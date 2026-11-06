@@ -1,18 +1,20 @@
 import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
+import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 
 export default function NotFound() {
   return (
-    <div className="mx-auto flex pb-24 max-w-6xl flex-col px-4 pt-24 sm:px-8">
-      <p className="max-w-xl text-3xl font-bold leading-tight text-balance">
-        {copy.notFoundPage.message}
-      </p>
-      <Link
-        href="/"
-        className="mt-8 self-start bg-ink px-6 py-3 font-bold text-white hover:bg-lanyard"
-      >
-        {copy.notFoundPage.button}
-      </Link>
+    <div className="flex min-h-dvh flex-col">
+      <SiteHeader />
+      <main className="page-x pt-16 pb-24 lg:pt-24">
+        <p className="max-w-2xl text-[36px] leading-none font-black tracking-[-0.04em] text-balance lg:text-act">
+          {copy.notFoundPage.message}
+        </p>
+        <Link href="/" className={`mt-10 ${buttonVariants()}`}>
+          {copy.notFoundPage.button}
+        </Link>
+      </main>
     </div>
   );
 }

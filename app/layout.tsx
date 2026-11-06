@@ -1,66 +1,36 @@
 import type { Metadata } from "next";
-import { Kalam, Permanent_Marker, Pinyon_Script, Schibsted_Grotesk } from "next/font/google";
-import { SiteFooter } from "@/components/site-footer";
+import { Archivo, Courier_Prime, JetBrains_Mono } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { copy } from "@/lib/copy";
 import "./globals.css";
 
-const sans = Schibsted_Grotesk({
-  variable: "--font-sans-family",
-  subsets: ["latin"],
-});
+const archivo = Archivo({ variable: "--font-archivo", subsets: ["latin"] });
 
-const marker = Permanent_Marker({
-  variable: "--font-marker-family",
-  subsets: ["latin"],
-  weight: "400",
-});
+const mono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 
-const hand = Kalam({
-  variable: "--font-hand-family",
+// Only the verdict paper uses it.
+const courier = Courier_Prime({
+  variable: "--font-courier",
   subsets: ["latin"],
   weight: ["400", "700"],
-});
-
-// Only the participation certificate uses it.
-const script = Pinyon_Script({
-  variable: "--font-script-family",
-  subsets: ["latin"],
-  weight: "400",
   preload: false,
 });
 
 export const metadata: Metadata = {
   title: copy.meta.title,
-  description: copy.home.subhead,
+  description: copy.meta.description,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${sans.variable} ${marker.variable} ${hand.variable} ${script.variable} antialiased`}
+      className={`${archivo.variable} ${mono.variable} ${courier.variable} antialiased`}
     >
-      <body className="p-1.5 sm:p-4 lg:p-6">
-        <div className="board-frame">
-          <span
-            className="corner-cap left-0 top-0 rounded-tl-[12px] rounded-br-[6px]"
-            aria-hidden="true"
-          />
-          <span
-            className="corner-cap right-0 top-0 rounded-tr-[12px] rounded-bl-[6px]"
-            aria-hidden="true"
-          />
-          <span
-            className="corner-cap bottom-0 left-0 rounded-bl-[12px] rounded-tr-[6px]"
-            aria-hidden="true"
-          />
-          <span
-            className="corner-cap bottom-0 right-0 rounded-br-[12px] rounded-tl-[6px]"
-            aria-hidden="true"
-          />
-          <div className="board min-h-[calc(100dvh-3rem)] overflow-clip">{children}</div>
-        </div>
-        <SiteFooter />
+      <body className="min-h-dvh">
+        <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
+        <Toaster />
       </body>
     </html>
   );
