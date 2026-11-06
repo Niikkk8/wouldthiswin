@@ -181,6 +181,10 @@ export const copy = {
     template:
       'I asked wouldthiswin.com if my hackathon project would win. Verdict: {verdict} {score}/100. "{oneLiner}"',
   },
+  odds: {
+    silence: "Said nothing",
+    late: "Answered after the buzzer",
+  },
   errors: {
     notFound:
       "Couldn't find that repo. Either the link's wrong or it's private. Judges can't see private repos either.",
@@ -193,6 +197,9 @@ export const copy = {
     rateLimited:
       "You've been judged 3 times today. The verdict isn't changing. Come back tomorrow.",
     dailyCap: "The judges are asleep. Come back tomorrow.",
+    stale: "The panel has moved on. Picking up where you are.",
+    alreadyAnswered: "You already answered that one. Judges don't take do-overs.",
+    network: "Lost the connection to the room. Try again.",
   },
   notFoundPage: {
     message: "This result doesn't exist. Maybe it was never judged. Maybe it was that bad.",
