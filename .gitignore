@@ -43,3 +43,6 @@ next-env.d.ts
 
 # database (managed outside the repo)
 /supabase
+
+# design reference, local only
+/Would This Win Project 34 storyboard.pdf
