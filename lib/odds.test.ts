@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+  BULK_FIRST_COMMIT_DELTA,
   START_ODDS,
   claimDelta,
   clampAnswerScore,
   clampOdds,
   currentOdds,
+  demoDelta,
   isNotGuilty,
   makeEvent,
   tierFor,
@@ -24,6 +26,18 @@ describe("claim deltas", () => {
     assert.equal(claimDelta("backed", "minor"), 3);
     assert.equal(claimDelta("unbacked", "minor"), -9);
     assert.equal(claimDelta("unclear", "minor"), -3);
+  });
+});
+
+describe("signal deltas", () => {
+  test("demo link: loads +5, dead -8, none 0", () => {
+    assert.equal(demoDelta("loads"), 5);
+    assert.equal(demoDelta("dead"), -8);
+    assert.equal(demoDelta("none"), 0);
+  });
+
+  test("a bulk first commit costs 10", () => {
+    assert.equal(BULK_FIRST_COMMIT_DELTA, -10);
   });
 });
 

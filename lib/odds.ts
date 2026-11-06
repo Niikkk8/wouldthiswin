@@ -22,6 +22,18 @@ export function claimDelta(status: ClaimStatus, weight: ClaimWeight): number {
   return CLAIM_DELTAS[weight][status];
 }
 
+export type DemoStatus = "loads" | "dead" | "none";
+
+const DEMO_DELTAS: Record<DemoStatus, number> = { loads: 5, dead: -8, none: 0 };
+
+/** A demo link that loads helps; a dead one hurts; no link changes nothing. */
+export function demoDelta(status: DemoStatus): number {
+  return DEMO_DELTAS[status];
+}
+
+/** The first commit added more than 70% of the files. */
+export const BULK_FIRST_COMMIT_DELTA = -10;
+
 /** Model output is untrusted: anything that isn't a number counts as 0. */
 export function clampAnswerScore(score: unknown): number {
   if (typeof score !== "number" || !Number.isFinite(score)) return 0;
@@ -37,7 +49,7 @@ export type OddsAct = 1 | 2;
 
 export type OddsEvent = {
   act: OddsAct;
-  kind: "claim" | "answer";
+  kind: "claim" | "demo" | "commits" | "answer";
   /** Set on claim events, so the replay can color unclear claims. */
   status?: ClaimStatus;
   /** What the odds actually moved, after clamping. */
