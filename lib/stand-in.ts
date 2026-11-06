@@ -1,48 +1,8 @@
-// Fixed data that stands in for the three model calls until they're built, so the whole
-// flow can be clicked through. It goes through the same state machine and odds engine
-// as the real calls will. Replaced call by call: scan, answer scoring, deliberation.
+// Fixed data that stands in for the answer scoring and deliberation calls until they're
+// built, so the whole flow can be clicked through. It goes through the same state machine
+// and odds engine as the real calls will.
 
-import type { Claim, Panel, Question } from "./session";
-
-export function standInScan(): { claims: Claim[]; questions: Omit<Question, "issuedAt">[] } {
-  return {
-    claims: [
-      {
-        claim: "Live queue updates",
-        status: "backed",
-        weight: "core",
-        file: "lib/queue.ts",
-        evidence: "Backed by lib/queue.ts",
-        label: "Live updates backed by code",
-      },
-      {
-        claim: "SMS alerts when your turn is close",
-        status: "unbacked",
-        weight: "core",
-        file: null,
-        evidence: "Nothing in the repo backs this",
-        label: "SMS claim unbacked",
-      },
-      {
-        claim: "Works for any hospital",
-        status: "unclear",
-        weight: "core",
-        file: "config/hospital.ts",
-        evidence: "Partly: one hospital is hardcoded",
-        label: '"Any hospital" is one hardcoded hospital',
-      },
-    ],
-    questions: [
-      { judge: "tired", text: "In one sentence. What is it?", caught: null },
-      { judge: "investor", text: "Who pays for this?", caught: null },
-      {
-        judge: "engineer",
-        text: "Your README says patients get an SMS. There's no SMS provider anywhere in package.json. So what sends the text?",
-        caught: "no SMS provider",
-      },
-    ],
-  };
-}
+import type { Panel } from "./session";
 
 const SCORES = [
   { score: 5, reason: "Clear one-liner" },

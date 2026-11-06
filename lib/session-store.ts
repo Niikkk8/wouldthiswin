@@ -11,6 +11,7 @@ import {
   type SessionError,
   type SessionState,
   type SessionView,
+  type Scan,
 } from "./session";
 
 export type LimitStatus = "ok" | "rateLimited" | "dailyCap";
@@ -40,22 +41,33 @@ export async function ensureOwner(): Promise<string> {
   return sha256(token);
 }
 
-const COLUMNS = "id, repo, act, claims, questions, answers, events, panel, version, owner_hash";
+const COLUMNS =
+  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, version, owner_hash";
 
 type Row = {
   id: string;
   repo: string;
+  repo_url: string;
+  latest_sha: string;
   act: SessionState["act"];
   claims: SessionState["claims"];
   questions: SessionState["questions"];
   answers: SessionState["answers"];
   events: SessionState["events"];
   panel: SessionState["panel"];
+  signals: SessionState["signals"];
+  files: SessionState["files"];
   version: number;
   owner_hash: string;
 };
 
-export type Loaded = { session: SessionState; version: number };
+export type Loaded = {
+  session: SessionState;
+  version: number;
+  /** The repo and commit the session was started on. */
+  repoUrl: string;
+  latestSha: string;
+};
 
 /** Returns the session only to the browser that started it. */
 export async function loadSession(id: string, owner: string | null): Promise<Loaded | null> {
@@ -76,8 +88,10 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     answers: data.answers,
     events: data.events,
     panel: data.panel,
+    signals: data.signals,
+    files: data.files,
   };
-  return { session, version: data.version };
+  return { session, version: data.version, repoUrl: data.repo_url, latestSha: data.latest_sha };
 }
 
 /** The client's view of a session, for this browser only. */
@@ -97,6 +111,8 @@ async function save(s: SessionState, version: number): Promise<boolean> {
       answers: s.answers,
       events: s.events,
       panel: s.panel,
+      signals: s.signals,
+      files: s.files,
       version: version + 1,
       updated_at: new Date().toISOString(),
     })
@@ -163,4 +179,56 @@ export async function checkLimits(ipHash: string): Promise<LimitStatus> {
   });
   if (error) throw error;
   return data as LimitStatus;
+}
+
+/** True if this request should run the scan (nobody else is running it). */
+export async function claimScan(id: string): Promise<boolean> {
+  const { data, error } = await db().rpc("claim_scan", { p_id: id });
+  if (error) throw error;
+  return data === true;
+}
+
+/** Lets a failed scan be retried straight away. */
+export async function releaseScan(id: string): Promise<void> {
+  const { error } = await db().from("sessions").update({ scan_started_at: null }).eq("id", id);
+  if (error) console.error(JSON.stringify({ event: "scan.release", id, error: error.message }));
+}
+
+/** A session that never cost anything shouldn't count toward the limits. */
+export async function deleteSession(id: string): Promise<void> {
+  const { error } = await db().from("sessions").delete().eq("id", id);
+  if (error) console.error(JSON.stringify({ event: "session.delete", id, error: error.message }));
+}
+
+export async function addUsage(id: string, usage: { inputTokens: number; outputTokens: number }) {
+  if (!usage.inputTokens && !usage.outputTokens) return;
+  const { error } = await db().rpc("add_session_usage", {
+    p_id: id,
+    p_input: usage.inputTokens,
+    p_output: usage.outputTokens,
+  });
+  if (error) console.error(JSON.stringify({ event: "session.usage", id, error: error.message }));
+}
+
+const CACHE_HOURS = 24;
+
+/** A scan of this exact commit from the last 24 hours, if there is one. */
+export async function getCachedScan(repoUrl: string, latestSha: string): Promise<Scan | null> {
+  const since = new Date(Date.now() - CACHE_HOURS * 3600 * 1000).toISOString();
+  const { data, error } = await db()
+    .from("scan_cache")
+    .select("scan")
+    .eq("repo_url", repoUrl)
+    .eq("latest_sha", latestSha)
+    .gte("created_at", since)
+    .maybeSingle<{ scan: Scan }>();
+  if (error) throw error;
+  return data?.scan ?? null;
+}
+
+export async function putCachedScan(repoUrl: string, latestSha: string, scan: Scan) {
+  const { error } = await db()
+    .from("scan_cache")
+    .upsert({ repo_url: repoUrl, latest_sha: latestSha, scan, created_at: new Date().toISOString() });
+  if (error) console.error(JSON.stringify({ event: "scan.cachePut", repoUrl, error: error.message }));
 }

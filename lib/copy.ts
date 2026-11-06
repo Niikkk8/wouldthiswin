@@ -35,6 +35,11 @@ export const copy = {
     investor: { name: "The Investor", initials: "IN" },
     tired: { name: "The Tired Judge", initials: "TJ" },
   },
+  scan: {
+    citedMissing: "Cites {path}, which isn't in the repo",
+    citedNothing: "Says it's backed, but cites no file",
+    cantVerify: "{claim}: can't verify",
+  },
   odds: {
     label: "Chance to win",
     // Read out by screen readers whenever the odds move.
@@ -45,6 +50,9 @@ export const copy = {
     down: "down",
     unchanged: "unchanged",
     silence: "Said nothing",
+    demoLoads: "Demo link loads",
+    demoDead: "Demo link is dead",
+    bulkFirstCommit: "Most of the code arrived in one commit.",
     late: "Answered after the buzzer",
   },
   acts: {
@@ -52,7 +60,30 @@ export const copy = {
       eyebrow: "The scan",
       title: "Every claim, traced to code.",
       claims: "README claims",
+      files: "Your files",
+      reading: [
+        "Reading the README.",
+        "Walking the file tree.",
+        "Checking the demo link.",
+        "Tracing each claim to a file.",
+        "Writing the panel's questions.",
+      ],
+      noClaims: "The README doesn't claim anything checkable. Judges will notice that too.",
+      notFound: "{missing}: not found",
+      notFoundPlain: "Not found",
+      searched: "searched {paths}",
+      demo: "Demo link",
+      demoLoads: "Loads: {host}",
+      demoDead: "Dead: {host}",
+      commits: "First commit",
+      commitsDetail: "Added most of the files in the repo today.",
       skip: "Skip",
+      restart: "Back to start",
+      footer: {
+        unbacked: "The Engineer saw the red line. So did the other two.",
+        unclear: "The panel has questions about the amber lines.",
+        clean: "Every claim checks out. The panel will have to dig.",
+      },
       next: "Face the panel",
     },
     grilling: {
@@ -69,7 +100,7 @@ export const copy = {
       channel: "#panel-{name}",
       readOnly: "You can read this. You can't reply.",
       night: "Your night so far",
-      next: "Hear the verdict",
+      next: "See the review",
     },
     verdict: {
       matter: "In the matter of demo day",

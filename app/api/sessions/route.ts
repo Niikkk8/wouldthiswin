@@ -2,13 +2,11 @@ import { z } from "zod";
 import { badRequest, clientIp, fail } from "@/lib/api";
 import { hashIp, newId } from "@/lib/db";
 import { fetchLatestSha, GitHubError, parseRepoUrl } from "@/lib/github";
-import { applyScan } from "@/lib/session";
-import { checkLimits, ensureOwner, mutate, reserveSession } from "@/lib/session-store";
-import { standInScan } from "@/lib/stand-in";
+import { checkLimits, ensureOwner, reserveSession } from "@/lib/session-store";
 
 const Body = z.object({ repoUrl: z.string().max(500) });
 
-/** Starts a session: checks the repo and the limits, then runs the scan. */
+/** Starts a session: checks the repo exists and the limits. The scan runs from act 1. */
 export async function POST(req: Request) {
   let body: z.infer<typeof Body>;
   try {
@@ -37,9 +35,6 @@ export async function POST(req: Request) {
     const repo = `${ref.owner}/${ref.repo}`;
     const reserved = await reserveSession({ id, repoUrl: ref.url, repo, latestSha, owner, ipHash });
     if (reserved !== "ok") return fail(reserved);
-
-    const scanned = await mutate(id, owner, (s) => applyScan(s, standInScan()));
-    if (!scanned.ok) return fail("judgeFailed");
 
     console.log(JSON.stringify({ event: "session.start", id, repo: ref.url }));
     return Response.json({ id });

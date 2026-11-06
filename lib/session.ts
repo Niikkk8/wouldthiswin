@@ -2,13 +2,17 @@
 // these, and saves the result. The client never runs them; it only mirrors SessionView.
 
 import { copy } from "./copy";
+import { displayTree } from "./file-tree";
 import {
   type ClaimStatus,
   type ClaimWeight,
+  type DemoStatus,
   type OddsEvent,
   type Tier,
+  BULK_FIRST_COMMIT_DELTA,
   SILENCE_SCORE,
   claimDelta,
+  demoDelta,
   clampAnswerScore,
   currentOdds,
   isNotGuilty,
@@ -38,6 +42,17 @@ export type Claim = {
   evidence: string;
   /** The odds event label, e.g. "SMS claim unbacked". */
   label: string;
+  /** Unbacked claims: what's missing, e.g. "SMS provider". */
+  missing: string | null;
+  /** Unbacked claims: where it was looked for. Every entry exists in the repo. */
+  searched: string[];
+};
+
+/** What the scan measured in code, beside the claims. */
+export type ScanSignals = {
+  demo: { status: DemoStatus; url: string | null };
+  /** The first commit added more than 70% of today's files. */
+  bulkFirstCommit: boolean;
 };
 
 export type Question = {
@@ -78,6 +93,9 @@ export type SessionState = {
   answers: Answer[];
   events: OddsEvent[];
   panel: Panel | null;
+  signals: ScanSignals | null;
+  /** Every file path in the repo at scan time (capped). Later acts may only cite these. */
+  files: string[];
 };
 
 export type SessionError =
@@ -98,14 +116,32 @@ const ok = (session: SessionState): Result => ({ ok: true, session });
 const fail = (error: SessionError): Result => ({ ok: false, error });
 
 export function newSession(id: string, repo: string): SessionState {
-  return { id, repo, act: "scan", claims: null, questions: [], answers: [], events: [], panel: null };
+  return {
+    id,
+    repo,
+    act: "scan",
+    claims: null,
+    questions: [],
+    answers: [],
+    events: [],
+    panel: null,
+    signals: null,
+    files: [],
+  };
 }
 
-/** Stores the scan: one odds event per claim, in order, and the three questions (not yet shown). */
-export function applyScan(
-  s: SessionState,
-  scan: { claims: Claim[]; questions: Omit<Question, "issuedAt">[] },
-): Result {
+export type Scan = {
+  claims: Claim[];
+  questions: Omit<Question, "issuedAt">[];
+  signals: ScanSignals;
+  files: string[];
+};
+
+/**
+ * Stores the scan: one odds event per claim, in order, then one per signal that moves the
+ * odds (demo link, bulk first commit). Questions are stored but not shown yet.
+ */
+export function applyScan(s: SessionState, scan: Scan): Result {
   if (s.act !== "scan") return fail("wrongAct");
   if (s.claims !== null) return fail("alreadyScanned");
   if (scan.questions.length !== QUESTION_COUNT) return fail("badScan");
@@ -122,11 +158,28 @@ export function applyScan(
       }),
     );
   }
+  const demo = demoDelta(scan.signals.demo.status);
+  if (demo !== 0) {
+    const reason = scan.signals.demo.status === "loads" ? copy.odds.demoLoads : copy.odds.demoDead;
+    events.push(makeEvent(events, { act: 1, kind: "demo", rawDelta: demo, reason }));
+  }
+  if (scan.signals.bulkFirstCommit) {
+    events.push(
+      makeEvent(events, {
+        act: 1,
+        kind: "commits",
+        rawDelta: BULK_FIRST_COMMIT_DELTA,
+        reason: copy.odds.bulkFirstCommit,
+      }),
+    );
+  }
   return ok({
     ...s,
     claims: scan.claims,
     questions: scan.questions.map((q) => ({ ...q, issuedAt: null })),
     events,
+    signals: scan.signals,
+    files: scan.files,
   });
 }
 
@@ -262,6 +315,9 @@ export type SessionView = {
   odds: number;
   events: OddsEvent[];
   claims: Claim[] | null;
+  signals: ScanSignals | null;
+  /** The files act 1 draws: cited files, their folders, and the top level. */
+  tree: string[];
   questionCount: number;
   questions: QuestionView[];
   panel: Panel | null;
@@ -289,6 +345,8 @@ export function toView(s: SessionState, now: number): SessionView {
     odds: currentOdds(s.events),
     events: s.events,
     claims: s.claims,
+    signals: s.signals,
+    tree: s.claims ? displayTree(s.files, s.claims) : [],
     questionCount: s.questions.length,
     questions,
     panel: at >= ACTS.indexOf("deliberation") ? s.panel : null,

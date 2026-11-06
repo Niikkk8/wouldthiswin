@@ -7,6 +7,7 @@ import {
   type Claim,
   type Panel,
   type Result,
+  type ScanSignals,
   type SessionState,
   acceptAnswer,
   advance,
@@ -22,9 +23,9 @@ import {
 const T0 = 1_800_000_000_000;
 
 const claims: Claim[] = [
-  { claim: "Live queue updates", status: "backed", weight: "core", file: "lib/queue.ts", evidence: "e", label: "Live updates backed" },
-  { claim: "SMS alerts", status: "unbacked", weight: "core", file: null, evidence: "e", label: "SMS claim unbacked" },
-  { claim: "Any hospital", status: "unclear", weight: "core", file: "config/hospital.ts", evidence: "e", label: "One hardcoded hospital" },
+  { claim: "Live queue updates", status: "backed", weight: "core", file: "lib/queue.ts", evidence: "e", label: "Live updates backed", missing: null, searched: [] },
+  { claim: "SMS alerts", status: "unbacked", weight: "core", file: null, evidence: "e", label: "SMS claim unbacked", missing: "SMS provider", searched: ["package.json"] },
+  { claim: "Any hospital", status: "unclear", weight: "core", file: "config/hospital.ts", evidence: "e", label: "One hardcoded hospital", missing: null, searched: [] },
 ];
 
 const questions = [
@@ -32,6 +33,10 @@ const questions = [
   { judge: "investor" as const, text: "Who pays?", caught: null },
   { judge: "engineer" as const, text: "What sends the SMS?", caught: "no SMS provider" },
 ];
+
+const noSignals: ScanSignals = { demo: { status: "none", url: null }, bulkFirstCommit: false };
+const files = ["lib/queue.ts", "config/hospital.ts", "package.json"];
+const scan = (c = claims, signals = noSignals) => ({ claims: c, questions, signals, files });
 
 const panel: Panel = { chat: [], oneLiner: "the one that texts you", fixes: ["a", "b", "c"], charge: "of overpromising" };
 
@@ -41,7 +46,7 @@ function unwrap(r: Result): SessionState {
 }
 
 function scanned(): SessionState {
-  return unwrap(applyScan(newSession("abc", "latenight/queue-less"), { claims, questions }));
+  return unwrap(applyScan(newSession("abc", "latenight/queue-less"), scan()));
 }
 
 function grilling(): SessionState {
@@ -68,8 +73,37 @@ describe("scan", () => {
     );
   });
 
+  test("a demo link that loads and a bulk first commit each add an event after the claims", () => {
+    const s = unwrap(
+      applyScan(
+        newSession("abc", "r"),
+        scan(claims, { demo: { status: "loads", url: "https://x.vercel.app" }, bulkFirstCommit: true }),
+      ),
+    );
+    assert.deepEqual(
+      s.events.map((e) => [e.kind, e.delta, e.after]),
+      [
+        ["claim", 6, 56],
+        ["claim", -19, 37],
+        ["claim", -6, 31],
+        ["demo", 5, 36],
+        ["commits", -10, 26],
+      ],
+    );
+    assert.equal(s.events[4].reason, "Most of the code arrived in one commit.");
+  });
+
+  test("a dead demo link costs 8; no link adds no event", () => {
+    const dead = unwrap(
+      applyScan(newSession("abc", "r"), scan([], { demo: { status: "dead", url: "https://x" }, bulkFirstCommit: false })),
+    );
+    assert.deepEqual(dead.events.map((e) => [e.kind, e.delta]), [["demo", -8]]);
+    const none = unwrap(applyScan(newSession("abc", "r"), scan([])));
+    assert.equal(none.events.length, 0);
+  });
+
   test("runs once", () => {
-    const r = applyScan(scanned(), { claims, questions });
+    const r = applyScan(scanned(), scan());
     assert.deepEqual(r, { ok: false, error: "alreadyScanned" });
   });
 });
@@ -195,7 +229,7 @@ describe("verdict", () => {
 
   test("not guilty otherwise", () => {
     const s = unwrap(
-      applyScan(newSession("abc", "r"), { claims: [claims[0], claims[2]], questions }),
+      applyScan(newSession("abc", "r"), scan([claims[0], claims[2]])),
     );
     assert.equal(verdictOf(s).charge, null);
   });
