@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "signals": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/signals.ts"
+    "signals": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/signals.ts",
+    "test": "node --import tsx --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
