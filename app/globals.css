@@ -1,0 +1,312 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wall: #c9ced2;
+  --color-board: #f5f7f7;
+  --color-ink: #000000;
+  --color-graphite: #4a5560;
+  --color-edge: #8a959d;
+  --color-sleeve: #dde3e6;
+  --color-sticky: #ffe15a;
+  --color-lanyard: #2d5be3;
+  --color-marker-red: #d7263d;
+  --color-gold: #e8b10e;
+
+  --color-note-yellow: #ffe15a;
+  --color-note-pink: #ffadd2;
+  --color-note-blue: #a8d8ff;
+
+  --font-sans: var(--font-sans-family), ui-sans-serif, system-ui, sans-serif;
+  --font-marker: var(--font-marker-family), "Comic Sans MS", cursive;
+  --font-hand: var(--font-hand-family), cursive;
+  --font-script: var(--font-script-family), cursive;
+}
+
+:root {
+  /* Fine monochrome noise, reused for whiteboard and paper grain. */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@layer base {
+  html {
+    background: var(--color-wall);
+    color: var(--color-ink);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-marker-red) 85%, transparent);
+    color: #fff;
+  }
+
+  input,
+  textarea {
+    caret-color: var(--color-lanyard);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-lanyard);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Brushed aluminium frame around the whiteboard: a bevelled extrusion (light
+ * top edge, dark lower edge), fine horizontal brushing, and grey corner caps.
+ */
+.board-frame {
+  position: relative;
+  border-radius: 12px;
+  padding: 10px;
+  background:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.1) 0 1px, rgb(0 0 0 / 0.035) 1px 2px),
+    linear-gradient(180deg, #fbfcfc 0%, #d5dadd 18%, #eef1f2 40%, #c3c9cd 72%, #9aa3a9 100%);
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / 0.95),
+    inset 0 -2px 0 rgb(0 0 0 / 0.22),
+    inset 1.5px 0 0 rgb(255 255 255 / 0.5),
+    inset -1.5px 0 0 rgb(0 0 0 / 0.12),
+    0 0 0 1px rgb(60 68 74 / 0.45),
+    0 2px 3px rgb(0 0 0 / 0.18),
+    0 28px 50px -30px rgb(0 0 0 / 0.5);
+}
+
+@media (min-width: 640px) {
+  .board-frame {
+    padding: 14px;
+  }
+}
+
+.corner-cap {
+  position: absolute;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(145deg, #5d656c, #3b4248);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.25),
+    0 1px 2px rgb(0 0 0 / 0.35);
+}
+
+/* The board itself: lit from above, faintly textured, slightly recessed into the frame. */
+.board {
+  position: relative;
+  isolation: isolate;
+  border-radius: 5px;
+  background:
+    radial-gradient(120% 60% at 50% -8%, #ffffff 0%, rgb(255 255 255 / 0) 60%),
+    linear-gradient(180deg, #f6f8f8 0%, #eef1f2 100%);
+  box-shadow:
+    inset 0 1px 3px rgb(0 0 0 / 0.22),
+    inset 0 0 0 1px rgb(0 0 0 / 0.07);
+}
+
+.board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image: var(--noise);
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* Paper and card grain, layered over a surface. */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: var(--noise);
+  mix-blend-mode: multiply;
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+/* Bright paper (the form sheet) needs less grain to stay white. */
+.grain-soft::after {
+  opacity: 0.06;
+}
+
+/* Sticky note: bottom-right corner lifting off the board. */
+.note-curl::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(
+    315deg,
+    #eef1f2 0%,
+    #eef1f2 45%,
+    rgb(0 0 0 / 0.16) 50%,
+    color-mix(in srgb, var(--note) 86%, #000) 55%,
+    var(--note) 80%
+  );
+  box-shadow: -1px -1px 2px rgb(0 0 0 / 0.08);
+  border-top-left-radius: 2px;
+}
+
+/* Result page: the badge swings in on its lanyard, then its award attaches. */
+@keyframes badge-swing {
+  0% {
+    transform: rotate(-14deg);
+  }
+  45% {
+    transform: rotate(7deg);
+  }
+  70% {
+    transform: rotate(-3deg);
+  }
+  88% {
+    transform: rotate(1deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes attach {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) rotate(var(--tilt, 0deg));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--tilt, 0deg));
+  }
+}
+
+.swing {
+  transform-origin: 50% 0;
+  animation: badge-swing 1100ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+}
+
+.attach {
+  animation: attach 280ms ease-out 950ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swing,
+  .attach {
+    animation: none;
+  }
+}
+
+/* Headline written on in marker, one letter at a time (timing set inline per letter). */
+@keyframes ink {
+  from {
+    mask-position: 100% 0;
+  }
+  to {
+    mask-position: 0% 0;
+  }
+}
+
+.ink-letter {
+  display: inline-block;
+  margin: -0.15em -0.08em;
+  padding: 0.15em 0.08em;
+  mask-image: linear-gradient(90deg, #000 0 42%, transparent 58%);
+  mask-size: 260% 100%;
+  mask-repeat: no-repeat;
+  mask-position: 100% 0;
+  animation-name: ink;
+  animation-timing-function: cubic-bezier(0.45, 0.05, 0.4, 1);
+  animation-fill-mode: both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-letter {
+    mask-image: none;
+    animation: none;
+  }
+}
+
+/* Chunky physical button: sits on a solid edge and travels down into it when pressed. */
+.chunky {
+  --edge: 5px;
+  position: relative;
+  border-radius: 10px;
+  background: #2d5be3;
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.25),
+    0 var(--edge) 0 #1a3a9e,
+    0 calc(var(--edge) + 4px) 8px -3px rgb(0 0 0 / 0.4);
+  transition:
+    transform 90ms ease-out,
+    box-shadow 90ms ease-out,
+    background-color 150ms;
+}
+
+.chunky:hover {
+  background: #3a67ea;
+}
+
+.chunky:active:not(:disabled),
+.chunky[data-pressed="true"] {
+  transform: translateY(var(--edge));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    0 0 0 #1a3a9e,
+    0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+.chunky-sm {
+  --edge: 3px;
+  border-radius: 8px;
+}
+
+/* Form field: a marker underline draws in beneath it on focus. */
+.field-line {
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 420ms cubic-bezier(0.5, 0, 0.2, 1);
+}
+
+.field:focus-within .field-line {
+  clip-path: inset(0 0 0 0);
+}
+
+/* A strip of translucent tape with torn ends. */
+.tape {
+  position: absolute;
+  height: 26px;
+  width: 92px;
+  background: rgb(247 243 226 / 0.72);
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.08);
+  clip-path: polygon(
+    3% 0,
+    97% 0,
+    100% 18%,
+    96% 36%,
+    100% 54%,
+    96% 72%,
+    100% 90%,
+    97% 100%,
+    3% 100%,
+    0 82%,
+    4% 64%,
+    0 46%,
+    4% 28%,
+    0 10%
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field-line {
+    transition: none;
+  }
+}
