@@ -14,6 +14,10 @@ export const copy = {
     shortcutHint: "Press / to jump here",
     demoPlaceholder: "Demo link, if it works (optional)",
     pitchPlaceholder: "What it does, in two lines. Judges won't read more. (optional)",
+    format: {
+      label: "How will it be judged?",
+      options: { "in-person": "In person", online: "Online", unknown: "Not sure" },
+    },
     button: "Judge my project",
     underButton: "Free. No sign-up. 3 a day.",
     exampleLabel: "Example result",

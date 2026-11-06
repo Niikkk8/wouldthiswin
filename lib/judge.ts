@@ -124,7 +124,16 @@ function render(
     .filter((l) => l !== null)
     .join("\n");
 
-  const submission = [`demo url: ${demoUrl ?? "(none)"}`, `pitch: ${pitch ?? "(none)"}`].join("\n");
+  const format = {
+    "in-person": "in person (live demo at a table; the repo is rarely opened)",
+    online: "online (video first; the repo is opened only if the video earns it)",
+    unknown: "not stated",
+  }[signals.format];
+  const submission = [
+    `judging format: ${format}`,
+    `demo url: ${demoUrl ?? "(none)"}`,
+    `pitch: ${pitch ?? "(none)"}`,
+  ].join("\n");
 
   return [
     section("repo", repo),

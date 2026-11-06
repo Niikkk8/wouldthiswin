@@ -24,7 +24,7 @@ export class GitHubError extends Error {
 
 export type TreeEntry = { path: string; type: "blob" | "tree" | "commit" };
 
-export type CommitInfo = { sha: string; date: string; message: string };
+export type CommitInfo = { sha: string; date: string; message: string; author: string };
 
 export type RawRepoData = {
   ref: RepoRef;
@@ -98,9 +98,10 @@ function lastPageFromLink(link: string | undefined): number | null {
 
 type ApiCommit = {
   sha: string;
+  author?: { login?: string } | null;
   commit: {
     message: string;
-    author: { date?: string } | null;
+    author: { date?: string; name?: string } | null;
     committer: { date?: string } | null;
     tree: { sha: string };
   };
@@ -112,6 +113,8 @@ function toCommitInfo(c: ApiCommit): CommitInfo {
     // Author date = when the work was written; committer date changes on rebase.
     date: c.commit.author?.date ?? c.commit.committer?.date ?? "",
     message: c.commit.message,
+    // GitHub login when the email is linked to an account, else the git author name.
+    author: c.author?.login ?? c.commit.author?.name ?? "",
   };
 }
 

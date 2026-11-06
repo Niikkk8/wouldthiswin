@@ -10,6 +10,10 @@ export type DemoCheck = {
   loads: boolean;
   status: number | null;
   finalUrl: string | null;
+  /** The page's <title>, when the demo served HTML. */
+  title: string | null;
+  /** The title is still a framework's starter default ("Create Next App", "Vite + React", ...). */
+  defaultTitle: boolean;
   /** Short machine reason when loads is false. */
   reason:
     | null
@@ -139,7 +143,34 @@ const safeLookup: net.LookupFunction = (hostname, options, callback) => {
   });
 };
 
-type Hop = { status: number; location: string | null };
+type Hop = { status: number; location: string | null; title: string | null };
+
+const TITLE_SCAN_BYTES = 64 * 1024;
+
+/** Starter titles judges recognise instantly: the page was never made the team's own. */
+const DEFAULT_TITLES =
+  /^(create next app|next\.js|vite \+ react( \+ ts)?|vite \+ vue( \+ ts)?|vite app|react app|svelte app|sveltekit|nuxt|astro|streamlit|gradio|expo|document|untitled|home|my app|app)$/i;
+
+function readTitle(res: http.IncomingMessage): Promise<string | null> {
+  return new Promise((resolve) => {
+    let html = "";
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      res.destroy();
+      const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      resolve(m ? m[1].replace(/\s+/g, " ").trim().slice(0, 140) || null : null);
+    };
+    res.setEncoding("utf8");
+    res.on("data", (chunk: string) => {
+      html += chunk;
+      if (html.length >= TITLE_SCAN_BYTES || /<\/title>/i.test(html)) finish();
+    });
+    res.on("end", finish);
+    res.on("error", finish);
+  });
+}
 
 function requestOnce(url: URL, signal: AbortSignal): Promise<Hop> {
   return new Promise((resolve, reject) => {
@@ -158,8 +189,14 @@ function requestOnce(url: URL, signal: AbortSignal): Promise<Hop> {
       (res) => {
         const status = res.statusCode ?? 0;
         const location = typeof res.headers.location === "string" ? res.headers.location : null;
-        res.destroy(); // headers are enough; don't download the body
-        resolve({ status, location });
+        const html = /text\/html/i.test(String(res.headers["content-type"] ?? ""));
+        if (status >= 200 && status < 300 && html) {
+          // Only the <title> is needed; stop reading as soon as it's seen.
+          readTitle(res).then((title) => resolve({ status, location, title }));
+        } else {
+          res.destroy(); // headers are enough; don't download the body
+          resolve({ status, location, title: null });
+        }
       },
     );
     req.on("error", reject);
@@ -180,7 +217,17 @@ function checkUrlShape(u: URL): DemoCheck["reason"] {
 /** Checks whether a public demo URL responds with a non-error status within 5s. */
 export async function checkDemo(input: string): Promise<DemoCheck> {
   const started = Date.now();
-  const done = (r: Omit<DemoCheck, "ms">): DemoCheck => ({ ...r, ms: Date.now() - started });
+  const done = (
+    r: Omit<DemoCheck, "ms" | "title" | "defaultTitle"> & { title?: string | null },
+  ) => {
+    const title = r.title ?? null;
+    return {
+      ...r,
+      title,
+      defaultTitle: title !== null && DEFAULT_TITLES.test(title),
+      ms: Date.now() - started,
+    } satisfies DemoCheck;
+  };
 
   let url: URL;
   try {
@@ -225,6 +272,7 @@ export async function checkDemo(input: string): Promise<DemoCheck> {
       loads: ok,
       status: res.status,
       finalUrl: url.href,
+      title: res.title,
       reason: ok ? null : "httpError",
     });
   }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { copy } from "@/lib/copy";
 import { parseRepoUrl } from "@/lib/repo-url";
+import { FORMATS, type JudgingFormat } from "@/lib/signals";
 
 type ErrorKey = keyof typeof copy.errors;
 const PITCH_MAX = 280;
@@ -64,6 +65,7 @@ export function JudgeForm({
   const [repoTouched, setRepoTouched] = useState(false);
   const [demoUrl, setDemoUrl] = useState("");
   const [pitch, setPitch] = useState("");
+  const [format, setFormat] = useState<JudgingFormat>("unknown");
   const [pitchFocused, setPitchFocused] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +107,7 @@ export function JudgeForm({
           repoUrl,
           demoUrl: demoUrl.trim() || null,
           pitch: pitch.trim() || null,
+          format,
         }),
       });
       const data: { id?: string; error?: string } = await res.json().catch(() => ({}));
@@ -215,6 +218,30 @@ export function JudgeForm({
                 {pitch.length}/{PITCH_MAX}
               </span>
             </Field>
+            <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+              <legend className="float-left mr-1 text-sm font-semibold">
+                {copy.home.format.label}
+              </legend>
+              <div className="flex rounded-[7px] border-2 border-ink bg-white p-0.5">
+                {FORMATS.map((f) => (
+                  <label
+                    key={f}
+                    className="cursor-pointer rounded-[5px] px-3 py-1.5 text-sm font-semibold text-graphite transition-colors has-[:checked]:bg-ink has-[:checked]:text-white has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-lanyard"
+                  >
+                    <input
+                      type="radio"
+                      name={`${idBase}-format`}
+                      value={f}
+                      checked={format === f}
+                      onChange={() => setFormat(f)}
+                      disabled={pending}
+                      className="sr-only"
+                    />
+                    {copy.home.format.options[f]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </>
         )}
 

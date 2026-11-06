@@ -13,7 +13,7 @@ import {
 import { checkDemo } from "@/lib/demo-check";
 import { fetchLatestSha, fetchRepoData, GitHubError, parseRepoUrl } from "@/lib/github";
 import { judge, JudgeError } from "@/lib/judge";
-import { computeSignals } from "@/lib/signals";
+import { computeSignals, FORMATS } from "@/lib/signals";
 
 // GitHub (~20s worst case) + two model attempts (2 x 18s).
 export const maxDuration = 60;
@@ -39,6 +39,7 @@ const Body = z.object({
   repoUrl: z.string().max(500),
   demoUrl: z.string().max(2048).optional().nullable(),
   pitch: z.string().optional().nullable(),
+  format: z.enum(FORMATS).optional().nullable(),
 });
 
 function normalizeDemoUrl(input: string | null | undefined): string {
@@ -73,7 +74,9 @@ export async function POST(req: Request) {
   const pitch = body.pitch?.trim() || null;
   if (pitch && pitch.length > 280) return Response.json({ error: "badRequest" }, { status: 400 });
   const demoUrl = normalizeDemoUrl(body.demoUrl);
-  const pitchHash = hashPitch(pitch);
+  const format = body.format ?? "unknown";
+  // Pitch and format both change the verdict, so both are part of the cache key.
+  const pitchHash = hashPitch(`${format}\n${pitch ?? ""}`);
 
   let ipHash: string;
   try {
@@ -98,7 +101,7 @@ export async function POST(req: Request) {
       demoUrl ? checkDemo(demoUrl) : Promise.resolve(null),
     ]);
     if (!raw.readmeFull.trim()) return fail("emptyReadme");
-    const signals = computeSignals(raw, demo);
+    const signals = computeSignals(raw, demo, format);
 
     // Re-checks the limits under a lock and inserts a pending row, so
     // concurrent requests can't get past them.
