@@ -11,12 +11,17 @@ import {
   toView,
   type SessionState,
 } from "@/lib/session";
+import { runSessionScan } from "@/lib/run-scan";
 import { mutate, ownerHash, type MutateResult } from "@/lib/session-store";
 import { standInPanel, standInScore } from "@/lib/stand-in";
+
+// The scan: GitHub (~5s), demo check in parallel, up to two model calls.
+export const maxDuration = 60;
 
 const Question = z.number().int().min(0).max(QUESTION_COUNT - 1);
 
 const Body = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("scan") }),
   z.object({ action: z.literal("advance"), from: z.enum(ACTS) }),
   z.object({ action: z.literal("show"), question: Question }),
   // Longer answers are cut to MAX_ANSWER_LENGTH by the state machine.
@@ -61,6 +66,22 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
     let r: MutateResult;
 
     switch (body.action) {
+      case "scan": {
+        const out = await runSessionScan(id, owner);
+        switch (out.kind) {
+          case "done":
+            return ok(out.session);
+          case "pending":
+            return Response.json({ pending: true, view: toView(out.session, now) }, { status: 202 });
+          case "stale":
+            return fail("stale", out.session);
+          case "notFound":
+            return fail("notFound");
+          case "failed":
+            // The session is over: the client offers a way back to the start.
+            return fail(out.error, undefined, { restart: true });
+        }
+      }
       case "advance": {
         r = await mutate(id, owner, (s) => advance(s, body.from));
         // A scoring step that failed earlier gets another go before the grilling can end.

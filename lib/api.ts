@@ -19,12 +19,13 @@ const STATUS: Record<ErrorKey, number> = {
 };
 
 /** An error response. Pass the session when there is one, so the client can resync to it. */
-export function fail(key: ErrorKey, session?: SessionState) {
+export function fail(key: ErrorKey, session?: SessionState, extra?: Record<string, unknown>) {
   return Response.json(
     {
       error: key,
       message: copy.errors[key],
       ...(session ? { view: toView(session, Date.now()) } : {}),
+      ...extra,
     },
     { status: STATUS[key] },
   );
