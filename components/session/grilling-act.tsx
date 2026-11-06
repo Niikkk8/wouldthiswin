@@ -79,7 +79,7 @@ function Question({ q, index, send }: { q: QuestionView; index: number; send: Se
     if (sent.current) return;
     sent.current = true;
     setWaiting(true);
-    send({ action: "answer", question: index, text: answer }).then((ok) => {
+    send({ action: "answer", question: index, text: answer }).then(({ ok }) => {
       if (!ok) {
         sent.current = false;
         setWaiting(false);
@@ -180,7 +180,7 @@ export function GrillingAct({ view, send, pending }: { view: SessionView; send: 
   useEffect(() => {
     if (done || current || asked.current === answered) return;
     asked.current = answered;
-    send({ action: "show", question: answered }).then((ok) => {
+    send({ action: "show", question: answered }).then(({ ok }) => {
       if (!ok) asked.current = -1;
     });
   }, [done, current, answered, send]);

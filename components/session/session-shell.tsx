@@ -15,12 +15,22 @@ import { ShareAct } from "./share-act";
 import { VerdictAct } from "./verdict-act";
 
 export type SessionAction =
+  | { action: "scan" }
   | { action: "advance"; from: ActName }
   | { action: "show"; question: number }
   | { action: "answer"; question: number; text: string };
 
-/** Sends one action to the server. Resolves true if it was applied. */
-export type Send = (a: SessionAction) => Promise<boolean>;
+export type SendResult = {
+  ok: boolean;
+  /** Another request is already running this (the scan): ask again shortly. */
+  pending?: boolean;
+  /** The session can't continue; offer a way back to the start. */
+  restart?: boolean;
+  message?: string;
+};
+
+/** Sends one action to the server and mirrors the view it returns. */
+export type Send = (a: SessionAction) => Promise<SendResult>;
 
 // The reducer only mirrors the server: every change to the session arrives as a new view.
 type State = { view: SessionView; pending: boolean };
@@ -66,11 +76,14 @@ export function SessionShell({ initial }: { initial: SessionView }) {
         });
         const body = await res.json().catch(() => ({}));
         if (body.view) dispatch({ type: "sync", view: body.view });
-        if (!res.ok) toast.error(body.message ?? copy.errors.network);
-        return res.ok;
+        if (res.status === 202) return { ok: false, pending: true };
+        const message: string = body.message ?? copy.errors.network;
+        // A dead session is shown in place, not as a toast.
+        if (!res.ok && !body.restart) toast.error(message);
+        return { ok: res.ok, restart: body.restart === true, message };
       } catch {
         toast.error(copy.errors.network);
-        return false;
+        return { ok: false, message: copy.errors.network };
       } finally {
         dispatch({ type: "pending", pending: false });
       }
@@ -91,6 +104,7 @@ export function SessionShell({ initial }: { initial: SessionView }) {
       act = (
         <ScanAct
           view={view}
+          send={send}
           revealed={revealed}
           onReveal={setRevealed}
           onNext={advance("scan")}
