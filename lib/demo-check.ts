@@ -1,0 +1,233 @@
+import dns from "node:dns";
+import http from "node:http";
+import https from "node:https";
+import net from "node:net";
+
+const TIMEOUT_MS = 5000;
+const MAX_REDIRECTS = 5;
+
+export type DemoCheck = {
+  loads: boolean;
+  status: number | null;
+  finalUrl: string | null;
+  /** Short machine reason when loads is false. */
+  reason:
+    | null
+    | "invalidUrl"
+    | "badProtocol"
+    | "blockedAddress"
+    | "dnsFailed"
+    | "timeout"
+    | "tooManyRedirects"
+    | "httpError"
+    | "networkError";
+  ms: number;
+};
+
+const v4Blocked: [string, number][] = [
+  ["0.0.0.0", 8], // "this" network
+  ["10.0.0.0", 8], // private
+  ["100.64.0.0", 10], // CGNAT
+  ["127.0.0.0", 8], // loopback
+  ["169.254.0.0", 16], // link-local / cloud metadata
+  ["172.16.0.0", 12], // private
+  ["192.0.0.0", 24], // IETF protocol assignments
+  ["192.0.2.0", 24], // TEST-NET-1
+  ["192.88.99.0", 24], // 6to4 relay anycast
+  ["192.168.0.0", 16], // private
+  ["198.18.0.0", 15], // benchmarking
+  ["198.51.100.0", 24], // TEST-NET-2
+  ["203.0.113.0", 24], // TEST-NET-3
+  ["224.0.0.0", 4], // multicast
+  ["240.0.0.0", 4], // reserved + broadcast
+];
+
+const v6Blocked: [string, number][] = [
+  ["::", 128], // unspecified
+  ["::1", 128], // loopback
+  ["100::", 64], // discard
+  ["2001:db8::", 32], // documentation
+  ["fc00::", 7], // unique local
+  ["fe80::", 10], // link-local
+  ["fec0::", 10], // deprecated site-local
+  ["ff00::", 8], // multicast
+];
+
+const blockList = new net.BlockList();
+for (const [a, p] of v4Blocked) blockList.addSubnet(a, p, "ipv4");
+for (const [a, p] of v6Blocked) blockList.addSubnet(a, p, "ipv6");
+
+/** Parse an IPv6 string into 16 bytes, or null. */
+function ipv6Bytes(addr: string): number[] | null {
+  let s = addr.split("%")[0]; // drop zone id
+  let tail: number[] = [];
+  const v4m = s.match(/(\d+\.\d+\.\d+\.\d+)$/);
+  if (v4m) {
+    if (net.isIPv4(v4m[1]) === false) return null;
+    tail = v4m[1].split(".").map(Number);
+    s = s.slice(0, -v4m[1].length) + "0:0";
+  }
+  const halves = s.split("::");
+  if (halves.length > 2) return null;
+  const parse = (part: string) => (part ? part.split(":") : []);
+  const head = parse(halves[0]);
+  const rest = halves.length === 2 ? parse(halves[1]) : [];
+  const fill = 8 - head.length - rest.length;
+  if (halves.length === 1 ? fill !== 0 : fill < 0) return null;
+  const groups = [...head, ...Array(Math.max(fill, 0)).fill("0"), ...rest];
+  const bytes: number[] = [];
+  for (const g of groups) {
+    if (!/^[0-9a-f]{1,4}$/i.test(g)) return null;
+    const n = parseInt(g, 16);
+    bytes.push(n >> 8, n & 0xff);
+  }
+  if (tail.length) bytes.splice(12, 4, ...tail);
+  return bytes;
+}
+
+/** Returns an IPv4 address embedded in an IPv6 address via a known mapping, if any. */
+function embeddedV4(addr: string): string | null {
+  const b = ipv6Bytes(addr);
+  if (!b) return null;
+  const zero = (from: number, to: number) => b.slice(from, to).every((x) => x === 0);
+  const v4 = (o: number) => b.slice(o, o + 4).join(".");
+  // ::ffff:a.b.c.d (mapped) and ::a.b.c.d (deprecated compatible)
+  if (zero(0, 10) && ((b[10] === 0xff && b[11] === 0xff) || (b[10] === 0 && b[11] === 0))) {
+    return v4(12);
+  }
+  // 64:ff9b::/96 NAT64
+  if (b[0] === 0x00 && b[1] === 0x64 && b[2] === 0xff && b[3] === 0x9b && zero(4, 12)) {
+    return v4(12);
+  }
+  // 2002::/16 6to4
+  if (b[0] === 0x20 && b[1] === 0x02) return v4(2);
+  return null;
+}
+
+export function isBlockedAddress(addr: string): boolean {
+  const family = net.isIP(addr);
+  if (family === 4) return blockList.check(addr, "ipv4");
+  if (family === 6) {
+    if (blockList.check(addr, "ipv6")) return true;
+    const v4 = embeddedV4(addr);
+    return v4 ? blockList.check(v4, "ipv4") : false;
+  }
+  return true; // not an IP at all: refuse
+}
+
+class BlockedError extends Error {
+  code = "EBLOCKED";
+}
+
+/**
+ * DNS lookup used for the actual socket connection. Validating here (rather
+ * than resolving once up front) means a rebinding DNS server can't swap in a
+ * private address between the check and the connect.
+ */
+const safeLookup: net.LookupFunction = (hostname, options, callback) => {
+  dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
+    if (err) return callback(err, "", 4);
+    const list = addresses as dns.LookupAddress[];
+    if (list.length === 0 || list.some((a) => isBlockedAddress(a.address))) {
+      return callback(new BlockedError(`blocked address for ${hostname}`), "", 4);
+    }
+    if ((options as dns.LookupOptions).all) {
+      (callback as unknown as (e: null, a: dns.LookupAddress[]) => void)(null, list);
+    } else {
+      callback(null, list[0].address, list[0].family);
+    }
+  });
+};
+
+type Hop = { status: number; location: string | null };
+
+function requestOnce(url: URL, signal: AbortSignal): Promise<Hop> {
+  return new Promise((resolve, reject) => {
+    const mod = url.protocol === "https:" ? https : http;
+    const req = mod.request(
+      url,
+      {
+        method: "GET",
+        lookup: safeLookup,
+        signal,
+        headers: {
+          "user-agent": "Mozilla/5.0 (compatible; WouldThisWinDemoCheck/1.0)",
+          accept: "text/html,application/xhtml+xml,*/*;q=0.8",
+        },
+      },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        const location = typeof res.headers.location === "string" ? res.headers.location : null;
+        res.destroy(); // headers are enough; don't download the body
+        resolve({ status, location });
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+function checkUrlShape(u: URL): DemoCheck["reason"] {
+  if (u.protocol !== "http:" && u.protocol !== "https:") return "badProtocol";
+  if (u.username || u.password) return "invalidUrl";
+  const host = u.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (!host || host === "localhost" || host.endsWith(".localhost")) return "blockedAddress";
+  // Node skips `lookup` for IP literals, so they must be checked here.
+  if (net.isIP(host) && isBlockedAddress(host)) return "blockedAddress";
+  return null;
+}
+
+/** Checks whether a public demo URL responds with a non-error status within 5s. */
+export async function checkDemo(input: string): Promise<DemoCheck> {
+  const started = Date.now();
+  const done = (r: Omit<DemoCheck, "ms">): DemoCheck => ({ ...r, ms: Date.now() - started });
+
+  let url: URL;
+  try {
+    url = new URL(input.trim());
+  } catch {
+    return done({ loads: false, status: null, finalUrl: null, reason: "invalidUrl" });
+  }
+
+  const signal = AbortSignal.timeout(TIMEOUT_MS);
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const shape = checkUrlShape(url);
+    if (shape) return done({ loads: false, status: null, finalUrl: url.href, reason: shape });
+
+    let res: Hop;
+    try {
+      res = await requestOnce(url, signal);
+    } catch (err) {
+      const e = err as NodeJS.ErrnoException;
+      const reason: DemoCheck["reason"] =
+        e instanceof BlockedError || e?.code === "EBLOCKED"
+          ? "blockedAddress"
+          : signal.aborted || e?.name === "AbortError" || e?.name === "TimeoutError"
+            ? "timeout"
+            : e?.code === "ENOTFOUND" || e?.code === "EAI_AGAIN"
+              ? "dnsFailed"
+              : "networkError";
+      return done({ loads: false, status: null, finalUrl: url.href, reason });
+    }
+
+    if (res.status >= 300 && res.status < 400 && res.location) {
+      try {
+        url = new URL(res.location, url);
+      } catch {
+        return done({ loads: false, status: res.status, finalUrl: url.href, reason: "invalidUrl" });
+      }
+      continue; // next hop is re-validated at the top of the loop
+    }
+
+    const ok = res.status >= 200 && res.status < 400;
+    return done({
+      loads: ok,
+      status: res.status,
+      finalUrl: url.href,
+      reason: ok ? null : "httpError",
+    });
+  }
+
+  return done({ loads: false, status: null, finalUrl: url.href, reason: "tooManyRedirects" });
+}
