@@ -233,7 +233,7 @@ const FILE_STACK: [RegExp, string][] = [
   [/^supabase$/, "Supabase"],
 ];
 
-function npmDeps(packageJson: string | null): string[] {
+export function npmDeps(packageJson: string | null): string[] {
   if (!packageJson) return [];
   try {
     const pkg = JSON.parse(packageJson) as Record<string, unknown>;
@@ -244,7 +244,7 @@ function npmDeps(packageJson: string | null): string[] {
   }
 }
 
-function pyDeps(requirements: string | null): string[] {
+export function pyDeps(requirements: string | null): string[] {
   if (!requirements) return [];
   return requirements
     .split(/\r?\n/)
@@ -268,6 +268,19 @@ export function detectStack(
   }
   if (raw.tree.some((e) => e.path.endsWith(".ipynb"))) out.add("Jupyter");
   return [...out];
+}
+
+/**
+ * The demo link to check: the repo's website field, else the first deployed-app link in the
+ * README. Only known hosting providers count from the README, so it can't aim the check
+ * at an arbitrary address.
+ */
+export function findDemoUrl(raw: Pick<RawRepoData, "meta" | "readmeFull">): string | null {
+  const home = raw.meta.homepage?.trim();
+  if (home && /^https?:\/\//i.test(home)) return home;
+  if (home && !home.includes(" ")) return `https://${home}`;
+  const m = raw.readmeFull.match(LIVE_HOSTS);
+  return m ? m[0].replace(/[).,;]+$/, "") : null;
 }
 
 function hoursBetween(a: string, b: string): number {

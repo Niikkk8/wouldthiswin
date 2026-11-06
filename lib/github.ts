@@ -65,7 +65,12 @@ export type RawRepoData = {
   };
   packageJson: string | null;
   requirementsTxt: string | null;
+  /** package.json / requirements.txt files below the root (e.g. backend/requirements.txt). */
+  nestedManifests: { path: string; text: string }[];
 };
+
+const MANIFEST = /(^|\/)(package\.json|requirements\.txt)$/;
+const NESTED_MANIFESTS = 4;
 
 function toGitHubError(err: unknown): GitHubError {
   if (err instanceof GitHubError) return err;
@@ -217,6 +222,23 @@ export async function fetchRepoData(
     const asText = (res: { data: unknown } | null) =>
       typeof res?.data === "string" ? res.data : null;
 
+    // Monorepos keep their dependencies one or two folders down (backend/, frontend/).
+    const headBlobs = blobs(headTree.data.tree);
+    const nestedPaths = headBlobs
+      .filter((p) => p.includes("/") && p.split("/").length <= 3 && MANIFEST.test(p))
+      .filter((p) => !/(^|\/)(node_modules|vendor|dist|build)\//.test(p))
+      .sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b))
+      .slice(0, NESTED_MANIFESTS);
+    const nestedManifests = (
+      await Promise.all(
+        nestedPaths.map(async (path) => {
+          const res = await orNull(gh.repos.getContent({ owner, repo, path, ...raw }));
+          const text = asText(res);
+          return text ? { path, text } : null;
+        }),
+      )
+    ).filter((m): m is { path: string; text: string } => m !== null);
+
     return {
       ref,
       meta: {
@@ -238,7 +260,7 @@ export async function fetchRepoData(
         type: e.type as TreeEntry["type"],
       })),
       treeEntriesTruncated: shallow.length > TREE_MAX_ENTRIES || headTree.data.truncated,
-      headFilePaths: blobs(headTree.data.tree),
+      headFilePaths: headBlobs,
       headTreeTruncated: headTree.data.truncated,
       commits,
       commitCount,
@@ -250,6 +272,7 @@ export async function fetchRepoData(
       },
       packageJson: asText(pkgRes),
       requirementsTxt: asText(reqRes),
+      nestedManifests,
     };
   } catch (err) {
     throw toGitHubError(err);
