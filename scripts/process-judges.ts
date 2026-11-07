@@ -2,11 +2,14 @@
 //
 //   npm run judges
 //
-// Reads public/judges/<judge>/<frame>.png and writes, per judge:
-//   public/judges/<judge>/<frame>.png  each frame, cleaned, at 128x128 (replacing the source)
-//   public/judges/<judge>-sheet.png    every frame side by side, in FRAMES order
-//   lib/judge-heads.ts                 the HEAD_CROP of each base frame as a data URI, for the share card
-//   .judge-previews/<judge>.png        every frame at 4x with its name, to check by eye
+// Reads art/judges/<judge>/<frame>.png and writes, per judge:
+//   art/judges/<judge>/<frame>.png   each frame, cleaned, at 128x128 (replacing the source)
+//   public/judges/<judge>-sheet.png  every frame side by side, in FRAMES order: all the app ships
+//   lib/judge-heads.ts               each base frame's HEAD_CROP at CARD_HEAD px, for the share card
+//   .judge-previews/<judge>.png      every frame at 4x with its name, to check by eye
+//
+// Everything is a palette PNG. Each judge's frames share one palette of at most 256
+// colours, quantized together without dithering, so a colour never shifts between frames.
 //
 // Generated art (larger than 128px, drawn on a 128x128 pixel grid) is cleaned per frame:
 // find the offset that lines it up with the judge's base frame, sample the centre of each
@@ -17,11 +20,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
-import { FRAMES, HEAD_CROP, SPRITE_SIZE } from "../lib/judge-sprites";
+import { CARD_HEAD, FRAMES, HEAD_CROP, SPRITE_SIZE } from "../lib/judge-sprites";
 import { JUDGES, type Judge } from "../lib/session";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const SRC = path.join(ROOT, "public/judges");
+const SRC = path.join(ROOT, "art/judges");
+const OUT = path.join(ROOT, "public/judges");
 const PREVIEW = path.join(ROOT, ".judge-previews");
 const N = SPRITE_SIZE;
 
@@ -259,6 +263,9 @@ function raw(px: RGB[]): Buffer {
 const rgbPng = (buf: Buffer, w: number, h: number) =>
   sharp(buf, { raw: { width: w, height: h, channels: 3 } }).png({ compressionLevel: 9 });
 
+/** Lossless when the image already has 256 colours or fewer. */
+const PALETTE = { palette: true, colours: 256, dither: 0, effort: 10, compressionLevel: 9 } as const;
+
 async function processJudge(judge: Judge) {
   const frames = FRAMES[judge] as readonly string[];
   const imgs = await Promise.all(frames.map((f) => load(path.join(SRC, judge, `${f}.png`))));
@@ -282,23 +289,40 @@ async function processJudge(judge: Judge) {
       sprites.push(px);
       console.log(`  ${frames[i].padEnd(12)} shift ${d.dx},${d.dy}  watermark blocks ${fixed}`);
     }
-    // The cleaned frames replace the generated ones.
-    for (const [i, px] of sprites.entries())
-      await rgbPng(raw(px), N, N).toFile(path.join(SRC, judge, `${frames[i]}.png`));
   }
 
-  // The sheet: frames left to right.
+  // The sheet, frames left to right, quantized to one shared palette.
   const W = N * frames.length;
-  const sheet = Buffer.alloc(W * N * 3);
+  const flat = Buffer.alloc(W * N * 3);
   sprites.forEach((px, f) => {
     for (let y = 0; y < N; y++)
-      for (let x = 0; x < N; x++) sheet.set(px[y * N + x], (y * W + f * N + x) * 3);
+      for (let x = 0; x < N; x++) flat.set(px[y * N + x], (y * W + f * N + x) * 3);
   });
-  await rgbPng(sheet, W, N).toFile(path.join(SRC, `${judge}-sheet.png`));
+  const sheetPng = await rgbPng(flat, W, N).png(PALETTE).toBuffer();
+  // Written as encoded: passing it back through sharp would re-encode it as RGB.
+  fs.writeFileSync(path.join(OUT, `${judge}-sheet.png`), sheetPng);
 
+  // Everything else is cut from the quantized sheet, so it matches what ships.
+  const q = await sharp(sheetPng).removeAlpha().raw().toBuffer();
+  let changed = 0;
+  for (let i = 0; i < flat.length; i++) if (q[i] !== flat[i]) changed++;
+  console.log(`  palette: ${changed ? `${((changed / flat.length) * 100).toFixed(1)}% of channel values moved` : "lossless"}`);
+  sprites.forEach((px, f) => {
+    for (let y = 0; y < N; y++)
+      for (let x = 0; x < N; x++) {
+        const o = (y * W + f * N + x) * 3;
+        px[y * N + x] = [q[o], q[o + 1], q[o + 2]];
+      }
+  });
+  for (const [i, px] of sprites.entries())
+    await rgbPng(raw(px), N, N).png(PALETTE).toFile(path.join(SRC, judge, `${frames[i]}.png`));
+
+  // The share card draws the head at CARD_HEAD px; scale it here, nearest neighbour, so
+  // the card never resamples it.
   const h = HEAD_CROP[judge];
-  const head = await rgbPng(raw(sprites[0]), N, N)
-    .extract({ left: h.x, top: h.y, width: h.size, height: h.size })
+  const head = await sharp(await rgbPng(raw(sprites[0]), N, N).extract({ left: h.x, top: h.y, width: h.size, height: h.size }).toBuffer())
+    .resize(CARD_HEAD, CARD_HEAD, { kernel: "nearest" })
+    .png(PALETTE)
     .toBuffer();
 
   // The preview: every frame at 4x with its name.

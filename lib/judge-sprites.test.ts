@@ -52,3 +52,12 @@ test("head crops sit inside the sprite", () => {
     assert.ok(c.x >= 0 && c.y >= 0 && c.x + c.size <= SPRITE_SIZE && c.y + c.size <= SPRITE_SIZE, j);
   }
 });
+
+test("public/judges ships only the sprite sheets, each a palette PNG", () => {
+  const files = fs.readdirSync(path.join(PUBLIC, "judges")).sort();
+  assert.deepEqual(files, JUDGES.map((j) => path.basename(sheetPath(j))).sort());
+  for (const f of files) {
+    // IHDR colour type 3: indexed colour.
+    assert.equal(fs.readFileSync(path.join(PUBLIC, "judges", f))[25], 3, f);
+  }
+});

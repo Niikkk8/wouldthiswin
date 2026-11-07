@@ -22,7 +22,7 @@ const CHART_MS = 1200;
 
 /** The judge's head, cut from their portrait. */
 export function Avatar({ judge, className }: { judge: Judge; className?: string }) {
-  return <JudgeHead judge={judge} size={32} className={className} />;
+  return <JudgeHead judge={judge} className={className} />;
 }
 
 function Typing({ judge }: { judge: Judge }) {

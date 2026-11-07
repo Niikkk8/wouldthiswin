@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { copy } from "@/lib/copy";
 import { JUDGE_HEADS } from "@/lib/judge-heads";
+import { CARD_HEAD } from "@/lib/judge-sprites";
 import { ogFonts } from "@/lib/og-fonts";
 import { loadPublicReview } from "@/lib/session-store";
 import type { Review } from "@/lib/review";
@@ -97,12 +98,12 @@ function Card({ r }: { r: Review }) {
         &ldquo;{clip(r.oneLiner, 60)}&rdquo;
       </div>
 
-      <div style={{ display: "flex", marginTop: "auto", gap: 44, alignItems: "flex-end" }}>
+      <div style={{ display: "flex", marginTop: "auto", gap: 28, alignItems: "flex-end" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {checks.map((c, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 24, fontWeight: 800 }}>
               <MarkIcon mark={c.status === "passed" ? "check" : "cross"} color={c.status === "passed" ? C.gain : C.loss} />
-              <div style={{ display: "flex", color: C.muted }}>{clip(c.title, 30)}</div>
+              <div style={{ display: "flex", color: C.muted }}>{clip(c.title, 26)}</div>
             </div>
           ))}
         </div>
@@ -111,7 +112,7 @@ function Card({ r }: { r: Review }) {
             <div key={rv.judge} style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "JetBrains Mono", fontSize: 21 }}>
               <MarkIcon mark={REVIEWER[rv.status].mark} color={REVIEWER[rv.status].color} size={20} />
               {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
-              <img src={JUDGE_HEADS[rv.judge]} width={32} height={32} style={{ borderRadius: 999 }} />
+              <img src={JUDGE_HEADS[rv.judge]} width={CARD_HEAD} height={CARD_HEAD} style={{ borderRadius: 999 }} />
               <div style={{ display: "flex", color: C.muted }}>{copy.judges[rv.judge].name}</div>
             </div>
           ))}

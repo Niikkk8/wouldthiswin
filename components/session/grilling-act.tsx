@@ -24,6 +24,8 @@ import { useReducedMotion } from "@/lib/use-reduced-motion";
 const noop = () => () => {};
 
 const WORD_MS = 60;
+/** How long each word takes to fade and rise in. */
+const WORD_IN_MS = 300;
 /** The judge's reaction stays up this long before the next question. */
 const REACTION_MS = 2000;
 /** How long the chip sits by the reaction before it flies to the widget. */
@@ -66,9 +68,9 @@ function Transcript({ questions }: { questions: QuestionView[] }) {
 
 /**
  * The question, word by word at 60ms a word. The caught phrase comes in last, in red, and
- * its underline draws in after it.
+ * its underline draws in after it. `onTyped` fires the moment the last word has landed.
  */
-function QuestionText({ text, caught }: { text: string; caught: string | null }) {
+function QuestionText({ text, caught, onTyped }: { text: string; caught: string | null; onTyped: () => void }) {
   const reduce = useReducedMotion();
   const at = caught ? text.indexOf(caught) : -1;
   const parts =
@@ -82,7 +84,12 @@ function QuestionText({ text, caught }: { text: string; caught: string | null })
 
   if (reduce) {
     return (
-      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        onAnimationComplete={onTyped}
+      >
         {parts.map((p, i) =>
           p.caught ? (
             <span key={i} className="text-loss underline decoration-2 underline-offset-[0.14em]">
@@ -98,7 +105,7 @@ function QuestionText({ text, caught }: { text: string; caught: string | null })
 
   // Plain words go in reading order; the caught words wait until all of them are in, then
   // their underline draws.
-  type Token = { text: string; caught: boolean; delay: number; underline: number; bridge: boolean };
+  type Token = { text: string; caught: boolean; delay: number; underline: number; bridge: boolean; last?: boolean };
   const raw = parts.flatMap((p) => words(p.text).map((w) => ({ text: w, caught: p.caught })));
   const isWord = (t?: { text: string }) => !!t && !/^\s+$/.test(t.text);
   const plainCount = raw.filter((t) => isWord(t) && !t.caught).length;
@@ -118,6 +125,9 @@ function QuestionText({ text, caught }: { text: string; caught: string | null })
       bridge: t.caught && !isWord(raw[i + 1]) && !!raw[i + 2]?.caught,
     };
   });
+  // The word that lands last ends the typing.
+  const placed = tokens.filter((t): t is Token => typeof t !== "string");
+  if (placed.length) placed.reduce((a, b) => (b.delay >= a.delay ? b : a)).last = true;
   // Tokens with no space between them ("calls" + ",") stay on one line together.
   const groups: (Token[] | string)[] = [];
   for (const t of tokens) {
@@ -140,7 +150,8 @@ function QuestionText({ text, caught }: { text: string; caught: string | null })
                 className={cn("relative inline-block max-w-full whitespace-normal [overflow-wrap:anywhere]", t.caught && "text-loss")}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, ease: EASE, delay: t.delay / 1000 }}
+                transition={{ duration: WORD_IN_MS / 1000, ease: EASE, delay: t.delay / 1000 }}
+                onAnimationComplete={t.last ? onTyped : undefined}
               >
                 {t.text}
                 {t.caught && (
@@ -165,15 +176,6 @@ function QuestionText({ text, caught }: { text: string; caught: string | null })
 }
 
 const words = (s: string) => s.split(/(\s+)/).filter(Boolean);
-
-/** How long QuestionText takes to put the whole question on screen. */
-function typingMs(text: string, caught: string | null): number {
-  const count = (s: string) => words(s).filter((w) => !/^\s+$/.test(w)).length;
-  const at = caught ? text.indexOf(caught) : -1;
-  if (!caught || at < 0) return count(text) * WORD_MS + 300;
-  const plain = count(text.slice(0, at)) + count(text.slice(at + caught.length));
-  return (plain + 2 + count(caught)) * WORD_MS + 300;
-}
 
 /**
  * The panel beside the question: the judge asking, large, talking while the question types
@@ -281,12 +283,9 @@ function Question({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // The asking judge talks while the question types out.
-  const [talking, setTalking] = useState(!reduce);
-  useEffect(() => {
-    const t = setTimeout(() => setTalking(false), reduce ? 0 : typingMs(q.text, q.caught));
-    return () => clearTimeout(t);
-  }, [reduce, q.text, q.caught]);
+  // The asking judge talks while the question types out, and stops as the last word lands.
+  const [talking, setTalking] = useState(true);
+  const typed = useCallback(() => setTalking(false), []);
 
   // Ten seconds without a keystroke and the Tired Judge dozes off, until the next one.
   const [dozing, setDozing] = useState(false);
@@ -392,19 +391,21 @@ function Question({
     >
       <Bench asker={q.judge} talking={talking} cue={cue} dozing={dozing && phase === "asking"} />
       <div className="min-w-0">
+        {/* The odds widget sits top right: the question's first lines wrap around it. */}
+        <div aria-hidden className="float-right hidden h-[132px] w-[340px] lg:block" />
         <p className="flex items-center gap-2.5 font-mono text-[13px]">
           <span aria-hidden className="size-2 rounded-full bg-loss" />
           {judge.name}
         </p>
         <h1 className="mt-5 max-w-[1120px] text-[36px] leading-[1.02] font-extrabold tracking-[-0.035em] text-balance lg:mt-6 lg:text-question">
-          <QuestionText text={q.text} caught={q.caught} />
+          <QuestionText text={q.text} caught={q.caught} onTyped={typed} />
         </h1>
 
         <AnimatePresence mode="wait" initial={false}>
           {reaction ? (
             <motion.div
               key="reaction"
-              className="mt-10 min-h-[160px] lg:mt-14"
+              className="clear-both mt-10 min-h-[160px] lg:mt-14"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: reduce ? 0.2 : 0.3, ease: EASE }}
@@ -429,7 +430,7 @@ function Question({
             <motion.form
               key="form"
               ref={formRef}
-              className="mt-10 flex scroll-mb-4 flex-col-reverse gap-6 lg:mt-14 lg:flex-row lg:items-end lg:gap-12"
+              className="clear-both mt-10 flex scroll-mb-4 flex-col-reverse gap-6 lg:mt-14 lg:flex-row lg:items-end lg:gap-12"
               exit={{ opacity: 0, transition: { duration: 0.2 } }}
               onSubmit={(e) => {
                 e.preventDefault();

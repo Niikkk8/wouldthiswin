@@ -40,6 +40,11 @@ export function frameIndex(judge: Judge, frame: string): number {
 }
 
 export const sheetPath = (judge: Judge) => `/judges/${judge}-sheet.png`;
+/** Head avatars draw their 80px crop at half size: one device pixel per art pixel at 2x. */
+export const AVATAR_SIZE = 40;
+/** The share card's heads, pre-scaled to exactly this, nearest neighbour. */
+export const CARD_HEAD = 40;
+
 /** The square of each base frame used for head avatars, in sprite pixels. */
 export const HEAD_CROP: Record<Judge, { x: number; y: number; size: number }> = {
   engineer: { x: 24, y: 12, size: 80 },

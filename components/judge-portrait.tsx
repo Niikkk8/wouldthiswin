@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { cn } from "cn";
 import { copy } from "@/lib/copy";
 import {
+  AVATAR_SIZE,
   FRAMES,
   SPRITE_SIZE,
   REACTION_FRAME,
@@ -75,7 +76,9 @@ export function JudgePortrait({
       role={label ? "img" : undefined}
       aria-label={label ? copy.judges[judge].name : undefined}
       aria-hidden={label ? undefined : true}
+      data-judge={judge}
       data-frame={frame}
+      data-talking={(!reduce && talking) || undefined}
       className={cn("shrink-0 bg-no-repeat", className)}
       style={{
         width: size,
@@ -89,8 +92,12 @@ export function JudgePortrait({
   );
 }
 
-/** A small head: the base frame of the sprite sheet, cropped to the face. */
-export function JudgeHead({ judge, size = 32, className }: { judge: Judge; size?: number; className?: string }) {
+/**
+ * A small head: the base frame of the sprite sheet, cropped to the face. At the default
+ * 40px the 80px crop is drawn at half size, so on a 2x screen every art pixel is exactly one
+ * device pixel, and on a 1x screen nearest-neighbour keeps every pixel it shows sharp.
+ */
+export function JudgeHead({ judge, size = AVATAR_SIZE, className }: { judge: Judge; size?: number; className?: string }) {
   const crop = HEAD_CROP[judge];
   const scale = size / crop.size;
   return (
@@ -103,8 +110,7 @@ export function JudgeHead({ judge, size = 32, className }: { judge: Judge; size?
         backgroundImage: `url(${sheetPath(judge)})`,
         backgroundSize: `${FRAMES[judge].length * SPRITE_SIZE * scale}px ${SPRITE_SIZE * scale}px`,
         backgroundPosition: `${-crop.x * scale}px ${-crop.y * scale}px`,
-        // Pixelated when it scales up by a whole number; smoothed when it shrinks.
-        imageRendering: Number.isInteger(scale) ? "pixelated" : "auto",
+        imageRendering: "pixelated",
       }}
     />
   );
