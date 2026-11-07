@@ -68,7 +68,7 @@ describe("scan", () => {
       [
         [6, 56],
         [-19, 37],
-        [-6, 31],
+        [-2, 35],
       ],
     );
   });
@@ -85,9 +85,9 @@ describe("scan", () => {
       [
         ["claim", 6, 56],
         ["claim", -19, 37],
-        ["claim", -6, 31],
-        ["demo", 5, 36],
-        ["commits", -10, 26],
+        ["claim", -2, 35],
+        ["demo", 5, 40],
+        ["commits", -10, 30],
       ],
     );
     assert.equal(s.events[4].reason, "Most of the code arrived in one commit.");
@@ -100,6 +100,29 @@ describe("scan", () => {
     assert.deepEqual(dead.events.map((e) => [e.kind, e.delta]), [["demo", -8]]);
     const none = unwrap(applyScan(newSession("abc", "r"), scan([])));
     assert.equal(none.events.length, 0);
+  });
+
+  test("a long README can't farm points: the scan adds at most 20", () => {
+    const backed = Array.from({ length: 6 }, () => claims[0]);
+    const s = unwrap(
+      applyScan(newSession("abc", "r"), scan(backed, { demo: { status: "loads", url: "https://x.vercel.app" }, bulkFirstCommit: false })),
+    );
+    assert.deepEqual(s.events.map((e) => e.delta), [6, 6, 6, 2, 0, 0, 0]);
+    assert.equal(s.events.at(-1)!.after, 70);
+  });
+
+  test("the scan takes at most 30", () => {
+    const unbacked = Array.from({ length: 3 }, () => claims[1]);
+    const s = unwrap(
+      applyScan(newSession("abc", "r"), scan(unbacked, { demo: { status: "dead", url: "https://x" }, bulkFirstCommit: true })),
+    );
+    assert.deepEqual(s.events.map((e) => e.delta), [-19, -11, 0, 0, 0]);
+    assert.equal(s.events.at(-1)!.after, 20);
+  });
+
+  test("a gain after hitting the floor still counts", () => {
+    const s = unwrap(applyScan(newSession("abc", "r"), scan([claims[1], claims[1], claims[0]])));
+    assert.deepEqual(s.events.map((e) => [e.delta, e.after]), [[-19, 31], [-11, 20], [6, 26]]);
   });
 
   test("runs once", () => {
@@ -224,7 +247,7 @@ describe("verdict", () => {
     s = answer(s, 1, "b", T0, 2);
     s = answer(s, 2, "c", T0, -4);
     s = unwrap(applyPanel(s, panel));
-    assert.deepEqual(verdictOf(s), { odds: 34, tier: "honorable", charge: "of overpromising" });
+    assert.deepEqual(verdictOf(s), { odds: 38, tier: "honorable", charge: "of overpromising" });
   });
 
   test("not guilty otherwise", () => {

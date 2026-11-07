@@ -12,10 +12,11 @@ export const SILENCE_SCORE = ANSWER_MIN;
 export type ClaimStatus = "backed" | "unbacked" | "unclear";
 export type ClaimWeight = "core" | "minor";
 
-// Minor claims move half as much, rounded toward zero (-19 / 2 -> -9).
+// Minor claims move half as much, rounded toward zero (-19 / 2 -> -9). Unclear means
+// unverified, not false, so it costs little: -2 core, nothing minor.
 const CLAIM_DELTAS: Record<ClaimWeight, Record<ClaimStatus, number>> = {
-  core: { backed: 6, unbacked: -19, unclear: -6 },
-  minor: { backed: 3, unbacked: -9, unclear: -3 },
+  core: { backed: 6, unbacked: -19, unclear: -2 },
+  minor: { backed: 3, unbacked: -9, unclear: 0 },
 };
 
 export function claimDelta(status: ClaimStatus, weight: ClaimWeight): number {
@@ -33,6 +34,15 @@ export function demoDelta(status: DemoStatus): number {
 
 /** The first commit added more than 70% of the files. */
 export const BULK_FIRST_COMMIT_DELTA = -10;
+
+/** The scan as a whole (claims, demo, commits) moves the odds by at most +20 / -30. */
+export const SCAN_CAP_UP = 20;
+export const SCAN_CAP_DOWN = -30;
+
+/** Cuts a scan delta so the scan's running total stays inside the cap. */
+export function capScanDelta(totalSoFar: number, rawDelta: number): number {
+  return Math.min(SCAN_CAP_UP - totalSoFar, Math.max(SCAN_CAP_DOWN - totalSoFar, rawDelta));
+}
 
 /** Model output is untrusted: anything that isn't a number counts as 0. */
 export function clampAnswerScore(score: unknown): number {

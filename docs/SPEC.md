@@ -51,8 +51,10 @@ The engine is deterministic and lives in code. The model only classifies claims 
 |---|---|
 | Start | 50 |
 | Odds clamp | 1 to 99, applied after every event |
-| Core claim: backed / unbacked / unclear | +6 / −19 / −6 |
-| Minor claim: backed / unbacked / unclear | +3 / −9 / −3 (half the core deltas, rounded toward zero; approved) |
+| Core claim: backed / unbacked / unclear | +6 / −19 / −2 |
+| Minor claim: backed / unbacked / unclear | +3 / −9 / 0 (backed and unbacked are half the core deltas, rounded toward zero; approved) |
+| Unclear | Means unverified, not false, so it costs little. A real hackathon winner scored low when unclear cost as much as −6. |
+| Scan cap | The scan as a whole (claims, demo, commits) moves the odds by at most +20 and −30 from the start (`SCAN_CAP_UP`, `SCAN_CAP_DOWN`), so a long README can't farm points. An event past the cap is stored with the part that still fits, often 0. |
 | Demo link loads | +5, reason "Demo link loads" |
 | Demo link provided but dead | −8, reason "Demo link is dead" |
 | No demo link | 0 (no event) |
@@ -63,7 +65,7 @@ The engine is deterministic and lives in code. The model only classifies claims 
 
 **Events.** Every change is stored as `{act, kind, status?, delta, reason, before, after}`.
 - `kind` is one of `claim`, `demo`, `commits` or `answer`.
-- `delta` is the change actually applied after clamping, so a −19 at 12% is stored as −11.
+- `delta` is the change actually applied after the scan cap and the odds clamp, so a −19 at 12% is stored as −11.
 - Act 1 events come in order: one per claim, then demo, then commits. Act 2 adds one per answer.
 - Act 3 replays them all.
 
@@ -377,6 +379,7 @@ Stop after each phase for review.
 - The act 3 odds widget stays top right (consistency beats the screenshot).
 - Owner-cookie-only `/s/[id]` until phase D; then the public view shows the review only.
 - Minor claim deltas round toward zero (unbacked minor = −9).
+- Unclear claims cost −2 (core) and 0 (minor); the scan's total is capped at +20 / −30.
 - Act 2's button is "Leave the room". Act 3's button is "See the review".
 - Question order: Tired Judge, Investor, Engineer.
 - The demo URL comes from the repo website field or a README hosting link; there is no input field.

@@ -11,6 +11,8 @@ import {
   type Tier,
   BULK_FIRST_COMMIT_DELTA,
   SILENCE_SCORE,
+  START_ODDS,
+  capScanDelta,
   claimDelta,
   demoDelta,
   clampAnswerScore,
@@ -139,7 +141,8 @@ export type Scan = {
 
 /**
  * Stores the scan: one odds event per claim, in order, then one per signal that moves the
- * odds (demo link, bulk first commit). Questions are stored but not shown yet.
+ * odds (demo link, bulk first commit). The scan's total is capped (SCAN_CAP_UP / DOWN), so
+ * a long README can't farm points. Questions are stored but not shown yet.
  */
 export function applyScan(s: SessionState, scan: Scan): Result {
   if (s.act !== "scan") return fail("wrongAct");
@@ -147,31 +150,20 @@ export function applyScan(s: SessionState, scan: Scan): Result {
   if (scan.questions.length !== QUESTION_COUNT) return fail("badScan");
 
   const events: OddsEvent[] = [];
+  const push = (e: Omit<Parameters<typeof makeEvent>[1], "act">) => {
+    const total = currentOdds(events) - START_ODDS;
+    events.push(makeEvent(events, { ...e, act: 1, rawDelta: capScanDelta(total, e.rawDelta) }));
+  };
   for (const c of scan.claims) {
-    events.push(
-      makeEvent(events, {
-        act: 1,
-        kind: "claim",
-        status: c.status,
-        rawDelta: claimDelta(c.status, c.weight),
-        reason: c.label,
-      }),
-    );
+    push({ kind: "claim", status: c.status, rawDelta: claimDelta(c.status, c.weight), reason: c.label });
   }
   const demo = demoDelta(scan.signals.demo.status);
   if (demo !== 0) {
     const reason = scan.signals.demo.status === "loads" ? copy.odds.demoLoads : copy.odds.demoDead;
-    events.push(makeEvent(events, { act: 1, kind: "demo", rawDelta: demo, reason }));
+    push({ kind: "demo", rawDelta: demo, reason });
   }
   if (scan.signals.bulkFirstCommit) {
-    events.push(
-      makeEvent(events, {
-        act: 1,
-        kind: "commits",
-        rawDelta: BULK_FIRST_COMMIT_DELTA,
-        reason: copy.odds.bulkFirstCommit,
-      }),
-    );
+    push({ kind: "commits", rawDelta: BULK_FIRST_COMMIT_DELTA, reason: copy.odds.bulkFirstCommit });
   }
   return ok({
     ...s,

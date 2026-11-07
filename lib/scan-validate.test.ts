@@ -73,8 +73,9 @@ describe("prompt injection in the README", () => {
     });
     assert.ok(applied.ok);
     if (!applied.ok) return;
-    // Five core unclear (-6 each) and one core backed (+6): 50 - 30 + 6 = 26.
-    assert.equal(applied.session.events.at(-1)!.after, 26);
+    // Five core unclear (-2 each) and one core backed (+6): 50 - 10 + 6 = 46, not the
+    // 50 + 36 that six backed claims would have given.
+    assert.equal(applied.session.events.at(-1)!.after, 46);
   });
 });
 

@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
   BULK_FIRST_COMMIT_DELTA,
+  SCAN_CAP_DOWN,
+  SCAN_CAP_UP,
   START_ODDS,
+  capScanDelta,
   claimDelta,
   clampAnswerScore,
   clampOdds,
@@ -19,13 +22,34 @@ describe("claim deltas", () => {
   test("core claims", () => {
     assert.equal(claimDelta("backed", "core"), 6);
     assert.equal(claimDelta("unbacked", "core"), -19);
-    assert.equal(claimDelta("unclear", "core"), -6);
+    assert.equal(claimDelta("unclear", "core"), -2);
   });
 
   test("minor claims move half as much, rounded toward zero", () => {
     assert.equal(claimDelta("backed", "minor"), 3);
     assert.equal(claimDelta("unbacked", "minor"), -9);
-    assert.equal(claimDelta("unclear", "minor"), -3);
+  });
+
+  test("unclear means unverified, not false: -2 core, 0 minor", () => {
+    assert.equal(claimDelta("unclear", "core"), -2);
+    assert.equal(claimDelta("unclear", "minor"), 0);
+  });
+});
+
+describe("scan cap", () => {
+  test("the scan moves the odds by at most +20 / -30", () => {
+    assert.equal(SCAN_CAP_UP, 20);
+    assert.equal(SCAN_CAP_DOWN, -30);
+  });
+
+  test("a delta is cut to what's left of the cap", () => {
+    assert.equal(capScanDelta(18, 6), 2);
+    assert.equal(capScanDelta(20, 6), 0);
+    assert.equal(capScanDelta(-19, -19), -11);
+    assert.equal(capScanDelta(-30, -8), 0);
+    // Away from the cap it passes through.
+    assert.equal(capScanDelta(20, -19), -19);
+    assert.equal(capScanDelta(-30, 6), 6);
   });
 });
 
