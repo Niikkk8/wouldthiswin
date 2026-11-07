@@ -23,11 +23,12 @@ export function claimDelta(status: ClaimStatus, weight: ClaimWeight): number {
   return CLAIM_DELTAS[weight][status];
 }
 
-export type DemoStatus = "loads" | "dead" | "none";
+/** loads: a live site answers. video: a public video on YouTube, Loom, Vimeo or Drive. */
+export type DemoStatus = "loads" | "video" | "dead" | "none";
 
-const DEMO_DELTAS: Record<DemoStatus, number> = { loads: 5, dead: -8, none: 0 };
+const DEMO_DELTAS: Record<DemoStatus, number> = { loads: 5, video: 3, dead: -8, none: 0 };
 
-/** A demo link that loads helps; a dead one hurts; no link changes nothing. */
+/** A live demo helps most, a video a little less; a dead link hurts; no link changes nothing. */
 export function demoDelta(status: DemoStatus): number {
   return DEMO_DELTAS[status];
 }

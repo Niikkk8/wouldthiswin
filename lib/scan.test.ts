@@ -174,6 +174,16 @@ describe("scan calls", () => {
     assert.equal(r.scan.claims[1].status, "unclear");
   });
 
+  test("progress is emitted from the real steps: claims found, then checking", async () => {
+    const events: string[] = [];
+    await runScanModel(repo(), {
+      call: model([claimsA()], [{ verdicts: [], questions }]),
+      fetch: fetchFrom(FILES).fetch,
+      emit: (p) => events.push(p.type === "claims" ? `claims:${p.claims.length}` : p.type),
+    });
+    assert.deepEqual(events, ["claims:2", "checking"]);
+  });
+
   test("invalid output is retried once per call, and every attempt's tokens count", async () => {
     const r = await runScanModel(repo(), {
       call: model(["not json", claimsA()], ["{}", { verdicts: [], questions }]),

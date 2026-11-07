@@ -58,6 +58,16 @@ describe("checks", () => {
     assert.equal(checks[3].detail, "queue.vercel.app");
   });
 
+  test("a demo video that resolves passes", () => {
+    const checks = checksOf(session({ signals: { demo: { status: "video", url: "https://www.loom.com/share/x" }, bulkFirstCommit: false } }));
+    assert.deepEqual(checks.find((c) => c.title === "Demo video resolves"), {
+      status: "passed",
+      title: "Demo video resolves",
+      detail: "www.loom.com",
+      file: null,
+    });
+  });
+
   test("the summary line", () => {
     assert.equal(summaryLine({ passed: 3, failed: 1, warning: 1 }), "3 passed, 1 failed, 1 warning");
     assert.equal(summaryLine({ passed: 0, failed: 0, warning: 2 }), "0 passed, 0 failed, 2 warnings");

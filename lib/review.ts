@@ -50,6 +50,7 @@ export function checksOf(s: Pick<SessionState, "claims" | "signals">): Check[] {
   if (demo) {
     const d = copy.review.checks;
     if (demo.status === "loads") checks.push({ status: "passed", title: d.demoLoads, detail: host(demo.url), file: null });
+    else if (demo.status === "video") checks.push({ status: "passed", title: d.demoVideo, detail: host(demo.url), file: null });
     else if (demo.status === "dead") checks.push({ status: "failed", title: d.demoDead, detail: host(demo.url), file: null });
     else checks.push({ status: "warning", title: d.demoNone, detail: d.demoNoneDetail, file: null });
   }

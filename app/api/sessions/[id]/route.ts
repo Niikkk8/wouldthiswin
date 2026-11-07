@@ -12,6 +12,7 @@ import {
   type SessionState,
 } from "@/lib/session";
 import { runSessionScan } from "@/lib/run-scan";
+import type { Emit } from "@/lib/scan-progress";
 import { scoreAnswer } from "@/lib/answer-score";
 import { PanelError, runPanel } from "@/lib/panel";
 import {
@@ -103,6 +104,60 @@ async function deliberate(id: string, owner: string | null): Promise<Deliberatio
   }
 }
 
+const NDJSON = "application/x-ndjson";
+
+/** The scan's result as a response: the view, 202 while another request scans, or an error. */
+async function scanResponse(id: string, owner: string | null, emit?: Emit): Promise<Response> {
+  const out = await runSessionScan(id, owner, emit);
+  switch (out.kind) {
+    case "done":
+      return ok(out.session);
+    case "pending":
+      return Response.json({ pending: true, view: toView(out.session, Date.now()) }, { status: 202 });
+    case "stale":
+      return fail("stale", out.session);
+    case "notFound":
+      return fail("notFound");
+    case "failed":
+      // The session is over: the client offers a way back to the start.
+      return fail(out.error, undefined, { restart: true });
+  }
+}
+
+/**
+ * The scan, streamed as NDJSON: one {type: "progress", event} line per real step (repo fetched,
+ * claims found, each file read, checking), then one {type: "result", status, body} line
+ * carrying exactly what the plain JSON response would have been.
+ */
+function streamScan(id: string, owner: string | null): Response {
+  const enc = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const write = (line: unknown) => {
+        try {
+          controller.enqueue(enc.encode(JSON.stringify(line) + "\n"));
+        } catch {
+          // The client went away; the scan still finishes and is saved.
+        }
+      };
+      let res: Response;
+      try {
+        res = await scanResponse(id, owner, (p) => write({ type: "progress", event: p }));
+      } catch (err) {
+        console.error(JSON.stringify({ event: "session.action.error", id, action: "scan", error: String(err) }));
+        res = fail("judgeFailed");
+      }
+      write({ type: "result", status: res.status, body: await res.json() });
+      try {
+        controller.close();
+      } catch {}
+    },
+  });
+  return new Response(stream, {
+    headers: { "content-type": `${NDJSON}; charset=utf-8`, "cache-control": "no-store", "x-accel-buffering": "no" },
+  });
+}
+
 export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">) {
   const { id } = await ctx.params;
   let body: z.infer<typeof Body>;
@@ -119,20 +174,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
 
     switch (body.action) {
       case "scan": {
-        const out = await runSessionScan(id, owner);
-        switch (out.kind) {
-          case "done":
-            return ok(out.session);
-          case "pending":
-            return Response.json({ pending: true, view: toView(out.session, now) }, { status: 202 });
-          case "stale":
-            return fail("stale", out.session);
-          case "notFound":
-            return fail("notFound");
-          case "failed":
-            // The session is over: the client offers a way back to the start.
-            return fail(out.error, undefined, { restart: true });
-        }
+        if (!req.headers.get("accept")?.includes(NDJSON)) return await scanResponse(id, owner);
+        return streamScan(id, owner);
       }
       case "deliberate": {
         const out = await deliberate(id, owner);

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ReviewView } from "@/components/review/review-view";
 import { SessionShell } from "@/components/session/session-shell";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
@@ -60,6 +61,7 @@ async function Session({ params }: { params: PageProps<"/s/[id]">["params"] }) {
           </Link>
         </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }

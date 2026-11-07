@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header";
 import { copy, fill } from "@/lib/copy";
 import { EASE } from "@/lib/motion";
 import { ANSWER_MAX } from "@/lib/odds";
+import type { ScanProgress } from "@/lib/scan-progress";
 import { ACTS, type ActName, type SessionView } from "@/lib/session";
 import { DeliberationAct } from "./deliberation-act";
 import { GrillingAct } from "./grilling-act";
@@ -32,8 +33,42 @@ export type SendResult = {
   message?: string;
 };
 
-/** Sends one action to the server and mirrors the view it returns. */
-export type Send = (a: SessionAction) => Promise<SendResult>;
+/**
+ * Sends one action to the server and mirrors the view it returns. With `onProgress`, the
+ * response is streamed and each real progress event is passed on as it arrives (the scan).
+ */
+export type Send = (a: SessionAction, opts?: { onProgress?: (p: ScanProgress) => void }) => Promise<SendResult>;
+
+/** Reads an NDJSON body: progress lines go to `onProgress`; returns the final result line. */
+async function readStream(
+  res: Response,
+  onProgress: (p: ScanProgress) => void,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const reader = res.body!.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  let result: { status: number; body: Record<string, unknown> } | null = null;
+  const take = (line: string) => {
+    if (!line.trim()) return;
+    const msg = JSON.parse(line);
+    if (msg.type === "progress") onProgress(msg.event);
+    else if (msg.type === "result") result = { status: msg.status, body: msg.body ?? {} };
+  };
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      take(buf.slice(0, nl));
+      buf = buf.slice(nl + 1);
+    }
+  }
+  take(buf);
+  // A stream cut off before its result line is a lost connection.
+  if (!result) throw new Error("stream ended without a result");
+  return result;
+}
 
 // The reducer only mirrors the server: every change to the session arrives as a new view.
 type State = { view: SessionView; pending: boolean };
@@ -71,23 +106,30 @@ export function SessionShell({ initial }: { initial: SessionView }) {
   // How many events the widget shows. The scan plays its events in, and act 2 holds each
   // answer's event back until its chip has flown to the widget. Later acts show all.
   const [revealed, setRevealed] = useState(initial.act === "scan" ? 0 : initial.events.length);
+  // The scan is running: the widget sits at 50% with a slow pulse until playback starts.
+  const [waiting, setWaiting] = useState(initial.act === "scan" && initial.claims === null);
 
   const send = useCallback<Send>(
-    async (a) => {
+    async (a, opts) => {
       dispatch({ type: "pending", pending: true });
       try {
+        const streamed = !!opts?.onProgress;
         const res = await fetch(`/api/sessions/${initial.id}`, {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...(streamed ? { accept: "application/x-ndjson" } : {}) },
           body: JSON.stringify(a),
         });
-        const body = await res.json().catch(() => ({}));
-        if (body.view) dispatch({ type: "sync", view: body.view });
-        if (res.status === 202) return { ok: false, pending: true };
-        const message: string = body.message ?? copy.errors.network;
+        const isStream = streamed && !!res.body && (res.headers.get("content-type") ?? "").includes("ndjson");
+        const { status, body } = isStream
+          ? await readStream(res, opts!.onProgress!)
+          : { status: res.status, body: await res.json().catch(() => ({})) };
+        const ok = status >= 200 && status < 300;
+        if (body.view) dispatch({ type: "sync", view: body.view as SessionView });
+        if (status === 202) return { ok: false, pending: true };
+        const message = (body.message as string | undefined) ?? copy.errors.network;
         // A dead session is shown in place, not as a toast.
-        if (!res.ok && !body.restart) toast.error(message);
-        return { ok: res.ok, restart: body.restart === true, message };
+        if (!ok && !body.restart) toast.error(message);
+        return { ok, restart: body.restart === true, message };
       } catch {
         toast.error(copy.errors.network);
         return { ok: false, message: copy.errors.network };
@@ -117,6 +159,7 @@ export function SessionShell({ initial }: { initial: SessionView }) {
           revealed={revealed}
           onReveal={setRevealed}
           onNext={advance("scan")}
+          onWaiting={setWaiting}
           pending={pending}
         />
       );
@@ -147,6 +190,7 @@ export function SessionShell({ initial }: { initial: SessionView }) {
               key="odds"
               events={events}
               travel={view.act === "grilling"}
+              waiting={view.act === "scan" && waiting}
               note={asking ? fill(copy.acts.grilling.riding, { max: ANSWER_MAX }) : undefined}
             />
           )}

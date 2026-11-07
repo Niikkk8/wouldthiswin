@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "cn";
 import { AnimatedBeam, type BeamState } from "@/components/ui/animated-beam";
 import { buttonVariants } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { HyperText } from "@/components/ui/hyper-text";
 import { copy, fill } from "@/lib/copy";
 import { EASE } from "@/lib/motion";
 import { toneOf, type OddsEvent, type Tone } from "@/lib/odds";
+import { progressLine, type ScanProgress } from "@/lib/scan-progress";
 import type { Claim, SessionView } from "@/lib/session";
 import { ActFooter, ActTitle } from "./act-parts";
 import type { Send } from "./session-shell";
@@ -23,7 +24,6 @@ const MIN_STEP_MS = 450;
 const MAX_STEP_MS = 900;
 const DRAW_SHARE = 0.7;
 const POLL_MS = 2500;
-const READING_MS = 1600;
 
 const BEAM_COLOR = { backed: "#f4f4f2", unclear: "#f5a524", unbacked: "#ff3b30" } as const;
 const TONE_TEXT: Record<Tone, string> = {
@@ -57,25 +57,110 @@ function useDesktop(): boolean {
 
 // ---------- while the scan runs ----------
 
-function Reading() {
+type FileState = "reading" | "read" | "skipped";
+type Live = { line: string; claims: string[]; files: { path: string; state: FileState }[] };
+
+const LIVE_START: Live = { line: copy.acts.scan.progress.start, claims: [], files: [] };
+
+/** Folds one real server event into what act 1 shows while the scan runs. */
+function liveReducer(live: Live, p: ScanProgress): Live {
+  const line = progressLine(p);
+  switch (p.type) {
+    case "claims":
+      return { ...live, line, claims: p.claims };
+    case "reading":
+      return live.files.some((f) => f.path === p.path)
+        ? { ...live, line }
+        : { ...live, line, files: [...live.files, { path: p.path, state: "reading" }] };
+    case "read":
+      return {
+        ...live,
+        // The line follows the newest fetch still running, else this one.
+        line: live.files.some((f) => f.state === "reading" && f.path !== p.path) ? live.line : line,
+        files: live.files.map((f) => (f.path === p.path ? { ...f, state: p.ok ? "read" : "skipped" } : f)),
+      };
+    default:
+      return { ...live, line };
+  }
+}
+
+/** The scan as it happens: claims as they're found, files as they're fetched, one live line. */
+function LiveScan({ live, repo }: { live: Live; repo: string }) {
   const reduce = useReducedMotion();
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setI((n) => (n + 1) % copy.acts.scan.reading.length), READING_MS);
-    return () => clearInterval(t);
-  }, []);
+  const name = repo.split("/").pop() ?? repo;
   return (
-    <p className="label-mono mt-12" role="status">
-      <motion.span
-        key={i}
-        className="inline-block"
-        initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: EASE }}
-      >
-        {copy.acts.scan.reading[i]}
-      </motion.span>
-    </p>
+    <>
+      <p className="label-mono mt-10 min-h-[1.3em] truncate lg:mt-12" role="status" aria-live="polite">
+        <motion.span
+          key={live.line}
+          className="inline-block"
+          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: EASE }}
+        >
+          {live.line}
+        </motion.span>
+      </p>
+      <div className="mt-8 grid gap-12 lg:grid-cols-[444px_minmax(0,1fr)] lg:gap-x-[clamp(96px,20vw,294px)]">
+        <section aria-labelledby="live-claims" className="pl-6 lg:pl-0">
+          <h2 id="live-claims" className="label-mono uppercase">
+            {copy.acts.scan.claims}
+          </h2>
+          <ul className="mt-4 grid gap-6">
+            {live.claims.map((c, i) => (
+              <motion.li
+                key={c + i}
+                className="rounded-card border border-border px-5 py-5"
+                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                animate={{ opacity: 0.6, y: 0 }}
+                transition={{ duration: 0.3, ease: EASE, delay: reduce ? 0 : i * 0.06 }}
+              >
+                <p className="text-[18px] leading-snug font-bold">{c}</p>
+              </motion.li>
+            ))}
+          </ul>
+        </section>
+        <section aria-labelledby="live-files" className="pl-6 lg:pl-0">
+          <h2 id="live-files" className="label-mono uppercase">
+            {copy.acts.scan.files}
+          </h2>
+          <ul className="mt-4 grid gap-2.5 font-mono text-[15px] lg:text-[16px]">
+            <li className="text-text">{name}/</li>
+            {live.files.map((f) => (
+              <motion.li
+                key={f.path}
+                className="flex min-w-0 items-baseline gap-3"
+                style={{ paddingLeft: 21 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                <span
+                  className={cn(
+                    "min-w-0 truncate transition-colors duration-300",
+                    f.state === "reading" && "text-text-subtle",
+                    f.state === "read" && "text-text",
+                    f.state === "skipped" && "text-text-subtle line-through",
+                  )}
+                >
+                  <span className="sr-only">{f.path}</span>
+                  {reduce ? (
+                    <span aria-hidden>{f.path}</span>
+                  ) : (
+                    <HyperText as="span" aria-hidden duration={SCRAMBLE_MS} className="inline-flex">
+                      {f.path}
+                    </HyperText>
+                  )}
+                </span>
+                <span className="label-mono shrink-0">
+                  {f.state === "reading" ? copy.acts.scan.reading : f.state === "skipped" ? copy.acts.scan.skippedTag : ""}
+                </span>
+              </motion.li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </>
   );
 }
 
@@ -135,7 +220,13 @@ function SignalCard({ event, view, resolved }: { event: OddsEvent; view: Session
   const title = event.kind === "demo" ? copy.acts.scan.demo : copy.acts.scan.commits;
   const detail =
     event.kind === "demo"
-      ? fill(demo?.status === "loads" ? copy.acts.scan.demoLoads : copy.acts.scan.demoDead, {
+      ? fill(
+          demo?.status === "loads"
+            ? copy.acts.scan.demoLoads
+            : demo?.status === "video"
+              ? copy.acts.scan.demoVideo
+              : copy.acts.scan.demoDead,
+          {
           host: hostOf(demo?.url ?? null),
         })
       : copy.acts.scan.commitsDetail;
@@ -459,6 +550,7 @@ export function ScanAct({
   revealed,
   onReveal,
   onNext,
+  onWaiting,
   pending,
 }: {
   view: SessionView;
@@ -466,18 +558,26 @@ export function ScanAct({
   revealed: number;
   onReveal: (n: number) => void;
   onNext: () => void;
+  /** True while the scan runs, so the odds widget can pulse at 50%. */
+  onWaiting: (waiting: boolean) => void;
   pending: boolean;
 }) {
   const scanned = view.claims !== null;
   const [failed, setFailed] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [live, dispatchLive] = useReducer(liveReducer, LIVE_START);
   const asked = useRef(-1);
+
+  useEffect(() => {
+    onWaiting(!scanned && !failed);
+  }, [scanned, failed, onWaiting]);
 
   useEffect(() => {
     if (scanned || failed || asked.current === attempt) return;
     asked.current = attempt;
     let retry: ReturnType<typeof setTimeout> | undefined;
-    send({ action: "scan" }).then((r) => {
+    // Progress events are real: each one is a step the server just finished.
+    send({ action: "scan" }, { onProgress: dispatchLive }).then((r) => {
       if (r.ok) return;
       if (r.pending) retry = setTimeout(() => setAttempt((n) => n + 1), POLL_MS);
       else if (r.restart) setFailed(r.message ?? copy.errors.judgeFailed);
@@ -501,7 +601,7 @@ export function ScanAct({
       ) : scanned ? (
         <XRay view={view} revealed={revealed} onReveal={onReveal} onNext={onNext} pending={pending} />
       ) : (
-        <Reading />
+        <LiveScan live={live} repo={view.repo} />
       )}
     </>
   );

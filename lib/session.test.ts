@@ -134,6 +134,16 @@ describe("scan", () => {
     assert.deepEqual(s.events.map((e) => [e.delta, e.after]), [[-19, 31], [-11, 20], [6, 26]]);
   });
 
+  test("a demo video that resolves adds 3", () => {
+    const s = unwrap(
+      applyScan(
+        newSession("abc", "r"),
+        scan([], { demo: { status: "video", url: "https://youtu.be/abcdefghijk", provided: true }, bulkFirstCommit: false }),
+      ),
+    );
+    assert.deepEqual(s.events.map((e) => [e.kind, e.delta, e.reason]), [["demo", 3, "Demo video resolves"]]);
+  });
+
   test("runs once", () => {
     const r = applyScan(scanned(), scan());
     assert.deepEqual(r, { ok: false, error: "alreadyScanned" });
@@ -277,6 +287,18 @@ describe("deliberation", () => {
     s = unwrap(advance(s, "grilling"));
     s = unwrap(applyPanel(s, panel));
     assert.deepEqual(applyPanel(s, panel), { ok: false, error: "alreadyDeliberated" });
+  });
+
+  test("writing the review clears the file contents the scan read", () => {
+    let s = grilling();
+    s = { ...s, sources: [{ path: "lib/queue.ts", text: "export const x = 1;" }] };
+    s = answer(s, 0, "a", T0);
+    s = answer(s, 1, "b", T0);
+    s = answer(s, 2, "c", T0);
+    s = unwrap(advance(s, "grilling"));
+    assert.equal(s.sources.length, 1);
+    s = unwrap(applyPanel(s, panel));
+    assert.deepEqual(s.sources, []);
   });
 });
 

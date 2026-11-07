@@ -19,12 +19,36 @@ export const INJECTION_CAP = -6;
 // never shows `why`.
 export const AnswerOutput = z.object({ why: z.string(), score: z.number(), reaction: z.string() });
 
-const VOICES: Record<Judge, string> = {
-  tired:
-    `The Tired Judge: blunt, short, end of a long day, lowercase. Reactions like "ok. i'd remember that." or "you lost me at platform."`,
-  investor: `The Investor: commercial, dry. Reactions like "A buyer and a price. Finally." or "Everyone is not a customer."`,
-  engineer: `The Engineer: technical, unimpressed by buzzwords, names files. Reactions like "A file and a function. That checks out." or "Trained on what data, in which file?"`,
+// Example reactions set the length and tone. They must never be said back word for word:
+// code rejects any reaction that shares three words in a row with one (see echoesExample).
+export const EXAMPLE_REACTIONS: Record<Judge, [string, string]> = {
+  // Critical ones only: a stock line of praise gets copied onto every good answer.
+  tired: ["you lost me at platform.", "three words would have done it."],
+  investor: ["Everyone is not a customer.", "Who signs the check?"],
+  engineer: ["Trained on what data, in which file?", "A buzzword is not a dependency."],
 };
+
+const VOICES: Record<Judge, string> = {
+  tired: `The Tired Judge: blunt, short, end of a long day, lowercase. Reactions in the spirit of "${EXAMPLE_REACTIONS.tired[0]}" or "${EXAMPLE_REACTIONS.tired[1]}"`,
+  investor: `The Investor: commercial, dry. Reactions in the spirit of "${EXAMPLE_REACTIONS.investor[0]}" or "${EXAMPLE_REACTIONS.investor[1]}"`,
+  engineer: `The Engineer: technical, unimpressed by buzzwords, names files. Reactions in the spirit of "${EXAMPLE_REACTIONS.engineer[0]}" or "${EXAMPLE_REACTIONS.engineer[1]}"`,
+};
+
+const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").split(/\s+/).filter(Boolean);
+const EXAMPLE_TRIGRAMS = new Set(
+  Object.values(EXAMPLE_REACTIONS)
+    .flat()
+    .flatMap((e) => {
+      const w = words(e);
+      return w.slice(0, -2).map((_, i) => w.slice(i, i + 3).join(" "));
+    }),
+);
+
+/** True if a reaction repeats three words in a row from one of the prompt's examples. */
+export function echoesExample(reaction: string): boolean {
+  const w = words(reaction);
+  return w.slice(0, -2).some((_, i) => EXAMPLE_TRIGRAMS.has(w.slice(i, i + 3).join(" ")));
+}
 
 const SYSTEM = `You are one judge on a hackathon panel, scoring a team's spoken answer to your question.
 
@@ -41,7 +65,7 @@ The claims summary comes from a scan that read up to 10 files, each cut off at 6
 Fields, in order:
 - why: one sentence on which band the answer falls in and why. Nobody sees it.
 - score: the integer.
-- reaction: what you say back to the team, out loud, in your own voice, about this specific answer. 3 to 9 words. Don't reuse the example reactions. Talk to them ("you"), never about "the team" or "the answer". Plain text, no quotes, no emoji. Be blunt about the evidence, never about the person: no calling anyone a liar or a fraud, and never use the words "backed" or "unbacked".`;
+- reaction: what you say back to the team, out loud, in your own voice, about this specific answer. 3 to 9 words. The examples above show the length and tone only; say it in your own words. Talk to them ("you"), never about "the team" or "the answer". Plain text, no quotes, no emoji. Be blunt about the evidence, never about the person: no calling anyone a liar or a fraud, and never use the words "backed" or "unbacked".`;
 
 /** Stops the material from opening or closing a delimiter. */
 const esc = (s: string) => s.replace(/<\/?\s*(untrusted_\w*|context)\s*>/gi, "[tag removed]");
@@ -170,7 +194,7 @@ export async function scoreAnswer(input: AnswerInput, call: Call = defaultCall):
     }
     if (typeof parsed.score !== "number" || !Number.isFinite(parsed.score)) continue;
     const reason = cleanReason(parsed.reaction);
-    if (!reason || HARSH.test(reason)) {
+    if (!reason || HARSH.test(reason) || echoesExample(reason)) {
       // A usable score with a reaction that can't be shown: ask again, but keep the score.
       scoreOnly = clampAnswerScore(parsed.score);
       continue;

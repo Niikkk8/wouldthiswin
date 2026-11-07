@@ -4,6 +4,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import {
   INJECTION_CAP,
   buildAnswerPrompt,
+  echoesExample,
   cleanReason,
   looksLikeInjection,
   scoreAnswer,
@@ -175,6 +176,21 @@ describe("blunt about the evidence, never the person", () => {
     const m = model({ why: "w", score: -9, reaction: "fraud." }, { why: "w", score: -9, reaction: "still a liar." });
     const out = await scoreAnswer(input("We send SMS via Twilio."), m.call);
     assert.deepEqual([out.score, out.reason], [-9, copy.acts.grilling.noted.engineer]);
+  });
+});
+
+describe("the prompt's example reactions are never said back", () => {
+  test("three words in a row from an example count as an echo", () => {
+    assert.equal(echoesExample("honestly you lost me at platform, again."), true);
+    assert.equal(echoesExample("Sure, but who signs the check here?"), true);
+    assert.equal(echoesExample("one key, errors on empty, cap plan. fair."), false);
+    assert.equal(echoesExample("Name the buyer and the price."), false);
+  });
+
+  test("an echo is retried; if it comes back again, the score stands with a plain line", async () => {
+    const m = model({ why: "w", score: -5, reaction: "Everyone is not a customer." }, { why: "w", score: -5, reaction: "again: everyone is not a customer." });
+    const out = await scoreAnswer(input("A search box for buyers."), m.call);
+    assert.deepEqual([out.score, out.reason], [-5, copy.acts.grilling.noted.engineer]);
   });
 });
 

@@ -6,6 +6,7 @@ export type ErrorKey = keyof typeof copy.errors;
 
 const STATUS: Record<ErrorKey, number> = {
   invalidUrl: 400,
+  invalidDemo: 400,
   notFound: 404,
   emptyRepo: 422,
   emptyReadme: 422,

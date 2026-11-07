@@ -22,6 +22,10 @@ export const copy = {
     button: "Face the panel",
     starting: "Finding a panel",
     underButton: "About 4 minutes. 3 questions, 30 seconds each. Free, no sign-up.",
+    demoToggle: "Add a demo link or video (optional)",
+    demoLabel: "Demo link or video",
+    demoPlaceholder: "your-app.vercel.app or a YouTube, Loom, Vimeo or Drive link",
+    demoNote: "A live demo that loads is worth +5, a video that plays +3. A dead link costs 8.",
     versus: "Or challenge a friend: same panel, two repos",
     versusSoon: "Coming soon",
     board: {
@@ -60,6 +64,7 @@ export const copy = {
     unchanged: "unchanged",
     silence: "Said nothing",
     demoLoads: "Demo link loads",
+    demoVideo: "Demo video resolves",
     demoDead: "Demo link is dead",
     bulkFirstCommit: "Most of the code arrived in one commit.",
     late: "Answered after the buzzer",
@@ -70,19 +75,26 @@ export const copy = {
       title: "Every claim, traced to code.",
       claims: "README claims",
       files: "Your files",
-      reading: [
-        "Reading the README.",
-        "Walking the file tree.",
-        "Checking the demo link.",
-        "Tracing each claim to a file.",
-        "Writing the panel's questions.",
-      ],
+      // The live status line while the scan runs. Each comes from a real server event.
+      progress: {
+        start: "Opening the repo.",
+        repo: "Walking {n} file{s}.",
+        cached: "Scanned this commit already. Replaying it.",
+        claims: "Found {n} claim{s}.",
+        noClaims: "No checkable claims in the README.",
+        reading: "Reading {path}",
+        skipped: "Skipped {path}",
+        checking: "Checking claims against the code.",
+      },
+      reading: "reading",
+      skippedTag: "skipped",
       noClaims: "The README doesn't claim anything checkable. Judges will notice that too.",
       notFound: "Couldn't find {missing}",
       notFoundPlain: "Couldn't find it",
       searched: "Looked in {paths}",
       demo: "Demo link",
       demoLoads: "Loads: {host}",
+      demoVideo: "Video: {host}",
       demoDead: "Dead: {host}",
       commits: "First commit",
       commitsDetail: "Added most of the files in the repo today.",
@@ -163,6 +175,7 @@ export const copy = {
     checks: {
       heading: "Checks",
       demoLoads: "Demo link loads",
+      demoVideo: "Demo video resolves",
       demoDead: "Demo link is dead",
       demoNone: "No demo link",
       demoNoneDetail: "Judges will ask to see it running.",
@@ -200,6 +213,7 @@ export const copy = {
     githubDown:
       "GitHub is rate-limiting us. Even GitHub needs a break. Try again in a few minutes.",
     invalidUrl: "That's not a GitHub repo link. Paste something like github.com/you/your-project.",
+    invalidDemo: "That demo link doesn't look right. Paste a full link to a live site or a video.",
     judgeFailed: "The panel fell asleep mid-session. Try again.",
     rateLimited:
       "You've faced the panel 3 times today. The verdict isn't changing. Come back tomorrow.",
@@ -208,8 +222,65 @@ export const copy = {
     alreadyAnswered: "You already answered that one. Judges don't take do-overs.",
     network: "Lost the connection to the room. Try again.",
   },
+  footer: {
+    privacy: "Privacy",
+    note: "Judged by three AI judges. Numbers by code.",
+  },
+  // Plain language. Keep in step with lib/retention.ts.
+  privacy: {
+    title: "Privacy",
+    lede: "What we keep when you face the panel, and for how long. Short version: your answers go after 30 days, your code is never kept.",
+    sections: [
+      {
+        heading: "What we store",
+        body: [
+          "The public GitHub link you paste, and the commit we judged.",
+          "The scan results: the claims from your README, what we found or couldn't find for each, and the odds.",
+          "Your three answers, the judges' reactions and scores, and the judges' chat in act 3.",
+          "The review: status, checks, one-liner, fixes and review comments.",
+          "A demo link, if you gave one.",
+          "A hashed, salted version of your IP address, to stop anyone running more than 3 sessions a day. Never the address itself.",
+        ],
+      },
+      {
+        heading: "Your code is never kept",
+        body: [
+          "To check your claims we read up to 10 files from your public repo. We keep them only until the review is written, a few minutes at most, and delete them within a day if you leave before then. A cache of a scan, so the same commit isn't paid for twice, is deleted after 24 hours.",
+          "Each review comment quotes a few lines from one of those files, the way a code review does. Those few lines stay with the review.",
+        ],
+      },
+      {
+        heading: "What's public",
+        body: [
+          "Nothing is listed or searchable. Your review link works for anyone you send it to, and it shows only the review: never your answers, the judges' reactions, or their chat.",
+          "The README badge shows your odds and tier, and links to that review.",
+        ],
+      },
+      {
+        heading: "How long we keep it",
+        body: [
+          "Your answers and the judges' chat: 30 days, then deleted.",
+          "The review, the odds and the claims: for as long as the site runs, because README badges and review links point at them.",
+          "File contents from your repo: until your review is written, at most a day.",
+        ],
+      },
+      {
+        heading: "Who sees it",
+        body: [
+          "The judges are AI models from Anthropic. Your README, the files we read and your answers are sent to Anthropic's API to be judged.",
+          "Everything is stored in our Supabase database. We don't sell anything, run ads, or use tracking cookies. One cookie remembers which sessions are yours.",
+        ],
+      },
+    ],
+    updated: "Last updated {date}.",
+  },
+  serverError: {
+    message: "The panel walked out mid-session. That one's on us.",
+    retry: "Try again",
+    home: "Back to start",
+  },
   notFoundPage: {
-    message: "This session doesn't exist. Maybe it never happened. Maybe it was that bad.",
+    message: "Nothing here. Maybe it never happened. Maybe it was that bad.",
     button: "Face the panel",
   },
 } as const;

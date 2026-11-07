@@ -6,9 +6,9 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { checkDemo } from "./demo-check";
 import { fetchSources, type RawRepoData } from "./github";
-import type { DemoStatus } from "./odds";
+import { parseDemoLink } from "./demo-link";
+import { checkDemoLink } from "./demo-link-check";
 import {
   ClaimsOutput,
   VerifyOutput,
@@ -17,8 +17,9 @@ import {
   type Candidate,
   type ValidScan,
 } from "./scan-validate";
-import type { Scan } from "./session";
+import type { Scan, ScanSignals } from "./session";
 import { computeSignals, findDemoUrl, npmDeps, pyDeps } from "./signals";
+import { noEmit, type Emit } from "./scan-progress";
 import { pickFiles, type Source } from "./sources";
 
 export const MODEL = "claude-haiku-5-5";
@@ -227,10 +228,16 @@ export type ScanModelResult = {
 /** Call A, the fetch, call B. Each call is retried once on bad output. */
 export async function runScanModel(
   raw: RawRepoData,
-  deps: { call?: Call; fetch?: (paths: string[]) => Promise<Source[]> } = {},
+  deps: { call?: Call; fetch?: (paths: string[]) => Promise<Source[]>; emit?: Emit } = {},
 ): Promise<ScanModelResult> {
   const call = deps.call ?? defaultCall;
-  const fetch = deps.fetch ?? ((paths) => fetchSources(raw.ref, raw.latestSha, paths));
+  const emit = deps.emit ?? noEmit;
+  const fetch =
+    deps.fetch ??
+    ((paths: string[]) =>
+      fetchSources(raw.ref, raw.latestSha, paths, (path, phase, ok) =>
+        emit(phase === "start" ? { type: "reading", path } : { type: "read", path, ok }),
+      ));
   const usage: Usage = { inputTokens: 0, outputTokens: 0 };
   const repo = raw.ref.url;
 
@@ -238,6 +245,8 @@ export async function runScanModel(
     const r = validateClaims(json, raw.headFilePaths);
     return r.ok ? { ok: true, value: r } : r;
   });
+
+  emit({ type: "claims", claims: a.claims.map((c) => c.claim) });
 
   let sources: Source[];
   try {
@@ -248,6 +257,7 @@ export async function runScanModel(
     sources = [];
   }
 
+  emit({ type: "checking", claims: a.claims.length });
   const b = await callChecked("verify", buildVerifyPrompt(raw, a.claims, sources), call, usage, repo, (json) => {
     const r = validateVerify(json, a.claims, sources);
     return r.ok ? { ok: true, value: r } : r;
@@ -256,16 +266,27 @@ export async function runScanModel(
   return { scan: b.scan, sources, usage, dropped: a.dropped, downgraded: b.downgraded };
 }
 
-async function demoStatus(url: string | null): Promise<DemoStatus> {
-  if (!url) return "none";
-  const check = await checkDemo(url);
-  return check.loads ? "loads" : "dead";
+/** Checks a demo link and records it the way the session stores it. */
+export async function demoSignal(url: string | null, provided: boolean): Promise<ScanSignals["demo"]> {
+  const link = url ? parseDemoLink(url) : null;
+  const status = await checkDemoLink(link);
+  return { status, url: status === "none" ? null : (link?.url ?? null), ...(provided ? { provided } : {}) };
 }
 
-/** The whole scan: model calls and demo check in parallel, first-commit check in code. */
-export async function scanRepo(raw: RawRepoData): Promise<{ scan: Scan; usage: Usage }> {
-  const demoUrl = findDemoUrl(raw);
-  const [model, demo] = await Promise.all([runScanModel(raw), demoStatus(demoUrl)]);
+/**
+ * The whole scan: model calls and demo checks in parallel, first-commit check in code.
+ * A demo link the team gave beats the one found in the repo; the found one is still checked
+ * and kept (`autoDemo`) so the cached scan works for a session without a link.
+ */
+export async function scanRepo(
+  raw: RawRepoData,
+  opts: { emit?: Emit; demoUrl?: string | null } = {},
+): Promise<{ scan: Scan; usage: Usage }> {
+  const [model, auto, given] = await Promise.all([
+    runScanModel(raw, { emit: opts.emit }),
+    demoSignal(findDemoUrl(raw), false),
+    opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
+  ]);
   const { firstCommitAddedOver70Pct } = computeSignals(raw, null);
   console.log(
     JSON.stringify({
@@ -280,11 +301,12 @@ export async function scanRepo(raw: RawRepoData): Promise<{ scan: Scan; usage: U
     scan: {
       ...model.scan,
       signals: {
-        demo: { status: demo, url: demo === "none" ? null : demoUrl },
+        demo: given ?? auto,
         bulkFirstCommit: firstCommitAddedOver70Pct,
       },
       files: raw.headFilePaths.slice(0, STORED_FILES),
       sources: model.sources,
+      autoDemo: auto,
     },
     usage: model.usage,
   };

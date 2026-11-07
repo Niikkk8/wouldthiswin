@@ -54,8 +54,9 @@ describe("scan cap", () => {
 });
 
 describe("signal deltas", () => {
-  test("demo link: loads +5, dead -8, none 0", () => {
+  test("demo link: loads +5, video +3, dead -8, none 0", () => {
     assert.equal(demoDelta("loads"), 5);
+    assert.equal(demoDelta("video"), 3);
     assert.equal(demoDelta("dead"), -8);
     assert.equal(demoDelta("none"), 0);
   });

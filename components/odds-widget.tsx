@@ -26,7 +26,9 @@ export function DeltaChip({
   event,
   className,
   ...props
-}: { event: Pick<OddsEvent, "delta" | "status" | "reason"> } & React.ComponentProps<typeof motion.p>) {
+}: { event: Pick<OddsEvent, "delta" | "status" | "reason"> } & React.ComponentProps<
+  typeof motion.p
+>) {
   return (
     <motion.p
       className={cn(
@@ -61,10 +63,13 @@ function announcement(e: OddsEvent): string {
 export function OddsWidget({
   events,
   travel = false,
+  waiting = false,
   note,
 }: {
   events: readonly OddsEvent[];
   travel?: boolean;
+  /** The scan is running: a slow pulse on the number until there's something to play. */
+  waiting?: boolean;
   /** A line under the chip on desktop, e.g. what the current answer can move. */
   note?: string;
 }) {
@@ -78,6 +83,7 @@ export function OddsWidget({
   const [settledAt, setSettledAt] = useState(count);
   const [flashDoneAt, setFlashDoneAt] = useState(count);
   const [scope, animate] = useAnimate<HTMLDivElement>();
+  const [pulseScope, animatePulse] = useAnimate<HTMLDivElement>();
   const fresh = settledAt !== count;
   const bigDrop = !!last && last.delta <= BIG_DROP && !reduce;
   const flashing = bigDrop && flashDoneAt !== count;
@@ -86,6 +92,22 @@ export function OddsWidget({
     const t = setTimeout(() => setSettledAt(count), 2000);
     return () => clearTimeout(t);
   }, [count]);
+
+  // Started imperatively: the widget lives under AnimatePresence initial={false}, which
+  // skips first-render animations, and the scan's wait starts on the first render.
+  useEffect(() => {
+    const el = pulseScope.current;
+    if (!el || !waiting || reduce) return;
+    const controls = animatePulse(
+      el,
+      { opacity: [1, 0.45, 1] },
+      { duration: 1.8, repeat: Infinity, ease: "easeInOut" },
+    );
+    return () => {
+      controls.stop();
+      animatePulse(el, { opacity: 1 }, { duration: 0.3 });
+    };
+  }, [waiting, reduce, animatePulse, pulseScope]);
 
   useEffect(() => {
     if (!flashing) return;
@@ -119,21 +141,24 @@ export function OddsWidget({
             {last.before}%
           </motion.s>
         )}
-        <div ref={scope}>
-          <NumberFlow
-            value={odds}
-            suffix="%"
-            aria-hidden
-            // Default mask padding adds 0.5em of height; this keeps the widget compact.
-            style={{ "--number-flow-mask-height": "0.1em" } as React.CSSProperties}
-            className={cn(
-              "text-[36px] leading-[0.9] font-black tracking-[-0.05em] transition-colors duration-200 lg:text-odds",
-              flashing ? "text-loss" : "text-text",
-            )}
-            transformTiming={{ duration: 600, easing: EASE_CSS }}
-            spinTiming={{ duration: 600, easing: EASE_CSS }}
-            opacityTiming={{ duration: 300, easing: "ease-out" }}
-          />
+        <div ref={scope} data-waiting={waiting || undefined}>
+          {/* While the scan runs: a slow pulse, on its own element so the drop shake can't cancel it. */}
+          <div ref={pulseScope}>
+            <NumberFlow
+              value={odds}
+              suffix="%"
+              aria-hidden
+              // Default mask padding adds 0.5em of height; this keeps the widget compact.
+              style={{ "--number-flow-mask-height": "0.1em" } as React.CSSProperties}
+              className={cn(
+                "text-[36px] leading-[0.9] font-black tracking-[-0.05em] transition-colors duration-200 lg:text-odds",
+                flashing ? "text-loss" : "text-text",
+              )}
+              transformTiming={{ duration: 600, easing: EASE_CSS }}
+              spinTiming={{ duration: 600, easing: EASE_CSS }}
+              opacityTiming={{ duration: 300, easing: "ease-out" }}
+            />
+          </div>
         </div>
       </div>
       {last && (

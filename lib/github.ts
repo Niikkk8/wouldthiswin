@@ -288,23 +288,31 @@ export async function fetchSources(
   ref: RepoRef,
   sha: string,
   paths: readonly string[],
+  onFile: (path: string, phase: "start" | "done", ok: boolean) => void = () => {},
   token: string | undefined = process.env.GITHUB_TOKEN,
 ): Promise<Source[]> {
   const gh = client(token);
-  const results = await Promise.all(
-    paths.map(async (path) => {
+  const results: (Source | null)[] = new Array(paths.length).fill(null);
+  // Two at a time, in order: quick enough, and each file's progress event is real.
+  let next = 0;
+  const worker = async () => {
+    while (next < paths.length) {
+      const i = next++;
+      const path = paths[i];
+      onFile(path, "start", true);
       try {
         const res = await orNull(
           gh.repos.getContent({ owner: ref.owner, repo: ref.repo, path, ref: sha, mediaType: { format: "raw" } }),
         );
         const text = typeof res?.data === "string" ? readableText(res.data) : null;
-        return text === null ? null : { path, text };
+        results[i] = text === null ? null : { path, text };
       } catch (err) {
         // One unreadable file shouldn't sink the scan; it just isn't read.
         console.warn(JSON.stringify({ event: "scan.source", path, error: String(err) }));
-        return null;
       }
-    }),
-  );
+      onFile(path, "done", results[i] !== null);
+    }
+  };
+  await Promise.all([worker(), worker()]);
   return results.filter((s): s is Source => s !== null);
 }

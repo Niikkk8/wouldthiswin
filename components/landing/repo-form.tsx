@@ -8,12 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { copy } from "@/lib/copy";
+import { parseDemoLink } from "@/lib/demo-link";
 import { parseRepoUrl } from "@/lib/repo-url";
+import { ChevronRight } from "lucide-react";
 
 export function RepoForm() {
   const router = useRouter();
   const [repo, setRepo] = useState("");
   const [invalid, setInvalid] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [demo, setDemo] = useState("");
+  const [demoInvalid, setDemoInvalid] = useState(false);
   const [pending, setPending] = useState(false);
 
   async function start(e: React.FormEvent) {
@@ -24,12 +29,18 @@ export function RepoForm() {
       toast.error(copy.errors.invalidUrl);
       return;
     }
+    const demoUrl = demoOpen && demo.trim() ? parseDemoLink(demo)?.url : undefined;
+    if (demoOpen && demo.trim() && !demoUrl) {
+      setDemoInvalid(true);
+      toast.error(copy.errors.invalidDemo);
+      return;
+    }
     setPending(true);
     try {
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ repoUrl: repo }),
+        body: JSON.stringify({ repoUrl: repo, ...(demoUrl ? { demoUrl } : {}) }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.id) {
@@ -70,6 +81,44 @@ export function RepoForm() {
       <p id="repo-note" className="mt-3 text-[14px] text-text-muted">
         {copy.landing.underButton}
       </p>
+      {/* A native disclosure: it opens even before React has hydrated. */}
+      <details
+        className="group mt-4"
+        onToggle={(e) => setDemoOpen((e.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-[14px] text-text-muted underline decoration-1 underline-offset-4 hover:text-text [&::-webkit-details-marker]:hidden">
+          <ChevronRight
+            aria-hidden
+            size={15}
+            strokeWidth={1.75}
+            className="transition-transform duration-200 group-open:rotate-90"
+          />
+          {copy.landing.demoToggle}
+        </summary>
+        <div className="mt-3">
+          <Label htmlFor="demo" className="sr-only">
+            {copy.landing.demoLabel}
+          </Label>
+          <Input
+            id="demo"
+            value={demo}
+            onChange={(e) => {
+              setDemo(e.target.value);
+              setDemoInvalid(false);
+            }}
+            placeholder={copy.landing.demoPlaceholder}
+            aria-invalid={demoInvalid || undefined}
+            aria-describedby="demo-note"
+            autoComplete="off"
+            spellCheck={false}
+            inputMode="url"
+            className="h-12 text-[15px]"
+          />
+          <p id="demo-note" className="mt-2 text-[13px] text-text-subtle">
+            {copy.landing.demoNote}
+          </p>
+        </div>
+      </details>
       <Tooltip>
         <TooltipTrigger asChild>
           <button

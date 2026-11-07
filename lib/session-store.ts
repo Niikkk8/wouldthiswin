@@ -43,7 +43,7 @@ export async function ensureOwner(): Promise<string> {
 }
 
 const COLUMNS =
-  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, version, owner_hash";
+  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, version, owner_hash, demo_url";
 
 type Row = {
   id: string;
@@ -61,6 +61,7 @@ type Row = {
   sources: SessionState["sources"] | null;
   version: number;
   owner_hash: string;
+  demo_url: string | null;
 };
 
 export type Loaded = {
@@ -69,6 +70,8 @@ export type Loaded = {
   /** The repo and commit the session was started on. */
   repoUrl: string;
   latestSha: string;
+  /** The demo link the team gave on the landing page, if any. */
+  demoUrl: string | null;
 };
 
 /** Returns the session only to the browser that started it. */
@@ -94,7 +97,7 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     files: data.files,
     sources: data.sources ?? [],
   };
-  return { session, version: data.version, repoUrl: data.repo_url, latestSha: data.latest_sha };
+  return { session, version: data.version, repoUrl: data.repo_url, latestSha: data.latest_sha, demoUrl: data.demo_url };
 }
 
 /** The client's view of a session, for this browser only. */
@@ -183,6 +186,12 @@ export async function checkLimits(ipHash: string): Promise<LimitStatus> {
   });
   if (error) throw error;
   return data as LimitStatus;
+}
+
+/** Stores the demo link the team gave. Written right after the session is reserved. */
+export async function setDemoUrl(id: string, url: string): Promise<void> {
+  const { error } = await db().from("sessions").update({ demo_url: url }).eq("id", id);
+  if (error) throw error;
 }
 
 /** True if this request should run the scan (nobody else is running it). */

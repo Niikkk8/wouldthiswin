@@ -1,6 +1,7 @@
 import { Headline } from "@/components/landing/headline";
 import { RepoForm } from "@/components/landing/repo-form";
 import { YesterdaysBoard } from "@/components/landing/yesterdays-board";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { copy } from "@/lib/copy";
 
@@ -20,6 +21,7 @@ export default function Home() {
           <YesterdaysBoard />
         </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }

@@ -56,7 +56,8 @@ export type Claim = {
 
 /** What the scan measured in code, beside the claims. */
 export type ScanSignals = {
-  demo: { status: DemoStatus; url: string | null };
+  /** `provided`: the team gave this link on the landing page (it beats auto-detection). */
+  demo: { status: DemoStatus; url: string | null; provided?: boolean };
   /** The first commit added more than 70% of today's files. */
   bulkFirstCommit: boolean;
 };
@@ -151,6 +152,8 @@ export type Scan = {
   signals: ScanSignals;
   files: string[];
   sources: Source[];
+  /** The auto-detected demo, kept so a cached scan can be reused with or without a team's own link. */
+  autoDemo?: ScanSignals["demo"];
 };
 
 /**
@@ -173,7 +176,9 @@ export function applyScan(s: SessionState, scan: Scan): Result {
   }
   const demo = demoDelta(scan.signals.demo.status);
   if (demo !== 0) {
-    const reason = scan.signals.demo.status === "loads" ? copy.odds.demoLoads : copy.odds.demoDead;
+    const status = scan.signals.demo.status;
+    const reason =
+      status === "loads" ? copy.odds.demoLoads : status === "video" ? copy.odds.demoVideo : copy.odds.demoDead;
     push({ kind: "demo", rawDelta: demo, reason });
   }
   if (scan.signals.bulkFirstCommit) {
@@ -281,7 +286,8 @@ export function settleAnswer(
 export function applyPanel(s: SessionState, panel: Panel): Result {
   if (s.act !== "deliberation") return fail("wrongAct");
   if (s.panel !== null) return fail("alreadyDeliberated");
-  return ok({ ...s, panel });
+  // The file contents were only needed to write the review; comments keep their own excerpts.
+  return ok({ ...s, panel, sources: [] });
 }
 
 export type Verdict = {

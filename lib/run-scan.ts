@@ -3,7 +3,8 @@
 
 import type { ErrorKey } from "./api";
 import { fetchRepoData, GitHubError } from "./github";
-import { ScanError, scanRepo, type Usage } from "./scan";
+import { ScanError, demoSignal, scanRepo, type Usage } from "./scan";
+import { noEmit, type Emit } from "./scan-progress";
 import { applyScan, type Scan, type SessionState } from "./session";
 import {
   addUsage,
@@ -23,10 +24,10 @@ export type ScanOutcome =
   | { kind: "notFound" }
   | { kind: "failed"; error: ErrorKey };
 
-export async function runSessionScan(id: string, owner: string | null): Promise<ScanOutcome> {
+export async function runSessionScan(id: string, owner: string | null, emit: Emit = noEmit): Promise<ScanOutcome> {
   const loaded = await loadSession(id, owner);
   if (!loaded) return { kind: "notFound" };
-  const { session, repoUrl, latestSha } = loaded;
+  const { session, repoUrl, latestSha, demoUrl } = loaded;
   if (session.claims !== null) return { kind: "done", session };
   if (session.act !== "scan") return { kind: "stale", session };
   // Another request (a second tab, a refresh) is already scanning: the client waits and asks again.
@@ -36,10 +37,16 @@ export async function runSessionScan(id: string, owner: string | null): Promise<
   try {
     let scan: Scan | null = await getCachedScan(repoUrl, latestSha);
     const cached = scan !== null;
-    if (!scan) {
+    if (scan) {
+      emit({ type: "cached" });
+      // The cache holds the repo's own demo link; a team's link is checked fresh.
+      const demo = demoUrl ? await demoSignal(demoUrl, true) : (scan.autoDemo ?? scan.signals.demo);
+      scan = { ...scan, signals: { ...scan.signals, demo } };
+    } else {
       const raw = await fetchRepoData(repoUrl);
+      emit({ type: "repo", files: raw.headFilePaths.length });
       if (!raw.readmeFull.trim()) return await fail(id, "emptyReadme", usage);
-      const result = await scanRepo(raw);
+      const result = await scanRepo(raw, { emit, demoUrl });
       scan = result.scan;
       usage = result.usage;
       await putCachedScan(repoUrl, raw.latestSha, scan);
