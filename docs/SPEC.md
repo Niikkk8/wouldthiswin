@@ -31,7 +31,7 @@ The flow is four acts plus a landing page and a share screen.
 | 2 | The grilling | Three questions, typed answers, 30s each; the odds move after each answer | "Leave the room" |
 | 3 | Deliberation | A read-only judges' chat about the project, plus a replay of every odds change and why | "See the review" |
 | 4 | The review | The verdict as a pull-request style code review (see §11.1) | "Share the review" |
-| 5 | Share | The share card with "Post to X", the public review link, the README badge. Versus and Wrapped are hidden for now. | none (end) |
+| 5 | Share | Share images in three formats, posting and download, the caption, a QR code to the phone, the public review link, the README badge. Versus and Wrapped are hidden for now. | "Post to X" (desktop) / "Share image" (phone) |
 
 ### Consistency rules
 
@@ -407,7 +407,17 @@ A 1200×630 review card in the dark system, made with `next/og`: the repo and pr
 
 See §6. Anyone with the link sees only the review; only the owner can act; never listed.
 
-### 11.5 Share screen (built)
+### 11.5 Share images (built, `GET /og/[id]/[format].png`)
+
+Per finished review, made on first request and cached by the CDN (`s-maxage` one year, immutable): `landscape` 1200×675 (X, LinkedIn), `portrait` 1080×1350 (Instagram post), `story` 1080×1920 (Instagram and WhatsApp stories, laid out inside the 250px/260px story safe area, the odds huge and the judges below). All carry the three judges' faces (pre-scaled nearest neighbour by `npm run judges`), the final odds, the verdict, the one-liner, the repo and wouldthiswin.com. The review link's preview stays the 1200×630 card.
+
+**Share events** (`POST /api/sessions/[id]/share`, table `share_events`, `docs/sql/share-events.sql`): `share_image` (with format), `x_clicked`, `linkedin_clicked`, `download` (with format), `caption_copied`. Public (the QR phone page isn't the owner), validated, only for finished reviews, capped at 200 per review. A failed insert is logged and never blocks the share.
+
+### 11.6 Share screen (built)
+
+A format picker over a preview of each image. Phone: "Share image" in the bar opens the share sheet with the PNG and the caption (`navigator.canShare` with files first; otherwise, or if sharing fails, it downloads). Desktop: "Post to X" in the bar, "Post to LinkedIn", a download per format, and a QR code opening `/s/[id]/share` (the same screen for whoever holds the link) on the phone. "Copy caption": the odds, the one-liner and the link. /demo shows the previews as sample images with no posting, downloads or QR.
+
+### 11.7 Share screen, first version
 
 The share card with "Post to X" (X's post intent, prefilled: `Judges will remember {project} as "{one-liner}" {odds}% chance to win. Would yours win?` plus the review link) and "Open"; the public review link with Copy; the README badge with its markdown and Copy. Versus and Wrapped stay hidden. Copyable links always use `NEXT_PUBLIC_SITE_URL` (default `https://wouldthiswin.com`).
 
@@ -441,7 +451,7 @@ Stop after each phase for review.
 - `/s/[id]` is public for the act 4 review only; everything else needs the owner cookie.
 - Minor claim deltas round toward zero (unbacked minor = −9).
 - Unclear claims cost −2 (core) and 0 (minor); the scan's total is capped at +20 / −30.
-- Act 2's button is "Leave the room". Act 3's button is "See the review". Act 4's is "Share the review" (Wrapped is hidden, so "Next: your night, wrapped" no longer fits).
+- **One action bar.** Every act fills one screen below the header: short content is centred, long content scrolls inside the act with a fade at the bottom, and the page itself never scrolls. A fixed bar at the bottom (`components/session/action-bar.tsx`) has "Act X of 4" on the left, any skip link as plain text beside it, and the one primary button on the right: "Continue to the grilling", "Leave the room", "See the review", "Share it". While an act plays, the button is disabled and says what's happening ("The panel is reading your repo..."); when ready it enables with one pulse, and Enter presses it. On a phone the bar is pinned with safe-area padding and the button is full width. The same bar runs real sessions and /demo.
 - The deliberation call runs when act 3 opens, not after the last answer.
 - Question order: Tired Judge, Investor, Engineer.
 - The demo link comes from an optional landing-page field first, else the repo website field or a README hosting link. A video earns less than a live demo (+3 vs +5).

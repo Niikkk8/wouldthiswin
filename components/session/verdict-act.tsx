@@ -5,7 +5,7 @@ import { ReviewView } from "@/components/review/review-view";
 import { burst } from "@/components/ui/confetti";
 import { copy } from "@/lib/copy";
 import type { SessionView } from "@/lib/session";
-import { ActFooter } from "./act-parts";
+import { ActionBar } from "./action-bar";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 /** Act 4, the review. One small confetti burst for Winner or Ready to win. */
@@ -34,7 +34,7 @@ export function VerdictAct({
   return (
     <>
       <ReviewView review={review} />
-      <ActFooter label={copy.acts.verdict.next} onClick={onNext} disabled={pending} />
+      <ActionBar label={copy.acts.verdict.next} ready pending={pending} onNext={onNext} />
     </>
   );
 }

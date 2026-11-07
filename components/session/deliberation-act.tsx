@@ -11,7 +11,8 @@ import { EASE } from "@/lib/motion";
 import { START_ODDS, toneOf, type OddsEvent, type Tone } from "@/lib/odds";
 import type { Judge, SessionView } from "@/lib/session";
 import type { Send } from "./session-shell";
-import { ActFooter, ActTitle } from "./act-parts";
+import { ActTitle } from "./act-parts";
+import { ActionBar } from "./action-bar";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const DELTA: Record<Tone, string> = { gain: "text-gain", loss: "text-loss", unclear: "text-unclear", flat: "text-text-muted" };
@@ -208,7 +209,13 @@ export function DeliberationAct({
           <Replay events={view.events} instant={reduce} />
         </section>
       </div>
-      {ready && <ActFooter label={copy.acts.deliberation.next} onClick={onNext} disabled={pending} />}
+      <ActionBar
+        label={copy.acts.deliberation.next}
+        status={failed ? copy.acts.deliberation.stuck : copy.acts.deliberation.busy}
+        ready={ready}
+        pending={pending}
+        onNext={onNext}
+      />
     </>
   );
 }

@@ -18,7 +18,7 @@ import {
   type SessionView,
 } from "@/lib/session";
 import type { Send } from "./session-shell";
-import { ActFooter } from "./act-parts";
+import { ActionBar } from "./action-bar";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const noop = () => () => {};
@@ -591,13 +591,13 @@ export function GrillingAct({
           frozen={frozen}
         />
       )}
-      {done && (
-        <ActFooter
-          label={copy.acts.grilling.next}
-          onClick={() => send({ action: "advance", from: "grilling" })}
-          disabled={pending}
-        />
-      )}
+      <ActionBar
+        label={copy.acts.grilling.next}
+        status={copy.acts.grilling.busy}
+        ready={done}
+        pending={pending}
+        onNext={() => send({ action: "advance", from: "grilling" })}
+      />
     </>
   );
 }

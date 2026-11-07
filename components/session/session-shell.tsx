@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { OddsWidget } from "@/components/odds-widget";
 import { SiteHeader } from "@/components/site-header";
@@ -10,6 +10,7 @@ import { EASE } from "@/lib/motion";
 import { ANSWER_MAX } from "@/lib/odds";
 import type { ScanProgress } from "@/lib/scan-progress";
 import { ACTS, type ActName, type SessionView } from "@/lib/session";
+import { ActFrame } from "./action-bar";
 import { DeliberationAct } from "./deliberation-act";
 import { GrillingAct } from "./grilling-act";
 import { ScanAct } from "./scan-act";
@@ -161,10 +162,6 @@ export function SessionShell({
     [initial.id, transport],
   );
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [view.act]);
-
   const advance = (from: ActName) => () => send({ action: "advance", from });
   const events =
     view.act === "scan" || view.act === "grilling" ? view.events.slice(0, revealed) : view.events;
@@ -209,32 +206,40 @@ export function SessionShell({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <SiteHeader repo={demo ? fill(copy.demo.header, { repo: view.repo }) : view.repo} status={headerStatus(view, revealed)} />
-      <main className="page-x relative flex-1 pb-16 lg:pb-20">
-        <AnimatePresence initial={false}>
-          {ODDS_ACTS.includes(view.act) && (
-            <OddsWidget
-              key="odds"
-              events={events}
-              travel={view.act === "grilling"}
-              waiting={view.act === "scan" && waiting}
-              note={asking ? fill(copy.acts.grilling.riding, { max: ANSWER_MAX }) : undefined}
-            />
-          )}
-        </AnimatePresence>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={view.act}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: reduce ? 0.2 : 0.25, ease: EASE } }}
-            transition={{ duration: reduce ? 0.2 : 0.4, ease: EASE }}
-          >
-            {act}
-          </motion.div>
-        </AnimatePresence>
-      </main>
-    </div>
+    <ActFrame
+      resetKey={view.act}
+      step={view.act === "share" ? copy.header.share : fill(copy.header.act, { n: ACTS.indexOf(view.act) + 1 })}
+      header={
+        <SiteHeader
+          repo={demo ? fill(copy.demo.header, { repo: view.repo }) : view.repo}
+          status={headerStatus(view, revealed)}
+        />
+      }
+    >
+      <AnimatePresence initial={false}>
+        {ODDS_ACTS.includes(view.act) && (
+          <OddsWidget
+            key="odds"
+            events={events}
+            travel={view.act === "grilling"}
+            waiting={view.act === "scan" && waiting}
+            note={asking ? fill(copy.acts.grilling.riding, { max: ANSWER_MAX }) : undefined}
+            // The act's own column now: its right edge is the content's.
+            className="lg:right-0!"
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={view.act}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: reduce ? 0.2 : 0.25, ease: EASE } }}
+          transition={{ duration: reduce ? 0.2 : 0.4, ease: EASE }}
+        >
+          {act}
+        </motion.div>
+      </AnimatePresence>
+    </ActFrame>
   );
 }

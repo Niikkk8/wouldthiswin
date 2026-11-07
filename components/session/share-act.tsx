@@ -1,21 +1,39 @@
 "use client";
 
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { Check, Copy, Download, ExternalLink } from "lucide-react";
 import { motion } from "motion/react";
-import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { REPO_FOCUS } from "@/components/landing/repo-form";
+import { SampleTag } from "@/components/landing/sample-tag";
+import { POST_FORMATS, SHARE_FORMATS, type PostFormat } from "@/components/share-card";
+import { QrCode } from "@/components/qr-code";
 import { ShareCardPreview } from "@/components/share-card-preview";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
-import { copy } from "@/lib/copy";
+import { copy, fill } from "@/lib/copy";
 import { EASE } from "@/lib/motion";
+import type { Review } from "@/lib/review";
 import type { SessionView } from "@/lib/session";
-import { badgeMarkdown, badgePath, ogPath, postToXUrl, reviewPath, reviewUrl } from "@/lib/site";
-import { REPO_FOCUS } from "@/components/landing/repo-form";
-import { ActTitle } from "./act-parts";
+import { logShare } from "@/lib/share-events";
+import {
+  SITE_URL,
+  badgeMarkdown,
+  badgePath,
+  captionFor,
+  imageFileName,
+  imagePath,
+  linkedInUrl,
+  postToXUrl,
+  reviewUrl,
+} from "@/lib/site";
+import { useDesktop } from "@/lib/use-desktop";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { ActTitle } from "./act-parts";
+import { ActionBar } from "./action-bar";
 
-function CopyButton({ text, label }: { text: string; label: string }) {
+const S = copy.acts.share;
+
+function CopyButton({ text, label, onCopied }: { text: string; label: string; onCopied?: () => void }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -25,15 +43,16 @@ function CopyButton({ text, label }: { text: string; label: string }) {
         try {
           await navigator.clipboard.writeText(text);
           setCopied(true);
+          onCopied?.();
           setTimeout(() => setCopied(false), 1600);
         } catch {
           setCopied(false);
         }
       }}
-      aria-label={`${copy.acts.share.copy}: ${label}`}
+      aria-label={`${S.copy}: ${label}`}
     >
       {copied ? <Check aria-hidden size={16} strokeWidth={1.75} /> : <Copy aria-hidden size={16} strokeWidth={1.75} />}
-      <span aria-live="polite">{copied ? copy.acts.share.copied : copy.acts.share.copy}</span>
+      <span aria-live="polite">{copied ? S.copied : S.copy}</span>
     </button>
   );
 }
@@ -54,72 +73,218 @@ function Field({ label, note, value, children }: { label: string; note: string; 
   );
 }
 
-/** The share screen: the card, the X post, the public review link and the README badge. */
-export function ShareAct({ view, demo = false }: { view: SessionView; demo?: boolean }) {
+/** The largest box of the image's shape that fits the column and a share of the screen's height. */
+function useFit(format: PostFormat) {
+  const { width, height } = SHARE_FORMATS[format];
+  const ref = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const maxH = Math.min(window.innerHeight * (window.innerWidth >= 1024 ? 0.46 : 0.5), 560);
+      setW(Math.floor(Math.min(el.clientWidth, (maxH * width) / height)));
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [width, height]);
+  return { ref, w, h: Math.round((w * height) / width) };
+}
+
+/** The image people will post: the real PNG, or for the sample, the same card drawn in the page. */
+function Preview({ review, format, sample }: { review: Review; format: PostFormat; sample: boolean }) {
+  const { ref, w, h } = useFit(format);
+  const alt = fill(S.imageAlt, { repo: review.repo, odds: review.odds, tier: copy.tiers[review.tier], oneLiner: review.oneLiner });
+  return (
+    <div ref={ref} className="mt-4 w-full">
+      {w > 0 &&
+        (sample ? (
+          <div style={{ width: w }}>
+            <ShareCardPreview key={format} review={review} format={format} label={alt} />
+          </div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={format}
+            src={imagePath(review.id, format)}
+            alt={alt}
+            width={w}
+            height={h}
+            style={{ width: w, height: h }}
+            className="rounded-card border border-border bg-surface"
+          />
+        ))}
+    </div>
+  );
+}
+
+function FormatPicker({ format, onChange }: { format: PostFormat; onChange: (f: PostFormat) => void }) {
+  return (
+    <div role="group" aria-label={S.formatsLabel} className="inline-flex rounded-control border border-border-strong p-1">
+      {POST_FORMATS.map((f) => (
+        <button
+          key={f}
+          type="button"
+          aria-pressed={f === format}
+          onClick={() => onChange(f)}
+          className="rounded-[6px] px-3.5 py-1.5 text-[15px] font-bold text-text-muted transition-colors hover:text-text aria-pressed:bg-surface-2 aria-pressed:text-text"
+        >
+          {S.formats[f]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const noSubscribe = () => () => {};
+
+/** Prefetched image files, so the share sheet opens inside the tap that asked for it. */
+function useImageFiles(review: Review, enabled: boolean, format: PostFormat) {
+  const files = useRef(new Map<PostFormat, Promise<File | null>>());
+  const get = (f: PostFormat) => {
+    let p = files.current.get(f);
+    if (!p) {
+      p = fetch(imagePath(review.id, f))
+        .then((r) => (r.ok ? r.blob() : null))
+        .then((b) => (b ? new File([b], imageFileName(review, f), { type: "image/png" }) : null))
+        .catch(() => null);
+      files.current.set(f, p);
+    }
+    return p;
+  };
+  useEffect(() => {
+    if (enabled) void get(format);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, format]);
+  return get;
+}
+
+function downloadFile(file: File) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = file.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/**
+ * The share screen: the images in each format, and every way to post them. In the sample
+ * session the images are drawn from the fixture and nothing links to a review that doesn't
+ * exist. `phone` is the page the QR code opens: the same screen for whoever holds the link.
+ */
+export function ShareScreen({ review: r, demo = false, phone = false }: { review: Review; demo?: boolean; phone?: boolean }) {
   const reduce = useReducedMotion();
-  const r = view.review;
-  if (!r) return null;
+  const desktop = useDesktop();
+  const [format, setFormat] = useState<PostFormat>("landscape");
+  const getFile = useImageFiles(r, !demo && !desktop, format);
+  const caption = captionFor(r);
+  const origin = useSyncExternalStore(noSubscribe, () => window.location.origin, () => SITE_URL);
+
+  const shareImage = async () => {
+    logShare(r.id, { kind: "share_image", format });
+    const file = await getFile(format);
+    if (!file) {
+      window.open(imagePath(r.id, format), "_blank", "noopener");
+      return;
+    }
+    const data: ShareData = { files: [file], text: caption, title: copy.meta.title };
+    if (navigator.canShare?.(data)) {
+      try {
+        await navigator.share(data);
+      } catch (err) {
+        // Closing the share sheet is fine. Anything else (the browser said it could share
+        // files, then refused): fall back to saving the image.
+        if ((err as Error)?.name !== "AbortError") downloadFile(file);
+      }
+    } else downloadFile(file);
+  };
+
   return (
     <>
-      <ActTitle eyebrow={copy.acts.share.eyebrow} title={copy.acts.share.title} />
-      <div className="mt-8 grid gap-10 lg:mt-14 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-16">
+      <ActTitle eyebrow={S.eyebrow} title={phone ? S.phoneTitle : S.title} />
+      <div className="mt-8 grid gap-10 lg:mt-12 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-16">
         <motion.section
           className="min-w-0"
-          aria-labelledby="card"
+          aria-label={S.card}
           initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduce ? 0.2 : 0.4, ease: EASE }}
         >
-          <h2 id="card" className="label-mono uppercase">
-            {copy.acts.share.card}
-          </h2>
-          {demo ? (
-            <ShareCardPreview
-              review={r}
-              label={`${r.repo}: ${r.odds}%, ${copy.tiers[r.tier]} "${r.oneLiner}"`}
-              className="mt-3"
-            />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={ogPath(r.id)}
-              alt={`${r.repo}: ${r.odds}%, ${copy.tiers[r.tier]} "${r.oneLiner}"`}
-              width={1200}
-              height={630}
-              className="mt-3 aspect-[1200/630] w-full rounded-card border border-border bg-surface"
-            />
-          )}
-          {!demo && (
-          <div className="mt-4 flex flex-wrap gap-3">
-            <a href={postToXUrl(r)} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants(), "gap-2")}>
-              {copy.acts.share.postX}
-              <ExternalLink aria-hidden size={16} strokeWidth={1.75} />
-            </a>
-            <a href={reviewPath(r.id)} target="_blank" rel="noopener" className={cn(buttonVariants({ variant: "secondary" }), "gap-2")}>
-              {copy.acts.share.open}
-            </a>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+            <FormatPicker format={format} onChange={setFormat} />
+            {demo ? <SampleTag>{copy.demo.sampleImages}</SampleTag> : <p className="label-mono">{S.formatNotes[format]}</p>}
           </div>
-          )}
+          <Preview review={r} format={format} sample={demo} />
         </motion.section>
 
         <motion.div
-          className="grid min-w-0 content-start gap-10"
+          className="grid min-w-0 content-start gap-9"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: reduce ? 0.2 : 0.4, ease: EASE, delay: reduce ? 0 : 0.15 }}
         >
           {demo ? (
-            // A sample has no real link or badge to copy; point at the real thing instead.
-            <section className="min-w-0">
-              <p className="text-[20px] leading-snug font-bold">{copy.demo.shareNote}</p>
-              <Link href={`/#${REPO_FOCUS}`} className={cn(buttonVariants(), "mt-5")}>
-                {copy.demo.yourTurn}
-              </Link>
-            </section>
+            <p className="text-[20px] leading-snug font-bold">{copy.demo.shareNote}</p>
           ) : (
             <>
-              <Field label={copy.acts.share.link} note={copy.acts.share.linkNote} value={reviewUrl(r.id)} />
-              <Field label={copy.acts.share.badge} note={copy.acts.share.badgeNote} value={badgeMarkdown(r.id)}>
+              {/* Desktop posting; on a phone the share sheet covers all of it. */}
+              <section className="grid gap-3 max-lg:hidden">
+                <a
+                  href={linkedInUrl(r.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => logShare(r.id, { kind: "linkedin_clicked" })}
+                  className={cn(buttonVariants({ variant: "secondary" }), "w-full")}
+                >
+                  {S.postLinkedIn}
+                  <ExternalLink aria-hidden size={16} strokeWidth={1.75} />
+                </a>
+                <h2 className="label-mono mt-4 uppercase">{S.downloads}</h2>
+                <div className="grid grid-cols-3 gap-2">
+                  {POST_FORMATS.map((f) => (
+                    <a
+                      key={f}
+                      href={imagePath(r.id, f)}
+                      download={imageFileName(r, f)}
+                      onClick={() => logShare(r.id, { kind: "download", format: f })}
+                      aria-label={fill(S.downloadFormat, { format: S.formats[f] })}
+                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "gap-1.5 px-3 text-[14px]")}
+                    >
+                      <Download aria-hidden size={16} strokeWidth={1.75} />
+                      {S.formats[f]}
+                    </a>
+                  ))}
+                </div>
+              </section>
+
+              <section className="min-w-0">
+                <h2 className="label-mono uppercase">{S.captionLabel}</h2>
+                <p className="mt-3 rounded-control border border-border bg-surface px-3.5 py-3 text-[15px] leading-snug text-text-muted">
+                  {caption}
+                </p>
+                <div className="mt-2">
+                  <CopyButton text={caption} label={S.captionLabel} onCopied={() => logShare(r.id, { kind: "caption_copied" })} />
+                </div>
+              </section>
+
+              {!phone && (
+                <section className="flex items-center gap-5 max-lg:hidden">
+                  <QrCode text={`${origin}/s/${r.id}/share`} label={S.qrNote} />
+                  <div>
+                    <h2 className="label-mono uppercase">{S.qr}</h2>
+                    <p className="mt-2 text-[15px] leading-snug text-text-muted">{S.qrNote}</p>
+                  </div>
+                </section>
+              )}
+
+              <Field label={S.link} note={S.linkNote} value={reviewUrl(r.id)} />
+              <Field label={S.badge} note={S.badgeNote} value={badgeMarkdown(r.id)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={badgePath(r.id)} alt={`would this win: ${r.odds}% ${copy.tiers[r.tier]}`} height={20} className="mt-3 h-5 w-auto" />
               </Field>
@@ -127,6 +292,27 @@ export function ShareAct({ view, demo = false }: { view: SessionView; demo?: boo
           )}
         </motion.div>
       </div>
+
+      {demo ? (
+        <ActionBar label={copy.demo.yourTurn} ready href={`/#${REPO_FOCUS}`} />
+      ) : desktop ? (
+        <ActionBar
+          label={S.postX}
+          ready
+          onNext={() => {
+            logShare(r.id, { kind: "x_clicked" });
+            window.open(postToXUrl(r), "_blank", "noopener,noreferrer");
+          }}
+        />
+      ) : (
+        <ActionBar label={S.shareImage} ready onNext={() => void shareImage()} />
+      )}
     </>
   );
+}
+
+/** After act 4. */
+export function ShareAct({ view, demo = false }: { view: SessionView; demo?: boolean }) {
+  if (!view.review) return null;
+  return <ShareScreen review={view.review} demo={demo} />;
 }

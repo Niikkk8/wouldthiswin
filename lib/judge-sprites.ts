@@ -44,6 +44,9 @@ export const sheetPath = (judge: Judge) => `/judges/${judge}-sheet.png`;
 export const AVATAR_SIZE = 40;
 /** The share card's heads, pre-scaled to exactly this, nearest neighbour. */
 export const CARD_HEAD = 40;
+/** Whole base frames for the share images, pre-scaled the same way. */
+export const FACE_SIZES = [128, 256] as const;
+export type FaceSize = (typeof FACE_SIZES)[number];
 
 /** The square of each base frame used for head avatars, in sprite pixels. */
 export const HEAD_CROP: Record<Judge, { x: number; y: number; size: number }> = {

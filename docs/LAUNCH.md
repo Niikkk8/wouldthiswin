@@ -34,3 +34,7 @@ The schema lives in the local, gitignored `supabase/schema.sql` and is run by ha
 ## Test data
 
 `npm run clear-test-data` lists sessions from test buckets (local runs, TEST-NET IPs) without deleting; `-- --yes` deletes them. The database in `.env` is production.
+
+## Share events table
+
+Run once before share events can be recorded: `psql "$DATABASE_URL" -f docs/sql/share-events.sql`. Until then the share screen works and each logging call writes a `share.log` error line.

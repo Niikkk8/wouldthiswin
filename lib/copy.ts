@@ -176,7 +176,13 @@ export const copy = {
         unclear: "The panel has questions about the amber lines.",
         clean: "Every claim checks out. The panel will have to dig.",
       },
-      next: "Face the panel",
+      next: "Continue to the grilling",
+      // The bar's button while the act is still playing.
+      busy: {
+        reading: "The panel is reading your repo...",
+        checking: "The panel is checking each claim...",
+        stopped: "The scan stopped",
+      },
     },
     grilling: {
       answerLabel: "Your answer",
@@ -188,6 +194,7 @@ export const copy = {
       you: "You",
       silence: "(silence)",
       next: "Leave the room",
+      busy: "The panel is still asking...",
       tenSeconds: "10 seconds left.",
       // Used when the scoring call fails twice. Nobody loses points for our outage.
       unscored: "Didn't catch that. No change.",
@@ -216,15 +223,37 @@ export const copy = {
       night: "Your night so far",
       chart: "Chance to win after each event, from 50% at the start to {odds}% now.",
       next: "See the review",
+      busy: "The panel is deliberating...",
+      stuck: "Waiting on the panel...",
     },
     verdict: {
-      next: "Share the review",
+      next: "Share it",
     },
     share: {
       eyebrow: "Share",
       title: "Post the review.",
       card: "Share card",
+      formats: { landscape: "Landscape", portrait: "Portrait", story: "Story" },
+      formatsLabel: "Image format",
+      formatNotes: {
+        landscape: "1200 × 675 · X, LinkedIn",
+        portrait: "1080 × 1350 · Instagram post",
+        story: "1080 × 1920 · Instagram and WhatsApp stories",
+      },
+      imageAlt: '{repo}: {odds}%, {tier} "{oneLiner}"',
       postX: "Post to X",
+      postLinkedIn: "Post to LinkedIn",
+      shareImage: "Share image",
+      download: "Download",
+      downloadFormat: "Download {format}",
+      downloads: "Download the image",
+      // The phone's share sheet: the image goes with this caption.
+      caption: 'The judges will remember {repo} as "{oneLiner}". {odds}% chance to win. Would yours win? {url}',
+      captionLabel: "Caption",
+      copyCaption: "Copy caption",
+      qr: "Instagram",
+      qrNote: "Scan with your phone to open this screen there, then share the image to Instagram.",
+      phoneTitle: "Share the review.",
       // Prefilled post. Kept short: X adds the link.
       postText: 'Judges will remember {repo} as "{oneLiner}" {odds}% chance to win. Would yours win?',
       link: "Public review link",
@@ -301,6 +330,7 @@ export const copy = {
     play: "Play the full sample session",
     yourTurn: "Face the panel with your repo",
     shareNote: "Your link and badge show up here after your own session.",
+    sampleImages: "Sample images",
   },
   footer: {
     builtBy: "Built by",

@@ -1,8 +1,6 @@
 "use client";
 
 import { motion } from "motion/react";
-import { cn } from "cn";
-import { Button } from "@/components/ui/button";
 import { EASE } from "@/lib/motion";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
@@ -22,35 +20,5 @@ export function ActTitle({ eyebrow, title }: { eyebrow?: string; title: string }
         {title}
       </h1>
     </motion.div>
-  );
-}
-
-/** The one way forward out of an act. */
-export function ActFooter({
-  line,
-  label,
-  onClick,
-  disabled,
-  className,
-}: {
-  line?: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  className?: string;
-}) {
-  return (
-    <div
-      data-demo-hide
-      className={cn(
-        "mt-16 flex flex-col gap-6 border-t border-border pt-8 sm:flex-row sm:items-center sm:justify-between",
-        className,
-      )}
-    >
-      <p className="text-[20px] leading-snug font-bold text-balance">{line}</p>
-      <Button onClick={onClick} disabled={disabled} className="w-full sm:w-auto">
-        {label}
-      </Button>
-    </div>
   );
 }

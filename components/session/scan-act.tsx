@@ -14,7 +14,8 @@ import { EASE } from "@/lib/motion";
 import { toneOf, type OddsEvent, type Tone } from "@/lib/odds";
 import { progressLine, type ScanProgress } from "@/lib/scan-progress";
 import type { Claim, SessionView } from "@/lib/session";
-import { ActFooter, ActTitle } from "./act-parts";
+import { ActTitle } from "./act-parts";
+import { ActionBar } from "./action-bar";
 import type { Send } from "./session-shell";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
@@ -527,21 +528,26 @@ function XRay({
         </svg>
       </div>
 
-      {!done && (
-        <button
-          type="button"
-          data-demo-hide
-          onClick={() => {
-            landed.current = total;
-            setStarted(true);
-            onReveal(total);
-          }}
-          className="label-mono mt-8 underline underline-offset-4 hover:text-text"
-        >
-          {copy.acts.scan.skip}
-        </button>
-      )}
-      {done && <ActFooter line={footer} label={copy.acts.scan.next} onClick={onNext} disabled={pending} />}
+      {done && <p className="mt-12 text-[20px] leading-snug font-bold text-balance lg:mt-14">{footer}</p>}
+      <ActionBar
+        label={copy.acts.scan.next}
+        status={copy.acts.scan.busy.checking}
+        ready={done}
+        pending={pending}
+        onNext={onNext}
+        skip={
+          done
+            ? null
+            : {
+                label: copy.acts.scan.skip,
+                onClick: () => {
+                  landed.current = total;
+                  setStarted(true);
+                  onReveal(total);
+                },
+              }
+        }
+      />
     </>
   );
 }
@@ -613,6 +619,13 @@ export function ScanAct({
         <XRay view={view} revealed={revealed} onReveal={onReveal} onNext={onNext} pending={pending} />
       ) : (
         <LiveScan live={live} repo={view.repo} />
+      )}
+      {!scanned && (
+        <ActionBar
+          label={copy.acts.scan.next}
+          status={failed ? copy.acts.scan.busy.stopped : copy.acts.scan.busy.reading}
+          ready={false}
+        />
       )}
     </>
   );
