@@ -54,8 +54,10 @@ describe("the prompt", () => {
     const { system, user } = buildAnswerPrompt(input("Twilio, in lib/sms.ts."));
     assert.match(user, /The Engineer/);
     assert.match(user, /What sends the SMS\?/);
-    assert.match(user, /core, unbacked: SMS alerts/);
-    assert.match(user, /core, backed: Live queue updates \(lib\/queue\.ts\)/);
+    // Findings go in as evidence, never as verdict words the judge might repeat.
+    assert.match(user, /- core: SMS alerts\. Couldn't find it in the files read: e/);
+    assert.match(user, /- core: Live queue updates\. Found in the code: e/);
+    assert.doesNotMatch(user, /backed/);
     assert.match(user, /<untrusted_answer>\nTwilio, in lib\/sms\.ts\.\n<\/untrusted_answer>/);
     assert.doesNotMatch(user + system, /readme/i);
   });
@@ -149,7 +151,7 @@ describe("scoring", () => {
   });
 
   test("two failures score 0 instead of stalling the room", async () => {
-    const m = model({ why: "w", score: "12", reaction: "r" }, { why: "w", score: 4, reaction: "" });
+    const m = model({ why: "w", score: "12", reaction: "r" }, { why: "w", reaction: "no score at all" });
     const out = await scoreAnswer(input("a"), m.call);
     assert.deepEqual([out.score, out.reason, out.source], [0, copy.acts.grilling.unscored, "fallback"]);
   });
@@ -159,6 +161,20 @@ describe("scoring", () => {
     const out = await scoreAnswer(input("a"), m.call);
     assert.equal(m.sent.length, 1);
     assert.equal(out.score, 0);
+  });
+});
+
+describe("blunt about the evidence, never the person", () => {
+  test("a reaction with a verdict word or an insult is retried", async () => {
+    const m = model({ why: "w", score: -8, reaction: "You're lying. Nothing backs this." }, { why: "w", score: -8, reaction: "No SMS code in package.json." });
+    const out = await scoreAnswer(input("We send SMS via Twilio."), m.call);
+    assert.deepEqual([out.score, out.reason], [-8, "No SMS code in package.json."]);
+  });
+
+  test("if the retry is no better, the score stands and a plain line replaces the reaction", async () => {
+    const m = model({ why: "w", score: -9, reaction: "fraud." }, { why: "w", score: -9, reaction: "still a liar." });
+    const out = await scoreAnswer(input("We send SMS via Twilio."), m.call);
+    assert.deepEqual([out.score, out.reason], [-9, copy.acts.grilling.noted.engineer]);
   });
 });
 

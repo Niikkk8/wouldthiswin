@@ -35,10 +35,19 @@ export const copy = {
     investor: { name: "The Investor", initials: "IN" },
     tired: { name: "The Tired Judge", initials: "TJ" },
   },
+  // Scan findings. They describe evidence, never motives, and never use "unbacked".
   scan: {
-    citedMissing: "Cites {path}, which isn't in the repo",
-    citedNothing: "Says it's backed, but cites no file",
-    cantVerify: "{claim}: can't verify",
+    notFoundIn: "Couldn't find {missing} in {paths}.",
+    notFoundLabel: "Couldn't find {missing}",
+    foundIn: "Found in {path}.",
+    foundLabel: "{claim}: found in code",
+    citedUnread: "Points to {path}, which wasn't read.",
+    citedNothing: "No file shows this yet.",
+    quoteMissing: "Couldn't find the quoted line in {path}.",
+    notRead: "Couldn't read the files where this would live.",
+    notAllRead: "Only some of the files where this would live were read.",
+    notConfirmed: "Couldn't confirm this from the files read.",
+    cantVerify: "{claim}: couldn't verify",
   },
   odds: {
     label: "Chance to win",
@@ -69,9 +78,9 @@ export const copy = {
         "Writing the panel's questions.",
       ],
       noClaims: "The README doesn't claim anything checkable. Judges will notice that too.",
-      notFound: "{missing}: not found",
-      notFoundPlain: "Not found",
-      searched: "searched {paths}",
+      notFound: "Couldn't find {missing}",
+      notFoundPlain: "Couldn't find it",
+      searched: "Looked in {paths}",
       demo: "Demo link",
       demoLoads: "Loads: {host}",
       demoDead: "Dead: {host}",
@@ -99,6 +108,12 @@ export const copy = {
       tenSeconds: "10 seconds left.",
       // Used when the scoring call fails twice. Nobody loses points for our outage.
       unscored: "Didn't catch that. No change.",
+      // When the judge's own reaction can't be shown: the score stands, this line replaces it.
+      noted: {
+        tired: "noted.",
+        investor: "Noted. Moving on.",
+        engineer: "Noted. Next question.",
+      },
       // An answer that tries to give the judge instructions, in each judge's voice.
       injection: {
         tired: "nice try. that's not an answer.",

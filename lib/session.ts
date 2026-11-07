@@ -3,6 +3,7 @@
 
 import { copy } from "./copy";
 import { displayTree } from "./file-tree";
+import type { Source } from "./sources";
 import {
   type ClaimStatus,
   type ClaimWeight,
@@ -46,8 +47,10 @@ export type Claim = {
   label: string;
   /** Unbacked claims: what's missing, e.g. "SMS provider". */
   missing: string | null;
-  /** Unbacked claims: where it was looked for. Every entry exists in the repo. */
+  /** Unbacked claims: the files that were read looking for it. */
   searched: string[];
+  /** Backed claims: a line (at most 120 characters) found verbatim in `file`. */
+  quote?: string | null;
 };
 
 /** What the scan measured in code, beside the claims. */
@@ -98,6 +101,8 @@ export type SessionState = {
   signals: ScanSignals | null;
   /** Every file path in the repo at scan time (capped). Later acts may only cite these. */
   files: string[];
+  /** The files the scan fetched and read (truncated). Review comments may only quote these. */
+  sources: Source[];
 };
 
 export type SessionError =
@@ -129,6 +134,7 @@ export function newSession(id: string, repo: string): SessionState {
     panel: null,
     signals: null,
     files: [],
+    sources: [],
   };
 }
 
@@ -137,6 +143,7 @@ export type Scan = {
   questions: Omit<Question, "issuedAt">[];
   signals: ScanSignals;
   files: string[];
+  sources: Source[];
 };
 
 /**
@@ -172,6 +179,7 @@ export function applyScan(s: SessionState, scan: Scan): Result {
     events,
     signals: scan.signals,
     files: scan.files,
+    sources: scan.sources,
   });
 }
 

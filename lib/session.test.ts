@@ -36,7 +36,7 @@ const questions = [
 
 const noSignals: ScanSignals = { demo: { status: "none", url: null }, bulkFirstCommit: false };
 const files = ["lib/queue.ts", "config/hospital.ts", "package.json"];
-const scan = (c = claims, signals = noSignals) => ({ claims: c, questions, signals, files });
+const scan = (c = claims, signals = noSignals) => ({ claims: c, questions, signals, files, sources: [] });
 
 const panel: Panel = { chat: [], oneLiner: "the one that texts you", fixes: ["a", "b", "c"], charge: "of overpromising" };
 

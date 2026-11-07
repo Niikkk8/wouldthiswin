@@ -40,11 +40,4 @@ export function failMutation(r: Extract<MutateResult, { ok: false }>) {
   return fail("stale", r.session);
 }
 
-export function clientIp(req: Request): string {
-  // On Vercel these are set by the platform, not passed through from the client.
-  return (
-    req.headers.get("x-real-ip") ??
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown"
-  );
-}
+export { clientIp } from "./client-ip";

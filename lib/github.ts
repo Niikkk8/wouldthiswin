@@ -1,5 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import { parseRepoUrl, type RepoRef } from "./repo-url";
+import { readableText, type Source } from "./sources";
 
 export { parseRepoUrl, type RepoRef };
 
@@ -277,4 +278,33 @@ export async function fetchRepoData(
   } catch (err) {
     throw toGitHubError(err);
   }
+}
+
+/**
+ * Fetches the files the scan will read, at the scanned commit. Unreadable ones (missing,
+ * binary, minified, generated) are left out, so callers can tell what was actually read.
+ */
+export async function fetchSources(
+  ref: RepoRef,
+  sha: string,
+  paths: readonly string[],
+  token: string | undefined = process.env.GITHUB_TOKEN,
+): Promise<Source[]> {
+  const gh = client(token);
+  const results = await Promise.all(
+    paths.map(async (path) => {
+      try {
+        const res = await orNull(
+          gh.repos.getContent({ owner: ref.owner, repo: ref.repo, path, ref: sha, mediaType: { format: "raw" } }),
+        );
+        const text = typeof res?.data === "string" ? readableText(res.data) : null;
+        return text === null ? null : { path, text };
+      } catch (err) {
+        // One unreadable file shouldn't sink the scan; it just isn't read.
+        console.warn(JSON.stringify({ event: "scan.source", path, error: String(err) }));
+        return null;
+      }
+    }),
+  );
+  return results.filter((s): s is Source => s !== null);
 }

@@ -1,45 +1,45 @@
-// Checks the model's scan in code. Nothing it says about the repo is trusted: every path it
-// cites is looked up in the real file list, and anything malformed is dropped.
+// Checks the model's scan in code. Nothing it says about the repo is trusted: candidate
+// files must exist, "backed" needs a line found verbatim in a file that was actually read,
+// and "unbacked" needs every file it would live in to have been read. Code writes every
+// "couldn't find" finding, so users see evidence, never a verdict word.
 
 import { z } from "zod";
 import { copy, fill } from "./copy";
-import { pathExists } from "./file-tree";
+import type { ClaimWeight } from "./odds";
 import { JUDGES, QUESTION_COUNT, type Claim, type Judge, type Question } from "./session";
+import type { Source } from "./sources";
 
 export const MAX_CLAIMS = 6;
+export const MAX_CANDIDATES = 2;
+export const MAX_QUOTE = 120;
 export const MAX_QUESTION_CHARS = 220;
-const MAX_SEARCHED = 3;
 
-// The shape the model is asked for. Kept loose (no length limits) because structured
-// output schemas don't enforce them; validateScan does.
-const ModelClaim = z.object({
+// Call A: claims and where each would live. Kept loose; validateClaims enforces limits.
+const ModelCandidate = z.object({
   claim: z.string(),
   weight: z.enum(["core", "minor"]),
+  candidates: z.array(z.string()),
+});
+export const ClaimsOutput = z.object({ claims: z.array(ModelCandidate) });
+
+// Call B: a verdict per claim (by 1-based id) and the questions.
+const ModelVerdict = z.object({
+  id: z.number(),
   status: z.enum(["backed", "unbacked", "unclear"]),
   file: z.string().nullable(),
+  quote: z.string().nullable(),
   evidence: z.string(),
   label: z.string(),
   missing: z.string().nullable(),
-  searched: z.array(z.string()),
 });
-
 const ModelQuestion = z.object({ text: z.string(), caught: z.string().nullable() });
-
-export const ScanOutput = z.object({
-  claims: z.array(ModelClaim),
+export const VerifyOutput = z.object({
+  verdicts: z.array(ModelVerdict),
   questions: z.object({ engineer: ModelQuestion, investor: ModelQuestion, tired: ModelQuestion }),
-});
-export type ScanOutput = z.infer<typeof ScanOutput>;
-
-// The same claim with the limits enforced. A claim that fails these is dropped.
-const StrictClaim = ModelClaim.extend({
-  claim: z.string().trim().min(1).max(120),
-  evidence: z.string().trim().min(1).max(160),
-  label: z.string().trim().min(1).max(80),
-  missing: z.string().trim().max(60).nullable(),
 });
 
 const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
+const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
 
 /** Cleans a model-written path. Returns null for anything that can't be a repo path. */
 export function normalizePath(p: string | null): string | null {
@@ -50,83 +50,158 @@ export function normalizePath(p: string | null): string | null {
   return s;
 }
 
+export type Candidate = { claim: string; weight: ClaimWeight; candidates: string[] };
+
+export type ClaimsCheck =
+  | { ok: true; claims: Candidate[]; dropped: number }
+  | { ok: false; reason: string };
+
+/** Call A: at most 6 claims, each with at most 2 candidate files that exist in the repo. */
+export function validateClaims(output: unknown, files: readonly string[]): ClaimsCheck {
+  const top = z.object({ claims: z.array(z.unknown()) }).safeParse(output);
+  if (!top.success) return { ok: false, reason: "shape" };
+  const fileSet = new Set(files);
+  let dropped = 0;
+  const claims: Candidate[] = [];
+  for (const raw of top.data.claims) {
+    const c = ModelCandidate.safeParse(raw);
+    const text = c.success ? oneLine(c.data.claim) : "";
+    if (!c.success || !text || text.length > 120 || claims.length >= MAX_CLAIMS) {
+      dropped++;
+      continue;
+    }
+    const candidates = [...new Set(c.data.candidates.map(normalizePath))]
+      .filter((p): p is string => p !== null && fileSet.has(p))
+      .slice(0, MAX_CANDIDATES);
+    claims.push({ claim: text, weight: c.data.weight, candidates });
+  }
+  return { ok: true, claims, dropped };
+}
+
+// Words that judge instead of describe. A model label using one is replaced by code's own.
+const VERDICT_WORDS =
+  /\b(un)?backed\b|\bnot backed\b|\bunsupported\b|\blie[sd]?\b|\blying\b|\bfake[ds]?\b|\bdishonest\b|\bpretend(s|ing)?\b|\bbluff(s|ing)?\b|\bmislead(s|ing)?\b|\bfraud\b/i;
+
+/** "a or b", "a, b or c". */
+export function joinPaths(paths: readonly string[]): string {
+  if (paths.length <= 1) return paths[0] ?? "";
+  return `${paths.slice(0, -1).join(", ")} or ${paths.at(-1)}`;
+}
+
 export type ValidScan = { claims: Claim[]; questions: Omit<Question, "issuedAt">[] };
 
 export type ScanCheck =
-  | { ok: true; scan: ValidScan; dropped: number; downgraded: number }
+  | { ok: true; scan: ValidScan; downgraded: number }
   | { ok: false; reason: string };
 
 /**
- * Validates the model's output against the real file list.
- * - A claim that fails the schema is dropped. At most 6 are kept.
- * - "backed" must cite a path that exists, or it becomes "unclear".
- * - Unbacked claims cite no file; their "searched" list keeps only real paths.
- * - Every judge needs a question of at most 220 characters, or the whole scan fails (and is retried).
+ * Call B, checked against what was actually read:
+ * - "backed" must name a file that was read and quote a line (at most 120 characters) found
+ *   in it verbatim. Otherwise "unclear".
+ * - "unbacked" needs every candidate file of the claim to have been read. Otherwise "unclear".
+ * - A claim with no verdict is "unclear".
+ * - Every judge needs a question of at most 220 characters, or the whole call fails (and is retried).
  */
-export function validateScan(output: unknown, files: readonly string[]): ScanCheck {
+export function validateVerify(
+  output: unknown,
+  candidates: readonly Candidate[],
+  sources: readonly Source[],
+): ScanCheck {
   const top = z
-    .object({ claims: z.array(z.unknown()), questions: z.record(z.string(), z.unknown()) })
+    .object({ verdicts: z.array(z.unknown()), questions: z.record(z.string(), z.unknown()) })
     .safeParse(output);
   if (!top.success) return { ok: false, reason: "shape" };
 
-  const fileSet = new Set(files);
-  const exists = (p: string | null) => p !== null && pathExists(fileSet, p);
-
-  let dropped = 0;
-  let downgraded = 0;
-  const claims: Claim[] = [];
-  for (const raw of top.data.claims) {
-    const parsed = StrictClaim.safeParse(raw);
-    if (!parsed.success) {
-      dropped++;
-      continue;
-    }
-    if (claims.length >= MAX_CLAIMS) {
-      dropped++;
-      continue;
-    }
-    const c = parsed.data;
-    const file = normalizePath(c.file);
-    const claim = oneLine(c.claim);
-    let status = c.status;
-    let evidence = oneLine(c.evidence);
-    let label = oneLine(c.label);
-    let cited: string | null = exists(file) ? file : null;
-
-    if (status === "backed" && !cited) {
-      // The model said a file backs this, but no such file exists. Code decides, not the model.
-      status = "unclear";
-      downgraded++;
-      evidence = file
-        ? fill(copy.scan.citedMissing, { path: file.slice(0, 80) })
-        : copy.scan.citedNothing;
-      label = fill(copy.scan.cantVerify, { claim: claim.slice(0, 50) });
-    }
-    // The model's own evidence says "partly" but its status says "backed": take the weaker one.
-    if (status === "backed" && cited && /^partly\b/i.test(evidence)) {
-      status = "unclear";
-      downgraded++;
-    }
-    if (status === "unbacked") cited = null;
-
-    const searched =
-      status === "unbacked"
-        ? [...new Set(c.searched.map(normalizePath))]
-            .filter((p): p is string => exists(p))
-            .slice(0, MAX_SEARCHED)
-        : [];
-
-    claims.push({
-      claim,
-      status,
-      weight: c.weight,
-      file: cited,
-      evidence,
-      label,
-      missing: status === "unbacked" && c.missing ? oneLine(c.missing) : null,
-      searched,
-    });
+  const read = new Map(sources.map((s) => [s.path, s.text]));
+  const verdicts = new Map<number, z.infer<typeof ModelVerdict>>();
+  for (const v of top.data.verdicts) {
+    const p = ModelVerdict.safeParse(v);
+    if (p.success && !verdicts.has(p.data.id)) verdicts.set(p.data.id, p.data);
   }
+
+  let downgraded = 0;
+  const claims: Claim[] = candidates.map((c, i) => {
+    const v = verdicts.get(i + 1);
+    const readHere = c.candidates.filter((p) => read.has(p));
+    const name = clip(c.claim, 50);
+    const unclear = (evidence: string, file: string | null = null): Claim => ({
+      claim: c.claim,
+      weight: c.weight,
+      status: "unclear",
+      file,
+      evidence,
+      label: fill(copy.scan.cantVerify, { claim: name }),
+      missing: null,
+      searched: [],
+      quote: null,
+    });
+
+    if (!v) {
+      downgraded++;
+      return unclear(readHere.length ? copy.scan.notConfirmed : copy.scan.notRead);
+    }
+
+    const file = normalizePath(v.file);
+    const modelEvidence = clip(oneLine(v.evidence), 160);
+    const modelLabel = clip(oneLine(v.label), 80);
+    const clean = (s: string) => s && !VERDICT_WORDS.test(s);
+
+    if (v.status === "unbacked") {
+      // "Not there" is only a finding if every place it would live was read.
+      if (!c.candidates.length || readHere.length !== c.candidates.length) {
+        downgraded++;
+        return unclear(readHere.length ? copy.scan.notAllRead : copy.scan.notRead);
+      }
+      const missing = clip(oneLine(v.missing ?? "") || c.claim, 60);
+      return {
+        claim: c.claim,
+        weight: c.weight,
+        status: "unbacked",
+        file: null,
+        evidence: fill(copy.scan.notFoundIn, { missing, paths: joinPaths(readHere) }),
+        label: clip(fill(copy.scan.notFoundLabel, { missing }), 80),
+        missing,
+        searched: readHere,
+        quote: null,
+      };
+    }
+
+    if (v.status === "backed") {
+      const text = file ? read.get(file) : undefined;
+      if (!file || text === undefined) {
+        downgraded++;
+        return unclear(file ? fill(copy.scan.citedUnread, { path: clip(file, 80) }) : copy.scan.citedNothing);
+      }
+      const quote = (v.quote ?? "").trim();
+      if (!quote || quote.length > MAX_QUOTE || !text.includes(quote)) {
+        downgraded++;
+        return unclear(fill(copy.scan.quoteMissing, { path: clip(file, 80) }), file);
+      }
+      // The model's own evidence says "partly" but its status says "backed": take the weaker one.
+      if (/^partly\b/i.test(modelEvidence)) {
+        downgraded++;
+        return { ...unclear(modelEvidence, file), quote };
+      }
+      return {
+        claim: c.claim,
+        weight: c.weight,
+        status: "backed",
+        file,
+        evidence: clean(modelEvidence) ? modelEvidence : fill(copy.scan.foundIn, { path: clip(file, 80) }),
+        label: clean(modelLabel) ? modelLabel : fill(copy.scan.foundLabel, { claim: name }),
+        missing: null,
+        searched: [],
+        quote,
+      };
+    }
+
+    // Unclear: keep the model's file only if it was read.
+    const unclearFile = file && read.has(file) ? file : null;
+    return {
+      ...unclear(clean(modelEvidence) ? modelEvidence : copy.scan.notConfirmed, unclearFile),
+      label: clean(modelLabel) ? modelLabel : fill(copy.scan.cantVerify, { claim: name }),
+    };
+  });
 
   const questions: Omit<Question, "issuedAt">[] = [];
   for (const judge of JUDGES) {
@@ -138,8 +213,8 @@ export function validateScan(output: unknown, files: readonly string[]): ScanChe
     questions.push({
       judge: judge as Judge,
       text,
-      // The highlight must be a phrase from the question itself.
-      // and only part of it: highlighting the whole question highlights nothing.
+      // The highlight must be a phrase from the question itself, and only part of it:
+      // highlighting the whole question highlights nothing.
       caught:
         caught && caught.length <= 80 && caught.length < text.length * 0.6 && text.includes(caught)
           ? caught
@@ -148,7 +223,7 @@ export function validateScan(output: unknown, files: readonly string[]): ScanChe
   }
   if (questions.length !== QUESTION_COUNT) return { ok: false, reason: "questions" };
 
-  return { ok: true, scan: { claims, questions: orderQuestions(questions) }, dropped, downgraded };
+  return { ok: true, scan: { claims, questions: orderQuestions(questions) }, downgraded };
 }
 
 /** The order judges ask in: the Tired Judge warms up, the Investor, then the Engineer goes for the gap. */

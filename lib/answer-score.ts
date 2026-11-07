@@ -36,21 +36,27 @@ Score the answer, not the repo. The repo's gaps were already scored by the scan;
 - -2 to -6: vague. Buzzwords, generalities, "everyone", "AI-powered", no detail.
 - -6 to -12: dodging, bluffing, or contradicting the repo. Bluffing is a confident claim with nothing behind it: traction, customers, trained models or scale the claims summary gives no sign of, stated without specifics.
 
-The claims summary comes from a scan that only reads file names and dependencies, so "unbacked" or "unclear" means the scan couldn't see it, not that it's false. An answer that explains the mechanism for something the scan marked unbacked is credible, not a bluff, unless it names a file or claim the summary contradicts.
+The claims summary comes from a scan that read up to 10 files, each cut off at 6,000 characters, so it can miss code. "Couldn't find" and "couldn't confirm" mean it wasn't seen, not that it's false. An answer that explains the mechanism for one of those is credible, not a bluff, unless it contradicts what the scan did find.
 
 Fields, in order:
 - why: one sentence on which band the answer falls in and why. Nobody sees it.
 - score: the integer.
-- reaction: what you say back to the team, out loud, in your own voice, about this specific answer. 3 to 9 words. Don't reuse the example reactions. Talk to them ("you"), never about "the team" or "the answer". Plain text, no quotes, no emoji.`;
+- reaction: what you say back to the team, out loud, in your own voice, about this specific answer. 3 to 9 words. Don't reuse the example reactions. Talk to them ("you"), never about "the team" or "the answer". Plain text, no quotes, no emoji. Be blunt about the evidence, never about the person: no calling anyone a liar or a fraud, and never use the words "backed" or "unbacked".`;
 
 /** Stops the material from opening or closing a delimiter. */
 const esc = (s: string) => s.replace(/<\/?\s*(untrusted_\w*|context)\s*>/gi, "[tag removed]");
+
+const FINDING: Record<Claim["status"], string> = {
+  backed: "Found in the code",
+  unbacked: "Couldn't find it in the files read",
+  unclear: "Couldn't confirm it",
+};
 
 function claimSummary(claims: readonly Claim[]): string {
   if (!claims.length) return "(the README makes no checkable claims)";
   return claims
     .slice(0, 6)
-    .map((c) => `- ${c.weight}, ${c.status}: ${c.claim}${c.file ? ` (${c.file})` : ""}`)
+    .map((c) => `- ${c.weight}: ${c.claim}. ${FINDING[c.status]}: ${c.evidence}`)
     .join("\n");
 }
 
@@ -81,6 +87,9 @@ const INJECTION = [
   /\b(score|reason|reaction|why)"?\s*:\s*["+\-\d]/i,
   /<\/?\s*(untrusted_\w*|context|system)\s*>/i,
 ];
+
+// Reactions describe the evidence. Verdict words and attacks on the person aren't shown.
+const HARSH = /\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bscam(mer)?\b|\bdishonest\b|\bidiots?\b|\bstupid\b/i;
 
 export function looksLikeInjection(answer: string): boolean {
   return INJECTION.some((re) => re.test(answer));
@@ -125,6 +134,7 @@ export async function scoreAnswer(input: AnswerInput, call: Call = defaultCall):
   const usage: Usage = { inputTokens: 0, outputTokens: 0 };
   const injected = looksLikeInjection(input.answer);
   let result: { score: number; reason: string } | null = null;
+  let scoreOnly: number | null = null;
 
   for (let attempt = 1; attempt <= 2 && !result; attempt++) {
     let res: Anthropic.Message;
@@ -158,10 +168,16 @@ export async function scoreAnswer(input: AnswerInput, call: Call = defaultCall):
     } catch {
       continue;
     }
+    if (typeof parsed.score !== "number" || !Number.isFinite(parsed.score)) continue;
     const reason = cleanReason(parsed.reaction);
-    if (typeof parsed.score !== "number" || !Number.isFinite(parsed.score) || !reason) continue;
+    if (!reason || HARSH.test(reason)) {
+      // A usable score with a reaction that can't be shown: ask again, but keep the score.
+      scoreOnly = clampAnswerScore(parsed.score);
+      continue;
+    }
     result = { score: clampAnswerScore(parsed.score), reason };
   }
+  if (!result && scoreOnly !== null) result = { score: scoreOnly, reason: copy.acts.grilling.noted[input.judge] };
 
   if (injected) {
     // Whatever the model made of it, an answer that tries to steer the scorer can't gain.

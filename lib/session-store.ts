@@ -42,7 +42,7 @@ export async function ensureOwner(): Promise<string> {
 }
 
 const COLUMNS =
-  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, version, owner_hash";
+  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, version, owner_hash";
 
 type Row = {
   id: string;
@@ -57,6 +57,7 @@ type Row = {
   panel: SessionState["panel"];
   signals: SessionState["signals"];
   files: SessionState["files"];
+  sources: SessionState["sources"] | null;
   version: number;
   owner_hash: string;
 };
@@ -90,6 +91,7 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     panel: data.panel,
     signals: data.signals,
     files: data.files,
+    sources: data.sources ?? [],
   };
   return { session, version: data.version, repoUrl: data.repo_url, latestSha: data.latest_sha };
 }
@@ -113,6 +115,7 @@ async function save(s: SessionState, version: number): Promise<boolean> {
       panel: s.panel,
       signals: s.signals,
       files: s.files,
+      sources: s.sources,
       version: version + 1,
       updated_at: new Date().toISOString(),
     })
@@ -223,7 +226,8 @@ export async function getCachedScan(repoUrl: string, latestSha: string): Promise
     .gte("created_at", since)
     .maybeSingle<{ scan: Scan }>();
   if (error) throw error;
-  return data?.scan ?? null;
+  // Scans from before the files were read (no `sources`) are re-run.
+  return data?.scan && Array.isArray(data.scan.sources) ? data.scan : null;
 }
 
 export async function putCachedScan(repoUrl: string, latestSha: string, scan: Scan) {
