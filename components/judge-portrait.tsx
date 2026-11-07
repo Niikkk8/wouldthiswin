@@ -7,8 +7,8 @@ import {
   FRAMES,
   SPRITE_SIZE,
   REACTION_FRAME,
+  HEAD_CROP,
   frameIndex,
-  headPath,
   sheetPath,
   type Reaction,
 } from "@/lib/judge-sprites";
@@ -89,27 +89,23 @@ export function JudgePortrait({
   );
 }
 
-/** A small head cut from the judge's base frame, for chat and reviewer lists. */
-export function JudgeHead({
-  judge,
-  size = 32,
-  className,
-}: {
-  judge: Judge;
-  size?: number;
-  className?: string;
-}) {
+/** A small head: the base frame of the sprite sheet, cropped to the face. */
+export function JudgeHead({ judge, size = 32, className }: { judge: Judge; size?: number; className?: string }) {
+  const crop = HEAD_CROP[judge];
+  const scale = size / crop.size;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={headPath(judge)}
-      alt=""
+    <span
       aria-hidden
-      width={size}
-      height={size}
-      className={cn("shrink-0 rounded-full bg-bg", className)}
-      // Pixelated when it scales up by a whole number; smoothed when it shrinks.
-      style={{ imageRendering: size >= SPRITE_SIZE ? "pixelated" : "auto" }}
+      className={cn("block shrink-0 rounded-full bg-bg bg-no-repeat", className)}
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: `url(${sheetPath(judge)})`,
+        backgroundSize: `${FRAMES[judge].length * SPRITE_SIZE * scale}px ${SPRITE_SIZE * scale}px`,
+        backgroundPosition: `${-crop.x * scale}px ${-crop.y * scale}px`,
+        // Pixelated when it scales up by a whole number; smoothed when it shrinks.
+        imageRendering: Number.isInteger(scale) ? "pixelated" : "auto",
+      }}
     />
   );
 }

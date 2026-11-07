@@ -40,9 +40,7 @@ export function frameIndex(judge: Judge, frame: string): number {
 }
 
 export const sheetPath = (judge: Judge) => `/judges/${judge}-sheet.png`;
-export const headPath = (judge: Judge) => `/judges/${judge}-head.png`;
-
-/** The square cut from each base frame for head avatars, in sprite pixels. */
+/** The square of each base frame used for head avatars, in sprite pixels. */
 export const HEAD_CROP: Record<Judge, { x: number; y: number; size: number }> = {
   engineer: { x: 24, y: 12, size: 80 },
   investor: { x: 24, y: 8, size: 80 },

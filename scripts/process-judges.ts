@@ -2,16 +2,17 @@
 //
 //   npm run judges
 //
-// Reads public/judges/<judge>/<frame>.png (2048x2048, drawn on a 128x128 pixel grid) and
-// writes, per judge:
-//   public/judges/<judge>-sheet.png  every frame side by side, 128x128 each, in FRAMES order
-//   public/judges/<judge>-head.png   the HEAD_CROP square of the base frame
-//   lib/judge-heads.ts               the heads as data URIs, for the share card
-//   .judge-previews/<judge>.png      every frame at 4x with its name, to check by eye
+// Reads public/judges/<judge>/<frame>.png and writes, per judge:
+//   public/judges/<judge>/<frame>.png  each frame, cleaned, at 128x128 (replacing the source)
+//   public/judges/<judge>-sheet.png    every frame side by side, in FRAMES order
+//   lib/judge-heads.ts                 the HEAD_CROP of each base frame as a data URI, for the share card
+//   .judge-previews/<judge>.png        every frame at 4x with its name, to check by eye
 //
-// Per frame: find the offset that lines it up with the judge's base frame, sample the
-// centre of each grid block on the base frame's grid, then repaint the blocks under the
-// generator's sparkle watermark (bottom right) with the colour underneath it.
+// Generated art (larger than 128px, drawn on a 128x128 pixel grid) is cleaned per frame:
+// find the offset that lines it up with the judge's base frame, sample the centre of each
+// grid block on the base frame's grid, then repaint the blocks under the generator's
+// sparkle watermark (bottom right) with the colour underneath it. Frames already at
+// 128x128 have been through this and are used as they are, so re-running changes nothing.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -262,21 +263,28 @@ async function processJudge(judge: Judge) {
   const frames = FRAMES[judge] as readonly string[];
   const imgs = await Promise.all(frames.map((f) => load(path.join(SRC, judge, `${f}.png`))));
   const base = imgs[0];
-  if (base.w !== base.h) throw new Error(`${judge}/base.png isn't square`);
-  const grid = findGrid(base);
-  // The background, read from the base frame's top-left corner.
-  const bg = snap(base, grid, { dx: 0, dy: 0 }).px[2 * N + 2];
-  console.log(
-    `${judge}: grid pitch ${grid.pitch}, offset ${grid.ox},${grid.oy}; background ${bg.join(",")}`,
-  );
+  for (const [i, img] of imgs.entries())
+    if (img.w !== img.h || img.w !== base.w) throw new Error(`${judge}/${frames[i]}.png isn't the size of base.png`);
 
   const sprites: RGB[][] = [];
-  for (let i = 0; i < frames.length; i++) {
-    const d = i === 0 ? { dx: 0, dy: 0 } : align(base, imgs[i]);
-    const { px, touched } = snap(imgs[i], grid, d);
-    const fixed = removeStar(px, touched, bg);
-    sprites.push(px);
-    console.log(`  ${frames[i].padEnd(12)} shift ${d.dx},${d.dy}  watermark blocks ${fixed}`);
+  if (base.w === N) {
+    console.log(`${judge}: already ${N}x${N}, packing as is`);
+    for (const img of imgs) sprites.push(Array.from({ length: N * N }, (_, i) => [img.data[i * 3], img.data[i * 3 + 1], img.data[i * 3 + 2]] as RGB));
+  } else {
+    const grid = findGrid(base);
+    // The background, read from the base frame's top-left corner.
+    const bg = snap(base, grid, { dx: 0, dy: 0 }).px[2 * N + 2];
+    console.log(`${judge}: grid pitch ${grid.pitch}, offset ${grid.ox},${grid.oy}; background ${bg.join(",")}`);
+    for (let i = 0; i < frames.length; i++) {
+      const d = i === 0 ? { dx: 0, dy: 0 } : align(base, imgs[i]);
+      const { px, touched } = snap(imgs[i], grid, d);
+      const fixed = removeStar(px, touched, bg);
+      sprites.push(px);
+      console.log(`  ${frames[i].padEnd(12)} shift ${d.dx},${d.dy}  watermark blocks ${fixed}`);
+    }
+    // The cleaned frames replace the generated ones.
+    for (const [i, px] of sprites.entries())
+      await rgbPng(raw(px), N, N).toFile(path.join(SRC, judge, `${frames[i]}.png`));
   }
 
   // The sheet: frames left to right.
@@ -292,7 +300,6 @@ async function processJudge(judge: Judge) {
   const head = await rgbPng(raw(sprites[0]), N, N)
     .extract({ left: h.x, top: h.y, width: h.size, height: h.size })
     .toBuffer();
-  await sharp(head).toFile(path.join(SRC, `${judge}-head.png`));
 
   // The preview: every frame at 4x with its name.
   const S = 4;
