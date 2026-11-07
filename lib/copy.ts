@@ -386,6 +386,7 @@ export const copy = {
         body: [
           "The judges are AI models from Anthropic. Your README, the files we read and your answers are sent to Anthropic's API to be judged.",
           "Everything is stored in our Supabase database. We don't sell anything, run ads, or use tracking cookies. One cookie remembers which sessions are yours.",
+          "We count page views with Vercel Web Analytics. It uses no cookies and doesn't identify you.",
         ],
       },
     ],

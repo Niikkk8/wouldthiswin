@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
@@ -39,6 +40,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-dvh">
         <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
         <Toaster />
+        {/* Page views only: no cookies, nothing that identifies a visitor. */}
+        <Analytics />
       </body>
     </html>
   );

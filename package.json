@@ -17,6 +17,7 @@
     "@number-flow/react": "^0.6.2",
     "@octokit/rest": "^22.0.1",
     "@supabase/supabase-js": "^2.119.0",
+    "@vercel/analytics": "^2.0.1",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
