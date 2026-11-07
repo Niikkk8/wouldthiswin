@@ -3,6 +3,7 @@
 // Code checks all of it: a comment must quote a file the scan actually read, verbatim.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { SwampedError, withRetry } from "./anthropic-retry";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { anyCoreMissing, currentOdds, tierFor } from "./odds";
@@ -172,6 +173,8 @@ export class PanelError extends Error {
   constructor(
     message: string,
     public usage: Usage,
+    /** Anthropic was busy (429/529) through every retry. */
+    public swamped = false,
   ) {
     super(message);
     this.name = "PanelError";
@@ -185,13 +188,17 @@ const client = () => (anthropic ??= new Anthropic({ timeout: 40_000, maxRetries:
 const outputFormat = zodOutputFormat(PanelOutput);
 
 const defaultCall: Call = (system, user) =>
-  client().messages.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    output_config: { effort: "low", format: outputFormat },
-    system,
-    messages: [{ role: "user", content: user }],
-  });
+  withRetry(
+    () =>
+      client().messages.create({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        output_config: { effort: "low", format: outputFormat },
+        system,
+        messages: [{ role: "user", content: user }],
+      }),
+    "panel",
+  );
 
 /** One call, one retry on bad output. */
 export async function runPanel(
@@ -207,7 +214,7 @@ export async function runPanel(
       res = await call(system, user);
     } catch (err) {
       const msg = err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : String(err);
-      throw new PanelError(`anthropic call failed: ${msg}`, usage);
+      throw new PanelError(`anthropic call failed: ${msg}`, usage, err instanceof SwampedError);
     }
     usage.inputTokens += res.usage.input_tokens;
     usage.outputTokens += res.usage.output_tokens;

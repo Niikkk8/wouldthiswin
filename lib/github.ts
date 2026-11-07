@@ -11,7 +11,7 @@ export const COMMITS_LIMIT = 50;
 const GITHUB_TIMEOUT_MS = 10_000;
 
 /** Matches keys in copy.errors. Private repos are reported as notFound. */
-export type GitHubErrorCode = "invalidUrl" | "notFound" | "emptyRepo" | "githubDown";
+export type GitHubErrorCode = "invalidUrl" | "notFound" | "emptyRepo" | "githubDown" | "githubAuth";
 
 export class GitHubError extends Error {
   constructor(
@@ -73,7 +73,12 @@ export type RawRepoData = {
 const MANIFEST = /(^|\/)(package\.json|requirements\.txt)$/;
 const NESTED_MANIFESTS = 4;
 
-function toGitHubError(err: unknown): GitHubError {
+/**
+ * Maps an Octokit error to what the visitor is told. A rejected token (401, or a 403 that
+ * isn't a rate limit) is our fault, not the repo's: it gets its own message and a loud log,
+ * because every session fails until the token is replaced.
+ */
+export function toGitHubError(err: unknown): GitHubError {
   if (err instanceof GitHubError) return err;
   const e = err as {
     status?: number;
@@ -82,6 +87,19 @@ function toGitHubError(err: unknown): GitHubError {
   };
   if (e?.status === 404) return new GitHubError("notFound");
   if (e?.status === 409) return new GitHubError("emptyRepo");
+  const rateLimited = e?.response?.headers?.["x-ratelimit-remaining"] === "0";
+  if (e?.status === 401 || (e?.status === 403 && !rateLimited)) {
+    console.error(
+      JSON.stringify({
+        event: "github.token_rejected",
+        severity: "CRITICAL",
+        status: e.status,
+        error: err instanceof Error ? err.message : String(err),
+        fix: "GITHUB_TOKEN is invalid, expired or lacks access. Every session fails until it's replaced in Vercel env vars.",
+      }),
+    );
+    return new GitHubError("githubAuth", err instanceof Error ? err.message : String(err));
+  }
   // Rate limits, timeouts, 5xx: all "GitHub isn't answering right now".
   return new GitHubError("githubDown", err instanceof Error ? err.message : String(err));
 }

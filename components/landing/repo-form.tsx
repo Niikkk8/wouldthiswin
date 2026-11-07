@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,17 @@ import { copy } from "@/lib/copy";
 import { parseDemoLink } from "@/lib/demo-link";
 import { parseRepoUrl } from "@/lib/repo-url";
 import { ChevronRight } from "lucide-react";
+import { cn } from "cn";
 
-export function RepoForm() {
+/** "Challenge a friend" isn't built yet: the link stays in the code, off the page. */
+const SHOW_VERSUS = false;
+
+/** Linking to `/#repo` lands on the hero form with the field focused. */
+export const REPO_FOCUS = "repo";
+
+/** The repo field. `id` keeps the field ids unique when the page has the form twice. */
+export function RepoForm({ id = "repo", className }: { id?: string; className?: string }) {
+  const ids = { repo: id, note: `${id}-note`, demo: `${id}-demo`, demoNote: `${id}-demo-note` };
   const router = useRouter();
   const [repo, setRepo] = useState("");
   const [invalid, setInvalid] = useState(false);
@@ -20,6 +29,26 @@ export function RepoForm() {
   const [demo, setDemo] = useState("");
   const [demoInvalid, setDemoInvalid] = useState(false);
   const [pending, setPending] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (id !== REPO_FOCUS) return;
+    let raf = 0;
+    // After the browser's own jump to the anchor: show the whole hero, then focus the field.
+    const focus = () => {
+      if (window.location.hash !== `#${REPO_FOCUS}`) return;
+      raf = requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        input.current?.focus({ preventScroll: true });
+      });
+    };
+    focus();
+    window.addEventListener("hashchange", focus);
+    return () => {
+      window.removeEventListener("hashchange", focus);
+      cancelAnimationFrame(raf);
+    };
+  }, [id]);
 
   async function start(e: React.FormEvent) {
     e.preventDefault();
@@ -56,11 +85,12 @@ export function RepoForm() {
   }
 
   return (
-    <form onSubmit={start} className="mt-10 max-w-[676px] lg:mt-12" noValidate>
-      <Label htmlFor="repo">{copy.landing.repoLabel}</Label>
+    <form onSubmit={start} className={cn("max-w-[676px]", className)} noValidate>
+      <Label htmlFor={ids.repo}>{copy.landing.repoLabel}</Label>
       <div className="mt-3 flex flex-col gap-3 sm:flex-row">
         <Input
-          id="repo"
+          ref={input}
+          id={ids.repo}
           value={repo}
           onChange={(e) => {
             setRepo(e.target.value);
@@ -68,7 +98,7 @@ export function RepoForm() {
           }}
           placeholder={copy.landing.placeholder}
           aria-invalid={invalid || undefined}
-          aria-describedby="repo-note"
+          aria-describedby={ids.note}
           autoComplete="off"
           spellCheck={false}
           inputMode="url"
@@ -78,7 +108,7 @@ export function RepoForm() {
           {pending ? copy.landing.starting : copy.landing.button}
         </Button>
       </div>
-      <p id="repo-note" className="mt-3 text-[14px] text-text-muted">
+      <p id={ids.note} className="mt-3 text-[14px] text-text-muted">
         {copy.landing.underButton}
       </p>
       {/* A native disclosure: it opens even before React has hydrated. */}
@@ -96,11 +126,11 @@ export function RepoForm() {
           {copy.landing.demoToggle}
         </summary>
         <div className="mt-3">
-          <Label htmlFor="demo" className="sr-only">
+          <Label htmlFor={ids.demo} className="sr-only">
             {copy.landing.demoLabel}
           </Label>
           <Input
-            id="demo"
+            id={ids.demo}
             value={demo}
             onChange={(e) => {
               setDemo(e.target.value);
@@ -108,17 +138,18 @@ export function RepoForm() {
             }}
             placeholder={copy.landing.demoPlaceholder}
             aria-invalid={demoInvalid || undefined}
-            aria-describedby="demo-note"
+            aria-describedby={ids.demoNote}
             autoComplete="off"
             spellCheck={false}
             inputMode="url"
             className="h-12 text-[15px]"
           />
-          <p id="demo-note" className="mt-2 text-[13px] text-text-subtle">
+          <p id={ids.demoNote} className="mt-2 text-[13px] text-text-subtle">
             {copy.landing.demoNote}
           </p>
         </div>
       </details>
+      {SHOW_VERSUS && (
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -131,6 +162,7 @@ export function RepoForm() {
         </TooltipTrigger>
         <TooltipContent side="bottom">{copy.landing.versusSoon}</TooltipContent>
       </Tooltip>
+      )}
     </form>
   );
 }

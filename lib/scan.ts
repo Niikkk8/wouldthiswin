@@ -5,6 +5,7 @@
 // Plus the two signals measured in code (demo link, first commit). The model never sets odds.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { SwampedError, withRetry } from "./anthropic-retry";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { fetchSources, type RawRepoData } from "./github";
 import { parseDemoLink } from "./demo-link";
@@ -35,6 +36,8 @@ export class ScanError extends Error {
   constructor(
     message: string,
     public usage: Usage,
+    /** Anthropic was busy (429/529) through every retry: not the repo's fault, not counted. */
+    public swamped = false,
   ) {
     super(message);
     this.name = "ScanError";
@@ -159,13 +162,17 @@ const claimsFormat = zodOutputFormat(ClaimsOutput);
 const verifyFormat = zodOutputFormat(VerifyOutput);
 
 const defaultCall: Call = (system, user, step) =>
-  client().messages.create({
-    model: MODEL,
-    max_tokens: step === "claims" ? MAX_TOKENS_A : MAX_TOKENS_B,
-    output_config: { effort: "low", format: step === "claims" ? claimsFormat : verifyFormat },
-    system,
-    messages: [{ role: "user", content: user }],
-  });
+  withRetry(
+    () =>
+      client().messages.create({
+        model: MODEL,
+        max_tokens: step === "claims" ? MAX_TOKENS_A : MAX_TOKENS_B,
+        output_config: { effort: "low", format: step === "claims" ? claimsFormat : verifyFormat },
+        system,
+        messages: [{ role: "user", content: user }],
+      }),
+    `scan.${step}`,
+  );
 
 /** One call, plus one retry if the output fails `check`. Tokens from every attempt count. */
 async function callChecked<T>(
@@ -183,7 +190,7 @@ async function callChecked<T>(
       res = await call(prompt.system, prompt.user, step);
     } catch (err) {
       const msg = err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : String(err);
-      throw new ScanError(`anthropic call failed (${step}): ${msg}`, usage);
+      throw new ScanError(`anthropic call failed (${step}): ${msg}`, usage, err instanceof SwampedError);
     }
     usage.inputTokens += res.usage.input_tokens;
     usage.outputTokens += res.usage.output_tokens;

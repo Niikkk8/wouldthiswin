@@ -65,7 +65,9 @@ export function OddsWidget({
   travel = false,
   waiting = false,
   note,
+  className,
 }: {
+  className?: string;
   events: readonly OddsEvent[];
   travel?: boolean;
   /** The scan is running: a slow pulse on the number until there's something to play. */
@@ -125,6 +127,7 @@ export function OddsWidget({
       className={cn(
         "sticky top-0 z-30 -mx-5 flex items-center gap-3 border-b border-border bg-bg px-5 py-3",
         "lg:absolute lg:top-0 lg:right-24 lg:mx-0 lg:block lg:border-0 lg:bg-transparent lg:p-0 lg:text-right",
+        className,
       )}
     >
       <p aria-hidden className="label-mono hidden uppercase lg:mb-1.5 lg:block">

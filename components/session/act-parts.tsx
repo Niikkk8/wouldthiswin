@@ -41,6 +41,7 @@ export function ActFooter({
 }) {
   return (
     <div
+      data-demo-hide
       className={cn(
         "mt-16 flex flex-col gap-6 border-t border-border pt-8 sm:flex-row sm:items-center sm:justify-between",
         className,

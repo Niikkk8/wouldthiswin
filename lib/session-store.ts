@@ -1,6 +1,7 @@
 // Loads and saves sessions. Every write is conditional on the version it read, so two
 // requests racing on the same session can't both succeed (e.g. a double-submitted answer).
 
+import type { Spent } from "./budget";
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
 import { ID_RE, IP_LIMIT_PER_24H, dailyCap, db, sha256 } from "./db";
@@ -43,7 +44,7 @@ export async function ensureOwner(): Promise<string> {
 }
 
 const COLUMNS =
-  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, version, owner_hash, demo_url";
+  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, version, owner_hash, demo_url, input_tokens, output_tokens";
 
 type Row = {
   id: string;
@@ -62,6 +63,8 @@ type Row = {
   version: number;
   owner_hash: string;
   demo_url: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
 };
 
 export type Loaded = {
@@ -72,6 +75,8 @@ export type Loaded = {
   latestSha: string;
   /** The demo link the team gave on the landing page, if any. */
   demoUrl: string | null;
+  /** Model tokens this session has spent so far. */
+  spent: Spent;
 };
 
 /** Returns the session only to the browser that started it. */
@@ -97,7 +102,14 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     files: data.files,
     sources: data.sources ?? [],
   };
-  return { session, version: data.version, repoUrl: data.repo_url, latestSha: data.latest_sha, demoUrl: data.demo_url };
+  return {
+    session,
+    version: data.version,
+    repoUrl: data.repo_url,
+    latestSha: data.latest_sha,
+    demoUrl: data.demo_url,
+    spent: { input: data.input_tokens ?? 0, output: data.output_tokens ?? 0 },
+  };
 }
 
 /** The client's view of a session, for this browser only. */

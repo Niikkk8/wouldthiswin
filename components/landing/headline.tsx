@@ -26,7 +26,7 @@ export function Headline() {
       </BlurFade>
     );
   return (
-    <h1 className="text-[64px] leading-[0.88] font-black tracking-[-0.05em] sm:text-[96px] lg:text-hero">
+    <h1 className="text-[64px] leading-[0.88] font-black tracking-[-0.05em] sm:text-[96px] lg:text-[clamp(72px,14.5vh,128px)]">
       {word(a, 0)} {word(b, 1)}
       <br />
       {word(c, 2)}

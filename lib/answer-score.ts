@@ -3,6 +3,7 @@
 // code clamps the score and has the last word on anything that tries to steer it.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { withRetry } from "./anthropic-retry";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { copy } from "./copy";
@@ -141,13 +142,17 @@ const client = () => (anthropic ??= new Anthropic({ timeout: 15_000, maxRetries:
 const outputFormat = zodOutputFormat(AnswerOutput);
 
 const defaultCall: Call = (system, user) =>
-  client().messages.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    output_config: { effort: "low", format: outputFormat },
-    system,
-    messages: [{ role: "user", content: user }],
-  });
+  withRetry(
+    () =>
+      client().messages.create({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        output_config: { effort: "low", format: outputFormat },
+        system,
+        messages: [{ role: "user", content: user }],
+      }),
+    "answer",
+  );
 
 /**
  * Scores one answer: one call, one retry on bad output. If the model can't be reached or

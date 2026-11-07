@@ -16,6 +16,9 @@ import { ScanAct } from "./scan-act";
 import { ShareAct } from "./share-act";
 import { VerdictAct } from "./verdict-act";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { DEMO_ANSWERS } from "@/lib/demo/fixture";
+
+const DEMO_ANSWER_TEXTS = DEMO_ANSWERS.map((a) => a.text);
 
 export type SessionAction =
   | { action: "scan" }
@@ -70,6 +73,24 @@ async function readStream(
   return result;
 }
 
+/** How an action reaches the server. The sample session swaps in a local one. */
+export type Transport = (
+  id: string,
+  a: SessionAction,
+  onProgress?: (p: ScanProgress) => void,
+) => Promise<{ status: number; body: Record<string, unknown> }>;
+
+/** The real one: a POST, streamed as NDJSON when progress is wanted. */
+const fetchTransport: Transport = async (id, a, onProgress) => {
+  const res = await fetch(`/api/sessions/${id}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(onProgress ? { accept: "application/x-ndjson" } : {}) },
+    body: JSON.stringify(a),
+  });
+  const isStream = !!onProgress && !!res.body && (res.headers.get("content-type") ?? "").includes("ndjson");
+  return isStream ? readStream(res, onProgress!) : { status: res.status, body: await res.json().catch(() => ({})) };
+};
+
 // The reducer only mirrors the server: every change to the session arrives as a new view.
 type State = { view: SessionView; pending: boolean };
 type Action = { type: "sync"; view: SessionView } | { type: "pending"; pending: boolean };
@@ -100,7 +121,16 @@ function headerStatus(view: SessionView, revealed: number): string {
   return fill(copy.header.act, { n: ACTS.indexOf(view.act) + 1 });
 }
 
-export function SessionShell({ initial }: { initial: SessionView }) {
+export function SessionShell({
+  initial,
+  transport = fetchTransport,
+  demo = false,
+}: {
+  initial: SessionView;
+  transport?: Transport;
+  /** The sample session: fixture data, answers typed for the team, no real links at the end. */
+  demo?: boolean;
+}) {
   const reduce = useReducedMotion();
   const [{ view, pending }, dispatch] = useReducer(reducer, { view: initial, pending: false });
   // How many events the widget shows. The scan plays its events in, and act 2 holds each
@@ -113,16 +143,7 @@ export function SessionShell({ initial }: { initial: SessionView }) {
     async (a, opts) => {
       dispatch({ type: "pending", pending: true });
       try {
-        const streamed = !!opts?.onProgress;
-        const res = await fetch(`/api/sessions/${initial.id}`, {
-          method: "POST",
-          headers: { "content-type": "application/json", ...(streamed ? { accept: "application/x-ndjson" } : {}) },
-          body: JSON.stringify(a),
-        });
-        const isStream = streamed && !!res.body && (res.headers.get("content-type") ?? "").includes("ndjson");
-        const { status, body } = isStream
-          ? await readStream(res, opts!.onProgress!)
-          : { status: res.status, body: await res.json().catch(() => ({})) };
+        const { status, body } = await transport(initial.id, a, opts?.onProgress);
         const ok = status >= 200 && status < 300;
         if (body.view) dispatch({ type: "sync", view: body.view as SessionView });
         if (status === 202) return { ok: false, pending: true };
@@ -137,7 +158,7 @@ export function SessionShell({ initial }: { initial: SessionView }) {
         dispatch({ type: "pending", pending: false });
       }
     },
-    [initial.id],
+    [initial.id, transport],
   );
 
   useEffect(() => {
@@ -166,7 +187,14 @@ export function SessionShell({ initial }: { initial: SessionView }) {
       break;
     case "grilling":
       act = (
-        <GrillingAct view={view} send={send} revealed={revealed} onReveal={setRevealed} pending={pending} />
+        <GrillingAct
+          view={view}
+          send={send}
+          revealed={revealed}
+          onReveal={setRevealed}
+          pending={pending}
+          autoAnswers={demo ? DEMO_ANSWER_TEXTS : undefined}
+        />
       );
       break;
     case "deliberation":
@@ -176,13 +204,13 @@ export function SessionShell({ initial }: { initial: SessionView }) {
       act = <VerdictAct view={view} onNext={advance("verdict")} pending={pending} />;
       break;
     case "share":
-      act = <ShareAct view={view} />;
+      act = <ShareAct view={view} demo={demo} />;
       break;
   }
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <SiteHeader repo={view.repo} status={headerStatus(view, revealed)} />
+      <SiteHeader repo={demo ? fill(copy.demo.header, { repo: view.repo }) : view.repo} status={headerStatus(view, revealed)} />
       <main className="page-x relative flex-1 pb-16 lg:pb-20">
         <AnimatePresence initial={false}>
           {ODDS_ACTS.includes(view.act) && (

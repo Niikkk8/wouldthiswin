@@ -2,6 +2,7 @@
 // otherwise GitHub plus one model call. Server only.
 
 import type { ErrorKey } from "./api";
+import { overBudget } from "./budget";
 import { fetchRepoData, GitHubError } from "./github";
 import { ScanError, demoSignal, scanRepo, type Usage } from "./scan";
 import { noEmit, type Emit } from "./scan-progress";
@@ -27,7 +28,7 @@ export type ScanOutcome =
 export async function runSessionScan(id: string, owner: string | null, emit: Emit = noEmit): Promise<ScanOutcome> {
   const loaded = await loadSession(id, owner);
   if (!loaded) return { kind: "notFound" };
-  const { session, repoUrl, latestSha, demoUrl } = loaded;
+  const { session, repoUrl, latestSha, demoUrl, spent } = loaded;
   if (session.claims !== null) return { kind: "done", session };
   if (session.act !== "scan") return { kind: "stale", session };
   // Another request (a second tab, a refresh) is already scanning: the client waits and asks again.
@@ -43,6 +44,12 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
       const demo = demoUrl ? await demoSignal(demoUrl, true) : (scan.autoDemo ?? scan.signals.demo);
       scan = { ...scan, signals: { ...scan.signals, demo } };
     } else {
+      // Retries after failed scans have already spent this session's share: stop paying.
+      if (overBudget(spent)) {
+        console.error(JSON.stringify({ event: "scan.over_budget", id, repo: repoUrl, ...spent }));
+        await releaseScan(id);
+        return { kind: "failed", error: "judgeFailed" };
+      }
       const raw = await fetchRepoData(repoUrl);
       emit({ type: "repo", files: raw.headFilePaths.length });
       if (!raw.readmeFull.trim()) return await fail(id, "emptyReadme", usage);
@@ -69,7 +76,8 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
     return r.session ? { kind: "stale", session: r.session } : { kind: "notFound" };
   } catch (err) {
     if (err instanceof ScanError) usage = err.usage;
-    const key: ErrorKey = err instanceof GitHubError ? err.code : "judgeFailed";
+    const swamped = err instanceof ScanError && err.swamped;
+    const key: ErrorKey = err instanceof GitHubError ? err.code : swamped ? "swamped" : "judgeFailed";
     console.error(
       JSON.stringify({
         event: "scan.failed",
@@ -80,6 +88,12 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
         output_tokens: usage.outputTokens,
       }),
     );
+    // Anthropic being busy isn't the visitor's fault: the session never counts, even if the
+    // first call went through before the second was turned away.
+    if (swamped) {
+      await deleteSession(id);
+      return { kind: "failed", error: key };
+    }
     return await fail(id, key, usage);
   }
 }

@@ -2,13 +2,16 @@
 
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { motion } from "motion/react";
+import Link from "next/link";
 import { useState } from "react";
+import { ShareCardPreview } from "@/components/share-card-preview";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { copy } from "@/lib/copy";
 import { EASE } from "@/lib/motion";
 import type { SessionView } from "@/lib/session";
 import { badgeMarkdown, badgePath, ogPath, postToXUrl, reviewPath, reviewUrl } from "@/lib/site";
+import { REPO_FOCUS } from "@/components/landing/repo-form";
 import { ActTitle } from "./act-parts";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
@@ -52,7 +55,7 @@ function Field({ label, note, value, children }: { label: string; note: string; 
 }
 
 /** The share screen: the card, the X post, the public review link and the README badge. */
-export function ShareAct({ view }: { view: SessionView }) {
+export function ShareAct({ view, demo = false }: { view: SessionView; demo?: boolean }) {
   const reduce = useReducedMotion();
   const r = view.review;
   if (!r) return null;
@@ -70,14 +73,23 @@ export function ShareAct({ view }: { view: SessionView }) {
           <h2 id="card" className="label-mono uppercase">
             {copy.acts.share.card}
           </h2>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={ogPath(r.id)}
-            alt={`${r.repo}: ${r.odds}%, ${copy.tiers[r.tier]} "${r.oneLiner}"`}
-            width={1200}
-            height={630}
-            className="mt-3 aspect-[1200/630] w-full rounded-card border border-border bg-surface"
-          />
+          {demo ? (
+            <ShareCardPreview
+              review={r}
+              label={`${r.repo}: ${r.odds}%, ${copy.tiers[r.tier]} "${r.oneLiner}"`}
+              className="mt-3"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={ogPath(r.id)}
+              alt={`${r.repo}: ${r.odds}%, ${copy.tiers[r.tier]} "${r.oneLiner}"`}
+              width={1200}
+              height={630}
+              className="mt-3 aspect-[1200/630] w-full rounded-card border border-border bg-surface"
+            />
+          )}
+          {!demo && (
           <div className="mt-4 flex flex-wrap gap-3">
             <a href={postToXUrl(r)} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants(), "gap-2")}>
               {copy.acts.share.postX}
@@ -87,6 +99,7 @@ export function ShareAct({ view }: { view: SessionView }) {
               {copy.acts.share.open}
             </a>
           </div>
+          )}
         </motion.section>
 
         <motion.div
@@ -95,11 +108,23 @@ export function ShareAct({ view }: { view: SessionView }) {
           animate={{ opacity: 1 }}
           transition={{ duration: reduce ? 0.2 : 0.4, ease: EASE, delay: reduce ? 0 : 0.15 }}
         >
-          <Field label={copy.acts.share.link} note={copy.acts.share.linkNote} value={reviewUrl(r.id)} />
-          <Field label={copy.acts.share.badge} note={copy.acts.share.badgeNote} value={badgeMarkdown(r.id)}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={badgePath(r.id)} alt={`would this win: ${r.odds}% ${copy.tiers[r.tier]}`} height={20} className="mt-3 h-5 w-auto" />
-          </Field>
+          {demo ? (
+            // A sample has no real link or badge to copy; point at the real thing instead.
+            <section className="min-w-0">
+              <p className="text-[20px] leading-snug font-bold">{copy.demo.shareNote}</p>
+              <Link href={`/#${REPO_FOCUS}`} className={cn(buttonVariants(), "mt-5")}>
+                {copy.demo.yourTurn}
+              </Link>
+            </section>
+          ) : (
+            <>
+              <Field label={copy.acts.share.link} note={copy.acts.share.linkNote} value={reviewUrl(r.id)} />
+              <Field label={copy.acts.share.badge} note={copy.acts.share.badgeNote} value={badgeMarkdown(r.id)}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={badgePath(r.id)} alt={`would this win: ${r.odds}% ${copy.tiers[r.tier]}`} height={20} className="mt-3 h-5 w-auto" />
+              </Field>
+            </>
+          )}
         </motion.div>
       </div>
     </>

@@ -2,6 +2,8 @@
 // can put anything in x-real-ip or x-forwarded-for, so those headers are ignored unless
 // Vercel itself set them.
 
+import { isIPv6 } from "node:net";
+
 type Env = Record<string, string | undefined>;
 
 /** Every request without a platform-set IP shares this one bucket, so spoofing buys nothing. */
@@ -22,4 +24,19 @@ export function clientIp(req: Request, env: Env = process.env): string {
     return req.headers.get("x-test-ip")?.trim() || UNKNOWN_IP;
   }
   return UNKNOWN_IP;
+}
+
+/**
+ * What the per-IP limit counts. One IPv6 subscriber gets a whole /64 (2^64 addresses) and
+ * can pick a fresh one per request, so IPv6 counts by its /64. IPv4 counts per address.
+ */
+export function limitKey(ip: string): string {
+  const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (mapped) return mapped[1];
+  if (!isIPv6(ip)) return ip;
+  const [head, tail = ""] = ip.toLowerCase().split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const groups = ip.includes("::") ? [...left, ...Array(8 - left.length - right.length).fill("0"), ...right] : left;
+  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, "")).join(":")}::/64`;
 }

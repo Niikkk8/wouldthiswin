@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { badRequest, clientIp, fail } from "@/lib/api";
+import { badRequest, clientIp, fail, limitKey } from "@/lib/api";
 import { hashIp, newId } from "@/lib/db";
 import { fetchLatestSha, GitHubError, parseRepoUrl } from "@/lib/github";
 import { parseDemoLink } from "@/lib/demo-link";
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
   let ipHash: string;
   try {
-    ipHash = hashIp(clientIp(req));
+    ipHash = hashIp(limitKey(clientIp(req)));
   } catch (err) {
     console.error(JSON.stringify({ event: "session.config", error: String(err) }));
     return fail("judgeFailed");

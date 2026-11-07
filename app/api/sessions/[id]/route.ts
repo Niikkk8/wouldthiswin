@@ -11,6 +11,7 @@ import {
   toView,
   type SessionState,
 } from "@/lib/session";
+import { overBudget } from "@/lib/budget";
 import { runSessionScan } from "@/lib/run-scan";
 import type { Emit } from "@/lib/scan-progress";
 import { scoreAnswer } from "@/lib/answer-score";
@@ -69,7 +70,7 @@ type Deliberation =
   | { kind: "done"; session: SessionState }
   | { kind: "pending"; session: SessionState }
   | { kind: "notFound" }
-  | { kind: "failed"; session: SessionState };
+  | { kind: "failed"; session: SessionState; error: "judgeFailed" | "swamped" };
 
 /**
  * Act 3: one deliberation call per session. A second request while it runs gets
@@ -80,6 +81,11 @@ async function deliberate(id: string, owner: string | null): Promise<Deliberatio
   if (!loaded) return { kind: "notFound" };
   const s = loaded.session;
   if (s.act !== "deliberation" || s.panel !== null) return { kind: "done", session: s };
+  // Failed deliberations can be retried; past the session's budget they stop costing.
+  if (overBudget(loaded.spent)) {
+    console.error(JSON.stringify({ event: "panel.over_budget", id, ...loaded.spent }));
+    return { kind: "failed", session: s, error: "judgeFailed" };
+  }
   if (!(await claimPanel(id))) return { kind: "pending", session: s };
   try {
     const out = await runPanel(s);
@@ -100,7 +106,7 @@ async function deliberate(id: string, owner: string | null): Promise<Deliberatio
     if (err instanceof PanelError) await addUsage(id, err.usage);
     console.error(JSON.stringify({ event: "panel.failed", id, error: err instanceof Error ? err.message : String(err) }));
     await releasePanel(id);
-    return { kind: "failed", session: s };
+    return { kind: "failed", session: s, error: err instanceof PanelError && err.swamped ? "swamped" : "judgeFailed" };
   }
 }
 
@@ -187,7 +193,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
           case "notFound":
             return fail("notFound");
           case "failed":
-            return fail("judgeFailed", out.session);
+            return fail(out.error, out.session);
         }
       }
       case "advance": {

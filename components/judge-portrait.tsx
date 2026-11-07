@@ -43,10 +43,13 @@ export function JudgePortrait({
   rest = "idle",
   reaction = null,
   dozing = false,
+  pose,
   label = true,
   className,
 }: {
   judge: Judge;
+  /** Hold this reaction for as long as it's set (a hover). */
+  pose?: Reaction | null;
   size?: PortraitSize;
   talking?: boolean;
   rest?: "idle" | "scan";
@@ -58,12 +61,13 @@ export function JudgePortrait({
   className?: string;
 }) {
   const reduce = useReducedMotion();
-  const blink = useBlink(!reduce && !talking && rest === "idle");
+  const blink = useBlink(!reduce && !talking && !pose && rest === "idle");
   const mouthOpen = useToggle(!reduce && talking, TALK_MS);
   const held = useHeld(reaction);
 
   let frame = "base";
   if (reduce) frame = "base";
+  else if (pose) frame = REACTION_FRAME[judge][pose];
   else if (held) frame = REACTION_FRAME[judge][held];
   else if (dozing && judge === "tired") frame = "dozing";
   else if (talking) frame = mouthOpen ? "talk" : "base";

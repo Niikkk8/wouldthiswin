@@ -32,6 +32,11 @@ const REACTION_MS = 2000;
 const CHIP_HOLD_MS = 700;
 /** The Tired Judge nods off after this long without a keystroke. */
 const DOZE_MS = 10_000;
+/** The sample team starts typing this long after the question lands, this fast. */
+const AUTO_START_MS = 700;
+const AUTO_CHAR_MS = 22;
+/** A frozen question (a still of the sample session) shows this much time left. */
+const FROZEN_LEFT_MS = 18_000;
 
 const answerId = (i: number) => `answer-${i}`;
 
@@ -259,6 +264,8 @@ function Question({
   chipEvent,
   onSettled,
   onDone,
+  autoAnswer,
+  frozen = false,
 }: {
   q: QuestionView;
   index: number;
@@ -270,11 +277,15 @@ function Question({
   onSettled: () => void;
   /** The reaction has been read: on to the next question. */
   onDone: () => void;
+  /** The sample session: this answer types itself in once the question has landed. */
+  autoAnswer?: string;
+  /** A still: the answer already typed, the clock stopped, nothing sent. */
+  frozen?: boolean;
 }) {
   const reduce = useReducedMotion();
   const [deadline] = useState(() => Date.now() + (q.remainingMs ?? 0));
   const [now, setNow] = useState(() => Date.now());
-  const [text, setText] = useState("");
+  const [text, setText] = useState(frozen ? (autoAnswer ?? "") : "");
   const [phase, setPhase] = useState<Phase>("asking");
   const [chipHere, setChipHere] = useState(true);
   const sent = useRef(false);
@@ -295,9 +306,9 @@ function Question({
     return () => clearTimeout(t);
   }, [phase, text]);
 
-  const stopped = phase !== "asking";
+  const stopped = phase !== "asking" || frozen;
   const [stoppedAt, setStoppedAt] = useState<number | null>(null);
-  const left = Math.max(0, deadline - (stoppedAt ?? now));
+  const left = frozen ? FROZEN_LEFT_MS : Math.max(0, deadline - (stoppedAt ?? now));
 
   useEffect(() => {
     if (stopped) return;
@@ -356,7 +367,27 @@ function Question({
     };
   }, [phase, reduce, onSettled, onDone]);
 
-  useEffect(() => inputRef.current?.focus({ preventScroll: true }), []);
+  useEffect(() => {
+    if (!autoAnswer) inputRef.current?.focus({ preventScroll: true });
+  }, [autoAnswer]);
+
+  // The sample team answers: typed out a character at a time, then sent.
+  const submitRef = useRef(submit);
+  useEffect(() => {
+    submitRef.current = submit;
+  });
+  useEffect(() => {
+    if (!autoAnswer || frozen || phase !== "asking" || talking) return;
+    let i = 0;
+    let t: ReturnType<typeof setTimeout>;
+    const step = () => {
+      i = reduce ? autoAnswer.length : i + 1;
+      setText(autoAnswer.slice(0, i));
+      t = i < autoAnswer.length ? setTimeout(step, AUTO_CHAR_MS) : setTimeout(() => submitRef.current(autoAnswer), 500);
+    };
+    t = setTimeout(step, reduce ? 0 : AUTO_START_MS);
+    return () => clearTimeout(t);
+  }, [autoAnswer, frozen, phase, talking, reduce]);
 
   // Keep the timer and field in view above a phone keyboard. The keyboard resizes the
   // viewport (resizes-content, or the visual viewport on iOS) after focus, so follow that.
@@ -468,7 +499,7 @@ function Question({
                     }}
                     onFocus={() => setTimeout(keepInView, 300)}
                     maxLength={MAX_ANSWER_LENGTH}
-                    readOnly={!ready}
+                    readOnly={!ready || !!autoAnswer}
                     aria-describedby="answer-count answer-hint"
                     autoComplete="off"
                     enterKeyHint="send"
@@ -503,12 +534,18 @@ export function GrillingAct({
   revealed,
   onReveal,
   pending,
+  autoAnswers,
+  frozen,
 }: {
   view: SessionView;
   send: Send;
   revealed: number;
   onReveal: (n: number) => void;
   pending: boolean;
+  /** The sample session: the team's answers, typed in for them. */
+  autoAnswers?: readonly string[];
+  /** A still of the sample session. */
+  frozen?: boolean;
 }) {
   const answered = view.questions.filter((q) => q.answer).length;
   // The question on screen. It stays put while its reaction plays, after the server has
@@ -550,6 +587,8 @@ export function GrillingAct({
           chipEvent={view.events.at(-1)}
           onSettled={settle}
           onDone={next}
+          autoAnswer={autoAnswers?.[onScreen]}
+          frozen={frozen}
         />
       )}
       {done && (

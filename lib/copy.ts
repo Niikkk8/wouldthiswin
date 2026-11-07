@@ -17,9 +17,53 @@ export const copy = {
     headline: ["Would", "this", "win?"],
     subhead:
       "Paste your hackathon repo. Get scanned, get grilled by three judges, and watch your odds move live.",
-    panel: "The panel",
-    madeBy: "Who made this",
-    credits: "Niket Shah plays the Engineer. Akshat Kharbanda plays the Investor. Krish Mehta plays the Tired Judge.",
+    meet: {
+      heading: "Meet the panel",
+      lede: "Three judges, three angles. Each one asks one question, and you get 30 seconds.",
+      playedBy: "played by",
+      hint: "Hover or tap to hear the question",
+      sample: "Sample question",
+      checks: "Checks",
+    },
+    sample: {
+      heading: "Watch one get judged",
+      label: "Sample session",
+      lede: "queueless puts a clinic's waiting room on a QR code. Here's how its night went.",
+      captions: [
+        "Every claim in your README gets checked against your code.",
+        "You're scored against the teams before you, not against perfect.",
+        "Teams that admit a weakness score higher.",
+        "The panel remembers one sentence. Make sure it's yours.",
+      ],
+      play: "Play the full sample session",
+      playNote: "All four acts, sample data. Doesn't count toward your 3 a day.",
+    },
+    walkAway: {
+      heading: "What you walk away with",
+      lede: "From the same sample session.",
+      review: "The review",
+      badge: "The README badge",
+      badgeNote: "Paste it into your README. It links to the review.",
+      card: "The share card",
+      cardNote: "What your link looks like when you post it.",
+    },
+    finePrint: {
+      heading: "The fine print",
+      reads: {
+        q: "What does it read?",
+        a: "Your public repo: the README, the file tree, recent commits, and up to 10 files that back your claims. It can't see private repos.",
+      },
+      stores: {
+        q: "What does it keep?",
+        a: "Your answers and the judges' chat, for 30 days. Your code is never kept: the files it reads are deleted once the review is written.",
+        link: "What we store, in full",
+      },
+      cost: {
+        q: "What does it cost?",
+        a: "Nothing. Three sessions a day each, so the judges stay awake for everyone.",
+      },
+    },
+    final: "Your repo is next.",
     repoLabel: "Your GitHub repo",
     placeholder: "github.com/you/your-project",
     button: "Face the panel",
@@ -38,9 +82,27 @@ export const copy = {
     },
   },
   judges: {
-    engineer: { name: "The Engineer" },
-    investor: { name: "The Investor" },
-    tired: { name: "The Tired Judge" },
+    engineer: {
+      name: "The Engineer",
+      catchphrase: "Show me the commit.",
+      checks: "Whether the code does what your README says it does.",
+      sample: "Your README says it scales. Which file proves that?",
+      player: { name: "Niket Shah", url: "https://niket.dev" },
+    },
+    investor: {
+      name: "The Investor",
+      catchphrase: "Who's paying for this?",
+      checks: "Who uses it, who pays for it, and why now.",
+      sample: "Who's the buyer, and what do they pay today instead?",
+      player: { name: "Akshat Kharbanda", url: "https://www.linkedin.com/in/akshatkharbandaa/" },
+    },
+    tired: {
+      name: "The Tired Judge",
+      catchphrase: "Wait. Which one was this?",
+      checks: "Whether you can say what it is in one sentence.",
+      sample: "In one sentence. What is it?",
+      player: { name: "Krish Mehta", url: "https://mehtakrish.in" },
+    },
   },
   // Scan findings. They describe evidence, never motives, and never use "unbacked".
   scan: {
@@ -218,6 +280,8 @@ export const copy = {
     invalidUrl: "That's not a GitHub repo link. Paste something like github.com/you/your-project.",
     invalidDemo: "That demo link doesn't look right. Paste a full link to a live site or a video.",
     judgeFailed: "The panel fell asleep mid-session. Try again.",
+    swamped: "The panel's swamped. Try again in a minute.",
+    githubAuth: "We can't get into GitHub right now. That's on us, not your repo. Try again in a few minutes.",
     rateLimited:
       "You've faced the panel 3 times today. The verdict isn't changing. Come back tomorrow.",
     dailyCap: "The judges are asleep. Come back tomorrow.",
@@ -225,7 +289,21 @@ export const copy = {
     alreadyAnswered: "You already answered that one. Judges don't take do-overs.",
     network: "Lost the connection to the room. Try again.",
   },
+  demo: {
+    header: "Sample session · {repo}",
+    label: "Sample session",
+    play: "Play the full sample session",
+    yourTurn: "Face the panel with your repo",
+    shareNote: "Your link and badge show up here after your own session.",
+  },
   footer: {
+    builtBy: "Built by",
+    author: { name: "Niket Shah", url: "https://niket.dev" },
+    socials: [
+      { label: "X", url: "https://x.com/niket_tsx" },
+      { label: "Instagram", url: "https://instagram.com/niket.dev" },
+      { label: "LinkedIn", url: "https://linkedin.com/in/niket" },
+    ],
     privacy: "Privacy",
     note: "Judged by three AI judges. Numbers by code.",
   },

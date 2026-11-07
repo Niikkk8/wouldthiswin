@@ -530,6 +530,7 @@ function XRay({
       {!done && (
         <button
           type="button"
+          data-demo-hide
           onClick={() => {
             landed.current = total;
             setStarted(true);

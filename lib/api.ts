@@ -14,6 +14,8 @@ const STATUS: Record<ErrorKey, number> = {
   dailyCap: 429,
   githubDown: 503,
   judgeFailed: 502,
+  swamped: 503,
+  githubAuth: 503,
   stale: 409,
   alreadyAnswered: 409,
   network: 503,
@@ -41,4 +43,4 @@ export function failMutation(r: Extract<MutateResult, { ok: false }>) {
   return fail("stale", r.session);
 }
 
-export { clientIp } from "./client-ip";
+export { clientIp, limitKey } from "./client-ip";
