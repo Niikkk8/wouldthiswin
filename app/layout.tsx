@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Archivo, Courier_Prime, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   title: copy.meta.title,
   description: copy.meta.description,
 };
+
+// The phone keyboard shrinks the layout instead of covering it, so act 2's answer field stays visible.
+export const viewport: Viewport = { interactiveWidget: "resizes-content" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

@@ -15,7 +15,31 @@ const CHIP: Record<Tone, string> = {
   flat: "bg-surface-2 text-text-muted",
 };
 
-const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
+export const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
+
+/** The layoutId an event's chip travels under, so act 2 can fly it into the widget. */
+export const chipLayoutId = (count: number) => `odds-chip-${count}`;
+
+/** The delta chip: the change and its reason, in the event's tone. */
+export function DeltaChip({
+  event,
+  className,
+  ...props
+}: { event: Pick<OddsEvent, "delta" | "status" | "reason"> } & React.ComponentProps<typeof motion.p>) {
+  return (
+    <motion.p
+      className={cn(
+        "inline-flex max-w-full items-center gap-2 truncate rounded-[6px] px-2.5 py-1 font-mono text-[13px]",
+        CHIP[toneOf(event)],
+        className,
+      )}
+      {...props}
+    >
+      <span>{signed(event.delta)}</span>
+      <span className="truncate">{event.reason}</span>
+    </motion.p>
+  );
+}
 
 function announcement(e: OddsEvent): string {
   const direction = e.delta > 0 ? copy.odds.up : e.delta < 0 ? copy.odds.down : copy.odds.unchanged;
@@ -23,15 +47,26 @@ function announcement(e: OddsEvent): string {
     odds: e.after,
     direction,
     amount: Math.abs(e.delta),
-    reason: e.reason,
+    // The template ends the sentence; a reaction that already does would read "..".
+    reason: e.reason.replace(/[.!?…]+$/, ""),
   });
 }
 
 /**
  * The live odds. Same place and size on acts 1 to 3: top right on desktop, a sticky bar
  * on mobile. `events` is what has been revealed so far, so the scan can play them in.
+ * With `travel`, each new chip arrives from wherever act 2 drew it (shared layoutId).
  */
-export function OddsWidget({ events }: { events: readonly OddsEvent[] }) {
+export function OddsWidget({
+  events,
+  travel = false,
+  note,
+}: {
+  events: readonly OddsEvent[];
+  travel?: boolean;
+  /** A line under the chip on desktop, e.g. what the current answer can move. */
+  note?: string;
+}) {
   const reduce = useReducedMotion();
   const odds = currentOdds(events);
   const last = events.at(-1);
@@ -101,18 +136,24 @@ export function OddsWidget({ events }: { events: readonly OddsEvent[] }) {
         </div>
       </div>
       {last && (
-        <motion.p
+        <DeltaChip
           key={count}
-          className={cn(
-            "inline-flex max-w-full items-center gap-2 truncate rounded-[6px] px-2.5 py-1 font-mono text-[13px] lg:mt-2",
-            CHIP[toneOf(last)],
-          )}
-          initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+          event={last}
+          layoutId={travel ? chipLayoutId(count) : undefined}
+          className="lg:mt-2"
+          initial={travel ? false : reduce ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
           animate={{ opacity: fresh ? 1 : 0.55, scale: 1 }}
-          transition={{ duration: reduce ? 0.2 : fresh ? 0.2 : 0.6, ease: EASE }}
+          transition={{ duration: reduce ? 0.2 : fresh ? (travel ? 0.5 : 0.2) : 0.6, ease: EASE }}
+        />
+      )}
+      {note && (
+        <motion.p
+          className="label-mono hidden lg:mt-3 lg:block"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, ease: EASE }}
         >
-          <span>{signed(last.delta)}</span>
-          <span className="truncate">{last.reason}</span>
+          {note}
         </motion.p>
       )}
       <p className="sr-only" aria-live="polite">

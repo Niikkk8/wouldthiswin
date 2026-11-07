@@ -7,6 +7,7 @@ import { OddsWidget } from "@/components/odds-widget";
 import { SiteHeader } from "@/components/site-header";
 import { copy, fill } from "@/lib/copy";
 import { EASE } from "@/lib/motion";
+import { ANSWER_MAX } from "@/lib/odds";
 import { ACTS, type ActName, type SessionView } from "@/lib/session";
 import { DeliberationAct } from "./deliberation-act";
 import { GrillingAct } from "./grilling-act";
@@ -47,10 +48,13 @@ function reducer(state: State, a: Action): State {
 
 const ODDS_ACTS: readonly ActName[] = ["scan", "grilling", "deliberation"];
 
-function headerStatus(view: SessionView): string {
+function headerStatus(view: SessionView, revealed: number): string {
   if (view.act === "share") return copy.header.share;
   if (view.act === "grilling") {
-    const answered = view.questions.filter((q) => q.answer).length;
+    // An answer counts once its odds change has landed, so the header doesn't run ahead
+    // of the judge's reaction.
+    const held = Math.max(0, view.events.length - revealed);
+    const answered = view.questions.filter((q) => q.answer).length - held;
     return fill(copy.header.question, {
       i: Math.min(answered + 1, view.questionCount),
       total: view.questionCount,
@@ -62,8 +66,9 @@ function headerStatus(view: SessionView): string {
 export function SessionShell({ initial }: { initial: SessionView }) {
   const reduce = useReducedMotion();
   const [{ view, pending }, dispatch] = useReducer(reducer, { view: initial, pending: false });
-  // How many scan events have played. Only the scan plays them in; later acts show all.
-  const [revealed, setRevealed] = useState(0);
+  // How many events the widget shows. The scan plays its events in, and act 2 holds each
+  // answer's event back until its chip has flown to the widget. Later acts show all.
+  const [revealed, setRevealed] = useState(initial.act === "scan" ? 0 : initial.events.length);
 
   const send = useCallback<Send>(
     async (a) => {
@@ -96,7 +101,9 @@ export function SessionShell({ initial }: { initial: SessionView }) {
   }, [view.act]);
 
   const advance = (from: ActName) => () => send({ action: "advance", from });
-  const events = view.act === "scan" ? view.events.slice(0, revealed) : view.events;
+  const events =
+    view.act === "scan" || view.act === "grilling" ? view.events.slice(0, revealed) : view.events;
+  const asking = view.act === "grilling" && view.questions.some((q) => !q.answer);
 
   let act: React.ReactNode;
   switch (view.act) {
@@ -113,7 +120,9 @@ export function SessionShell({ initial }: { initial: SessionView }) {
       );
       break;
     case "grilling":
-      act = <GrillingAct view={view} send={send} pending={pending} />;
+      act = (
+        <GrillingAct view={view} send={send} revealed={revealed} onReveal={setRevealed} pending={pending} />
+      );
       break;
     case "deliberation":
       act = <DeliberationAct view={view} onNext={advance("deliberation")} pending={pending} />;
@@ -128,10 +137,17 @@ export function SessionShell({ initial }: { initial: SessionView }) {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <SiteHeader repo={view.repo} status={headerStatus(view)} />
+      <SiteHeader repo={view.repo} status={headerStatus(view, revealed)} />
       <main className="page-x relative flex-1 pb-16 lg:pb-20">
         <AnimatePresence initial={false}>
-          {ODDS_ACTS.includes(view.act) && <OddsWidget key="odds" events={events} />}
+          {ODDS_ACTS.includes(view.act) && (
+            <OddsWidget
+              key="odds"
+              events={events}
+              travel={view.act === "grilling"}
+              note={asking ? fill(copy.acts.grilling.riding, { max: ANSWER_MAX }) : undefined}
+            />
+          )}
         </AnimatePresence>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

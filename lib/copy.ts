@@ -89,10 +89,22 @@ export const copy = {
     grilling: {
       answerLabel: "Your answer",
       hint: "Enter to answer. Silence counts as an answer too.",
+      counter: "{n} of {max}",
+      counterLabel: "{n} of {max} characters used",
+      thinking: "{judge} is writing something down.",
+      riding: "Riding on this answer: up to {max} points",
       you: "You",
       silence: "(silence)",
       next: "Leave the room",
       tenSeconds: "10 seconds left.",
+      // Used when the scoring call fails twice. Nobody loses points for our outage.
+      unscored: "Didn't catch that. No change.",
+      // An answer that tries to give the judge instructions, in each judge's voice.
+      injection: {
+        tired: "nice try. that's not an answer.",
+        investor: "Instructions aren't a business model.",
+        engineer: "Prompt injection isn't a feature. Answer the question.",
+      },
     },
     deliberation: {
       eyebrow: "Deliberation",

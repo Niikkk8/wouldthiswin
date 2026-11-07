@@ -1,94 +1,256 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "cn";
-import { copy } from "@/lib/copy";
+import { DeltaChip, chipLayoutId, signed } from "@/components/odds-widget";
+import { copy, fill } from "@/lib/copy";
+import { EASE } from "@/lib/motion";
+import type { OddsEvent } from "@/lib/odds";
 import { ANSWER_WINDOW_MS, MAX_ANSWER_LENGTH, type QuestionView, type SessionView } from "@/lib/session";
 import type { Send } from "./session-shell";
 import { ActFooter } from "./act-parts";
 
 const noop = () => () => {};
-const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 
+const WORD_MS = 60;
+/** The judge's reaction stays up this long before the next question. */
+const REACTION_MS = 2000;
+/** How long the chip sits by the reaction before it flies to the widget. */
+const CHIP_HOLD_MS = 700;
+
+const answerId = (i: number) => `answer-${i}`;
+
+/** Earlier answers, each collapsed to one faded line. The one just given flies in from the field. */
 function Transcript({ questions }: { questions: QuestionView[] }) {
-  const answered = questions.filter((q) => q.answer);
-  if (!answered.length) return null;
+  const lines = questions.filter((q) => q.answer);
+  if (!lines.length) return null;
   return (
-    <ol className="grid gap-3 pt-6 text-[17px] lg:max-w-[calc(100%-360px)] lg:pt-4">
-      {answered.map((q, i) => (
-        <li key={i} className="grid gap-3">
-          <p className="text-text-subtle">
-            <span className="label-mono mr-2 uppercase">{copy.judges[q.judge].name}</span>
-            {q.text}
-          </p>
-          <p className="text-text-muted">
-            <span className="label-mono mr-2 uppercase">{copy.acts.grilling.you}</span>
-            {q.answer!.silent ? copy.acts.grilling.silence : q.answer!.text}
-            {q.answer!.score !== null && (
+    <ol className="grid gap-1.5 pt-6 text-[15px] leading-snug lg:max-w-[calc(100%-360px)] lg:pt-4 lg:text-[16px]">
+      {lines.map((q, i) => {
+        const a = q.answer!;
+        return (
+          <li key={i} className="flex min-w-0 items-baseline gap-3 text-text-subtle" title={q.text}>
+            <span className="label-mono shrink-0 uppercase">{copy.judges[q.judge].name}</span>
+            <motion.span layoutId={answerId(i)} className="block min-w-0 truncate text-text-muted/80">
+              {a.silent ? copy.acts.grilling.silence : a.text}
+            </motion.span>
+            {a.score !== null && (
               <span
                 className={cn(
-                  "ml-3 font-mono text-[14px]",
-                  q.answer!.score > 0 ? "text-gain" : q.answer!.score < 0 ? "text-loss" : "",
+                  "shrink-0 font-mono text-[13px]",
+                  a.score > 0 ? "text-gain" : a.score < 0 ? "text-loss" : "text-text-subtle",
                 )}
               >
-                {signed(q.answer!.score)}
+                {signed(a.score)}
               </span>
             )}
-          </p>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ol>
   );
 }
 
-/** The question, with the caught phrase in red. */
+/**
+ * The question, word by word at 60ms a word. The caught phrase comes in last, in red, and
+ * its underline draws in after it.
+ */
 function QuestionText({ text, caught }: { text: string; caught: string | null }) {
+  const reduce = useReducedMotion();
   const at = caught ? text.indexOf(caught) : -1;
-  if (!caught || at < 0) return <>{text}</>;
+  const parts =
+    caught && at >= 0
+      ? [
+          { text: text.slice(0, at), caught: false },
+          { text: caught, caught: true },
+          { text: text.slice(at + caught.length), caught: false },
+        ]
+      : [{ text, caught: false }];
+
+  if (reduce) {
+    return (
+      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+        {parts.map((p, i) =>
+          p.caught ? (
+            <span key={i} className="text-loss underline decoration-2 underline-offset-[0.14em]">
+              {p.text}
+            </span>
+          ) : (
+            p.text
+          ),
+        )}
+      </motion.span>
+    );
+  }
+
+  // Plain words go in reading order; the caught words wait until all of them are in, then
+  // their underline draws.
+  type Token = { text: string; caught: boolean; delay: number; underline: number; bridge: boolean };
+  const raw = parts.flatMap((p) => words(p.text).map((w) => ({ text: w, caught: p.caught })));
+  const isWord = (t?: { text: string }) => !!t && !/^\s+$/.test(t.text);
+  const plainCount = raw.filter((t) => isWord(t) && !t.caught).length;
+  const caughtCount = raw.filter((t) => isWord(t) && t.caught).length;
+  const caughtStart = (plainCount + 2) * WORD_MS;
+  const lineStart = caughtStart + caughtCount * WORD_MS + 120;
+  let plain = 0;
+  let late = 0;
+  const tokens: (Token | string)[] = raw.map((t, i) => {
+    if (!isWord(t)) return t.text;
+    const k = t.caught ? late++ : plain++;
+    return {
+      ...t,
+      delay: t.caught ? caughtStart + k * WORD_MS : k * WORD_MS,
+      underline: lineStart + k * 180,
+      // Bridge the space to the next caught word so the underline reads as one line.
+      bridge: t.caught && !isWord(raw[i + 1]) && !!raw[i + 2]?.caught,
+    };
+  });
+  // Tokens with no space between them ("calls" + ",") stay on one line together.
+  const groups: (Token[] | string)[] = [];
+  for (const t of tokens) {
+    if (typeof t === "string") groups.push(t);
+    else if (Array.isArray(groups.at(-1))) (groups.at(-1) as Token[]).push(t);
+    else groups.push([t]);
+  }
+
   return (
     <>
-      {text.slice(0, at)}
-      <span className="text-loss">{caught}</span>
-      {text.slice(at + caught.length)}
+      {groups.map((g, gi) =>
+        typeof g === "string" ? (
+          g
+        ) : (
+          <span key={gi} className="whitespace-nowrap">
+            {g.map((t, ti) => (
+              <motion.span
+                key={ti}
+                // A token wider than the line (a long file name) may break inside itself.
+                className={cn("relative inline-block max-w-full whitespace-normal [overflow-wrap:anywhere]", t.caught && "text-loss")}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, ease: EASE, delay: t.delay / 1000 }}
+              >
+                {t.text}
+                {t.caught && (
+                  <motion.span
+                    aria-hidden
+                    className={cn(
+                      "absolute -bottom-[0.04em] left-0 h-[0.06em] min-h-[2px] origin-left bg-loss",
+                      t.bridge ? "-right-[0.28em]" : "right-0",
+                    )}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: 0.18, ease: "linear", delay: t.underline / 1000 }}
+                  />
+                )}
+              </motion.span>
+            ))}
+          </span>
+        ),
+      )}
     </>
   );
 }
 
-function Question({ q, index, send }: { q: QuestionView; index: number; send: Send }) {
+const words = (s: string) => s.split(/(\s+)/).filter(Boolean);
+
+function Timer({ left, stopped }: { left: number; stopped: boolean }) {
+  const reduce = useReducedMotion();
+  const secs = Math.ceil(left / 1000);
+  const urgent = secs <= 10;
+  const pulse = urgent && !stopped && !reduce && secs > 0;
+  // The bar runs on its own linear animation from where the clock is to zero.
+  const [start] = useState(() => ({ fraction: left / ANSWER_WINDOW_MS, ms: left }));
+
+  return (
+    <div className="w-full lg:w-[212px]">
+      <motion.p
+        key={pulse ? secs : "steady"}
+        aria-hidden
+        className={cn(
+          "origin-right text-right font-mono text-[56px] leading-none tabular-nums transition-colors duration-200 lg:text-[88px]",
+          urgent ? "text-loss" : "text-text",
+        )}
+        initial={pulse ? { scale: 1.08, opacity: 0.7 } : false}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.45, ease: EASE }}
+      >
+        0:{String(secs).padStart(2, "0")}
+      </motion.p>
+      <div className="mt-3 h-[3px] w-full overflow-hidden bg-border-strong">
+        <motion.div
+          className={cn("h-full origin-left", urgent ? "bg-loss" : "bg-text")}
+          initial={{ scaleX: start.fraction }}
+          animate={{ scaleX: stopped ? left / ANSWER_WINDOW_MS : 0 }}
+          transition={stopped ? { duration: 0 } : { duration: start.ms / 1000, ease: "linear" }}
+        />
+      </div>
+      <p className="sr-only" aria-live="assertive">
+        {urgent && !stopped && secs > 0 ? copy.acts.grilling.tenSeconds : ""}
+      </p>
+    </div>
+  );
+}
+
+type Phase = "asking" | "waiting" | "reacting";
+
+function Question({
+  q,
+  index,
+  send,
+  eventCount,
+  chipEvent,
+  onSettled,
+  onDone,
+}: {
+  q: QuestionView;
+  index: number;
+  send: Send;
+  /** How many events the view has; once this answer is scored, its event is the last. */
+  eventCount: number;
+  chipEvent: OddsEvent | undefined;
+  /** The chip has flown: show the new odds. */
+  onSettled: () => void;
+  /** The reaction has been read: on to the next question. */
+  onDone: () => void;
+}) {
   const reduce = useReducedMotion();
   const [deadline] = useState(() => Date.now() + (q.remainingMs ?? 0));
   const [now, setNow] = useState(() => Date.now());
   const [text, setText] = useState("");
+  const [phase, setPhase] = useState<Phase>("asking");
+  const [chipHere, setChipHere] = useState(true);
   const sent = useRef(false);
-  const [waiting, setWaiting] = useState(false);
   // Typing before hydration would be lost, so the field opens once React is running.
   const ready = useSyncExternalStore(noop, () => true, () => false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const stopped = phase !== "asking";
+  const [stoppedAt, setStoppedAt] = useState<number | null>(null);
+  const left = Math.max(0, deadline - (stoppedAt ?? now));
 
   useEffect(() => {
+    if (stopped) return;
     const t = setInterval(() => setNow(Date.now()), 200);
     return () => clearInterval(t);
-  }, []);
-
-  const left = Math.max(0, deadline - now);
-  const secs = Math.ceil(left / 1000);
-  const urgent = secs <= 10;
+  }, [stopped]);
 
   const submit = (answer: string) => {
     if (sent.current) return;
     sent.current = true;
-    setWaiting(true);
+    setStoppedAt(Date.now());
+    setPhase("waiting");
     send({ action: "answer", question: index, text: answer }).then(({ ok }) => {
-      if (!ok) {
-        sent.current = false;
-        setWaiting(false);
-      }
+      if (ok) return setPhase("reacting");
+      sent.current = false;
+      setStoppedAt(null);
+      setPhase("asking");
     });
   };
 
   // When the clock runs out, whatever is typed goes in. The server allows a short grace period.
-  const expired = left === 0;
+  const expired = left === 0 && !stopped;
   const textRef = useRef(text);
   useEffect(() => {
     textRef.current = text;
@@ -98,97 +260,213 @@ function Question({ q, index, send }: { q: QuestionView; index: number; send: Se
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expired]);
 
-  useEffect(() => inputRef.current?.focus(), []);
+  // A reload mid-reaction lands here with the answer already scored: skip straight on.
+  const scored = q.answer?.score != null;
+  useEffect(() => {
+    if (scored && phase === "asking") {
+      onSettled();
+      onDone();
+    }
+  }, [scored, phase, onSettled, onDone]);
+
+  // The reaction: the chip sits by it, flies to the widget, then the next question comes.
+  useEffect(() => {
+    if (phase !== "reacting") return;
+    const fly = setTimeout(
+      () => {
+        setChipHere(false);
+        onSettled();
+      },
+      reduce ? 0 : CHIP_HOLD_MS,
+    );
+    const next = setTimeout(onDone, REACTION_MS + (reduce ? 0 : CHIP_HOLD_MS));
+    return () => {
+      clearTimeout(fly);
+      clearTimeout(next);
+    };
+  }, [phase, reduce, onSettled, onDone]);
+
+  useEffect(() => inputRef.current?.focus({ preventScroll: true }), []);
+
+  // Keep the timer and field in view above a phone keyboard. The keyboard resizes the
+  // viewport (resizes-content, or the visual viewport on iOS) after focus, so follow that.
+  const keepInView = useCallback(() => {
+    if (document.activeElement !== inputRef.current) return;
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    formRef.current?.scrollIntoView({ block: "end", behavior: reduce ? "auto" : "smooth" });
+  }, [reduce]);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    window.addEventListener("resize", keepInView);
+    vv?.addEventListener("resize", keepInView);
+    return () => {
+      window.removeEventListener("resize", keepInView);
+      vv?.removeEventListener("resize", keepInView);
+    };
+  }, [keepInView]);
 
   const judge = copy.judges[q.judge];
+  const a = q.answer;
+  const reaction = phase === "reacting" && a?.score != null && a.reason;
+  const near = text.length >= MAX_ANSWER_LENGTH - 30;
+
   return (
-    <div className="mt-14 lg:mt-16">
+    <motion.div layout="position" transition={{ duration: 0.4, ease: EASE }} className="mt-10 lg:mt-12">
       <p className="flex items-center gap-2.5 font-mono text-[13px]">
         <span aria-hidden className="size-2 rounded-full bg-loss" />
         {judge.name}
       </p>
-      <h1 className="mt-6 max-w-[1120px] text-[36px] leading-[1.02] font-extrabold tracking-[-0.035em] text-balance lg:text-question">
+      <h1 className="mt-5 max-w-[1120px] text-[36px] leading-[1.02] font-extrabold tracking-[-0.035em] text-balance lg:mt-6 lg:text-question">
         <QuestionText text={q.text} caught={q.caught} />
       </h1>
 
-      <form
-        className="mt-14 flex flex-col-reverse gap-8 lg:mt-20 lg:flex-row lg:items-end lg:gap-12"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit(text);
-        }}
-      >
-        <div className="flex-1">
-          <label htmlFor="answer" className="label-mono">
-            {copy.acts.grilling.answerLabel}
-          </label>
-          <input
-            id="answer"
-            ref={inputRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={MAX_ANSWER_LENGTH}
-            readOnly={waiting || !ready}
-            aria-busy={waiting}
-            autoComplete="off"
-            enterKeyHint="send"
-            className="mt-4 w-full border-b read-only:text-text-muted border-border-strong bg-transparent pb-4 font-mono text-[18px] text-text outline-offset-4 placeholder:text-text-subtle lg:text-[20px]"
-          />
-          <p className="label-mono mt-3">{copy.acts.grilling.hint}</p>
-        </div>
-
-        <div className="w-full lg:w-[212px]">
-          <motion.p
-            key={urgent && !reduce ? secs : "calm"}
-            aria-hidden
-            className={cn(
-              "text-right font-mono text-[56px] leading-none tabular-nums lg:text-[88px]",
-              urgent ? "text-loss" : "text-text",
-            )}
-            initial={urgent && !reduce ? { opacity: 0.55 } : false}
+      <AnimatePresence mode="wait" initial={false}>
+        {reaction ? (
+          <motion.div
+            key="reaction"
+            className="mt-10 min-h-[160px] lg:mt-14"
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: reduce ? 0.2 : 0.3, ease: EASE }}
           >
-            0:{String(secs).padStart(2, "0")}
-          </motion.p>
-          <div className="mt-3 h-[3px] w-full bg-border-strong">
-            <div
-              className={cn(
-                "h-full origin-left transition-transform duration-200 ease-linear",
-                urgent ? "bg-loss" : "bg-text",
+            <p className="label-mono uppercase">{judge.name}</p>
+            <p className="mt-3 max-w-[900px] text-[24px] leading-tight font-bold tracking-[-0.02em] text-balance lg:text-[34px]">
+              {reaction}
+            </p>
+            <div className="mt-5 h-[30px]">
+              {chipHere && chipEvent && (
+                <DeltaChip
+                  event={chipEvent}
+                  layoutId={chipLayoutId(eventCount)}
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2, ease: EASE }}
+                />
               )}
-              style={{ transform: `scaleX(${left / ANSWER_WINDOW_MS})` }}
-            />
-          </div>
-          <p className="sr-only" aria-live="assertive">
-            {urgent && !expired ? copy.acts.grilling.tenSeconds : ""}
-          </p>
-        </div>
-      </form>
-    </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.form
+            key="form"
+            ref={formRef}
+            className="mt-10 flex scroll-mb-4 flex-col-reverse gap-6 lg:mt-14 lg:flex-row lg:items-end lg:gap-12"
+            exit={{ opacity: 0, transition: { duration: 0.2 } }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit(text);
+            }}
+          >
+            <div className="flex-1">
+              <div className="flex items-baseline justify-between gap-4">
+                <label htmlFor="answer" className="label-mono">
+                  {copy.acts.grilling.answerLabel}
+                </label>
+                <p
+                  id="answer-count"
+                  className={cn("label-mono tabular-nums", near && "text-unclear")}
+                  aria-label={fill(copy.acts.grilling.counterLabel, { n: text.length, max: MAX_ANSWER_LENGTH })}
+                >
+                  {fill(copy.acts.grilling.counter, { n: text.length, max: MAX_ANSWER_LENGTH })}
+                </p>
+              </div>
+              {phase === "asking" ? (
+                <textarea
+                  id="answer"
+                  ref={inputRef}
+                  rows={1}
+                  value={text}
+                  onChange={(e) => setText(e.target.value.replace(/[\r\n]+/g, " ").slice(0, MAX_ANSWER_LENGTH))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                      e.preventDefault();
+                      submit(text);
+                    }
+                  }}
+                  onFocus={() => setTimeout(keepInView, 300)}
+                  maxLength={MAX_ANSWER_LENGTH}
+                  readOnly={!ready}
+                  aria-describedby="answer-count answer-hint"
+                  autoComplete="off"
+                  enterKeyHint="send"
+                  className="mt-4 field-sizing-content w-full resize-none border-b border-border-strong bg-transparent pb-4 font-mono text-[18px] text-text outline-offset-4 read-only:text-text-muted lg:text-[20px]"
+                />
+              ) : (
+                // The submitted answer: it collapses into the transcript once it's scored.
+                <div className="mt-4 border-b border-border-strong pb-4">
+                  <motion.p layoutId={answerId(index)} className="font-mono text-[18px] text-text-muted lg:text-[20px]">
+                    {text.trim() || copy.acts.grilling.silence}
+                  </motion.p>
+                </div>
+              )}
+              <p id="answer-hint" className="label-mono mt-3" role="status">
+                {phase === "waiting" ? fill(copy.acts.grilling.thinking, { judge: judge.name }) : copy.acts.grilling.hint}
+              </p>
+            </div>
+
+            <Timer left={left} stopped={stopped} />
+          </motion.form>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
-/** Act 2, the grilling. Placeholder motion: the word-by-word reveal comes next. */
-export function GrillingAct({ view, send, pending }: { view: SessionView; send: Send; pending: boolean }) {
+/** Act 2, the grilling. */
+export function GrillingAct({
+  view,
+  send,
+  revealed,
+  onReveal,
+  pending,
+}: {
+  view: SessionView;
+  send: Send;
+  revealed: number;
+  onReveal: (n: number) => void;
+  pending: boolean;
+}) {
   const answered = view.questions.filter((q) => q.answer).length;
-  const done = answered === view.questionCount;
-  const current = view.questions[answered];
+  // The question on screen. It stays put while its reaction plays, after the server has
+  // already moved on, and only then does the next one get asked for.
+  const [onScreen, setOnScreen] = useState(answered);
+  const done = onScreen >= view.questionCount;
+  const current = view.questions[onScreen];
   const asked = useRef(-1);
+  const eventCount = view.events.length;
 
   // Ask the server to start the clock on the next question.
   useEffect(() => {
-    if (done || current || asked.current === answered) return;
-    asked.current = answered;
-    send({ action: "show", question: answered }).then(({ ok }) => {
+    if (done || current || asked.current === onScreen || onScreen !== answered) return;
+    asked.current = onScreen;
+    send({ action: "show", question: onScreen }).then(({ ok }) => {
       if (!ok) asked.current = -1;
     });
-  }, [done, current, answered, send]);
+  }, [done, current, onScreen, answered, send]);
+
+  // Anything not held back by a reaction (a reload, a resync) shows straight away.
+  const reacting = !!current?.answer;
+  useEffect(() => {
+    if (!reacting && revealed < eventCount) onReveal(eventCount);
+  }, [reacting, revealed, eventCount, onReveal]);
+
+  const settle = useCallback(() => onReveal(eventCount), [onReveal, eventCount]);
+  const next = useCallback(() => setOnScreen((i) => i + 1), []);
 
   return (
     <>
       <Transcript questions={view.questions} />
-      {current && <Question key={answered} q={current} index={answered} send={send} />}
+      {current && (
+        <Question
+          key={onScreen}
+          q={current}
+          index={onScreen}
+          send={send}
+          eventCount={eventCount}
+          chipEvent={view.events.at(-1)}
+          onSettled={settle}
+          onDone={next}
+        />
+      )}
       {done && (
         <ActFooter
           label={copy.acts.grilling.next}

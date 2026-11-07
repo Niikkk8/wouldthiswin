@@ -31,7 +31,7 @@ export type Judge = (typeof JUDGES)[number];
 export const QUESTION_COUNT = 3;
 export const ANSWER_WINDOW_MS = 30_000;
 export const ANSWER_GRACE_MS = 3_000;
-export const MAX_ANSWER_LENGTH = 400;
+export const MAX_ANSWER_LENGTH = 300;
 
 export type Claim = {
   /** The claim as the README makes it, e.g. "SMS alerts when your turn is close". */

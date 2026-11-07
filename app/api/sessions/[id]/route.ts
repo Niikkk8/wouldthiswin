@@ -12,8 +12,9 @@ import {
   type SessionState,
 } from "@/lib/session";
 import { runSessionScan } from "@/lib/run-scan";
-import { mutate, ownerHash, type MutateResult } from "@/lib/session-store";
-import { standInPanel, standInScore } from "@/lib/stand-in";
+import { scoreAnswer } from "@/lib/answer-score";
+import { addUsage, mutate, ownerHash, type MutateResult } from "@/lib/session-store";
+import { standInPanel } from "@/lib/stand-in";
 
 // The scan: GitHub (~5s), demo check in parallel, up to two model calls.
 export const maxDuration = 60;
@@ -24,7 +25,7 @@ const Body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("scan") }),
   z.object({ action: z.literal("advance"), from: z.enum(ACTS) }),
   z.object({ action: z.literal("show"), question: Question }),
-  // Longer answers are cut to MAX_ANSWER_LENGTH by the state machine.
+  // Longer answers are cut to MAX_ANSWER_LENGTH (300) by the state machine.
   z.object({ action: z.literal("answer"), question: Question, text: z.string().max(2000) }),
 ]);
 
@@ -40,7 +41,18 @@ async function finishPending(id: string, owner: string | null, s: SessionState):
     if (!r.ok) return r;
     const a = r.session.answers[i];
     if (a.score !== null) continue;
-    const scored = a.silent ? null : standInScore(i);
+    let scored: { score: number; reason: string } | null = null;
+    if (!a.silent) {
+      const q = r.session.questions[i];
+      const out = await scoreAnswer({
+        judge: q.judge,
+        question: q.text,
+        answer: a.text,
+        claims: r.session.claims ?? [],
+      });
+      await addUsage(id, out.usage);
+      scored = out;
+    }
     r = await mutate(id, owner, (cur) => settleAnswer(cur, i, scored));
   }
   if (!r.ok) return r;
