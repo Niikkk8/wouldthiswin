@@ -16,7 +16,7 @@ import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const MOMENT_MS = 6000;
 const WORD_MS = 110;
-const TICK_MS = 50;
+const TICK_MS = 100;
 /** The hero form's fields: while one has focus, the loop holds still. */
 const FORM_FIELDS = ["repo", "repo-demo"];
 
@@ -51,33 +51,61 @@ const LOOP_MS = MOMENTS.length * MOMENT_MS;
 const STILL_MS = 5000;
 
 /** Time through the loop, counting only while the visitor isn't typing in the form. */
-function useLoopClock(run: boolean): number {
+function useLoopClock(run: boolean, box: React.RefObject<HTMLElement | null>): number {
   const [t, setT] = useState(0);
-  const paused = useRef(false);
+  const typing = useRef(false);
+  const visible = useRef(true);
   useEffect(() => {
     if (!run) return;
     const sync = () => {
-      paused.current = FORM_FIELDS.includes(document.activeElement?.id ?? "");
+      typing.current = FORM_FIELDS.includes(document.activeElement?.id ?? "");
     };
     sync();
     document.addEventListener("focusin", sync);
     // On focusout the next field isn't focused yet; check once it is.
     const later = () => setTimeout(sync);
     document.addEventListener("focusout", later);
-    let last = performance.now();
-    const id = setInterval(() => {
-      const now = performance.now();
-      // A background tab can stall the timer for seconds; never skip ahead more than a tick.
-      const dt = Math.min(now - last, TICK_MS * 4);
-      last = now;
-      if (!paused.current) setT((x) => x + dt);
-    }, TICK_MS);
+    // Scrolled away: nothing to watch, so nothing to run.
+    const io = new IntersectionObserver(([e]) => {
+      visible.current = e.isIntersecting;
+    });
+    if (box.current) io.observe(box.current);
+
+    // Starts once the page has loaded and the main thread is free, so the loop never
+    // competes with the hero's first paint or the page becoming interactive.
+    let id: ReturnType<typeof setInterval> | undefined;
+    // Safari has no requestIdleCallback: a short timeout stands in.
+    const ric = typeof window.requestIdleCallback === "function";
+    let idle: number | undefined;
+    let last = 0;
+    const begin = () => {
+      last = performance.now();
+      id = setInterval(() => {
+        const now = performance.now();
+        // A background tab can stall the timer for seconds; never skip ahead more than a tick.
+        const dt = Math.min(now - last, TICK_MS * 4);
+        last = now;
+        if (!typing.current && visible.current) setT((x) => x + dt);
+      }, TICK_MS);
+    };
+    const whenIdle = () => {
+      idle = ric ? window.requestIdleCallback(begin, { timeout: 2000 }) : (setTimeout(begin, 600) as unknown as number);
+    };
+    if (document.readyState === "complete") whenIdle();
+    else window.addEventListener("load", whenIdle, { once: true });
+
     return () => {
       clearInterval(id);
+      if (idle !== undefined) {
+        if (ric) window.cancelIdleCallback(idle);
+        else clearTimeout(idle);
+      }
+      window.removeEventListener("load", whenIdle);
+      io.disconnect();
       document.removeEventListener("focusin", sync);
       document.removeEventListener("focusout", later);
     };
-  }, [run]);
+  }, [run, box]);
   return run ? t : STILL_MS;
 }
 
@@ -87,7 +115,8 @@ function useLoopClock(run: boolean): number {
  */
 export function HeroMoment({ className }: { className?: string }) {
   const reduce = useReducedMotion();
-  const t = useLoopClock(!reduce);
+  const box = useRef<HTMLElement>(null);
+  const t = useLoopClock(!reduce, box);
   const loop = Math.floor(t / LOOP_MS);
   const index = Math.floor((t % LOOP_MS) / MOMENT_MS);
   const local = t % MOMENT_MS;
@@ -104,7 +133,7 @@ export function HeroMoment({ className }: { className?: string }) {
   const others = ORDER.filter((j) => j !== m.judge);
 
   return (
-    <figure className={cn("w-full max-w-[544px] xl:max-w-[448px] 2xl:max-w-[544px]", className)} aria-label={copy.landing.moment.describe}>
+    <figure ref={box} className={cn("w-full max-w-[544px] xl:max-w-[448px] 2xl:max-w-[544px]", className)} aria-label={copy.landing.moment.describe}>
       <div aria-hidden>
         <SampleTag>{copy.landing.moment.label}</SampleTag>
 

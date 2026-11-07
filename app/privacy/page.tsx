@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { copy, fill } from "@/lib/copy";
 
 export const metadata: Metadata = {
-  title: `${copy.privacy.title} · ${copy.meta.title}`,
+  title: `${copy.privacy.title} · ${copy.meta.name}`,
   description: copy.privacy.lede,
 };
 

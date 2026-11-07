@@ -2,7 +2,7 @@
 
 import { CircleAlert, CircleCheck, CircleX, GitPullRequest, MessageSquare } from "lucide-react";
 import { motion } from "motion/react";
-import { useId, useState } from "react";
+import { createContext, useContext, useId, useState } from "react";
 import { cn } from "cn";
 import { Avatar } from "@/components/session/deliberation-act";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,9 +28,14 @@ const REVIEWER: Record<ReviewStatus, { Icon: typeof CircleCheck; color: string }
 
 const projectName = (repo: string) => repo.split("/").pop() ?? repo;
 
+/** A review shown as a still: no entrance, so its text is visible in the server HTML. */
+const Still = createContext(false);
+
 /** Fades and rises once; under reduced motion, a plain 200ms crossfade. */
 function Rise({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
   const reduce = useReducedMotion();
+  const still = useContext(Still);
+  if (still) return <div className={className}>{children}</div>;
   return (
     <motion.div
       className={className}
@@ -100,9 +105,10 @@ function Fixes({ fixes }: { fixes: string[] }) {
 }
 
 /** Act 4, and the public review link: the night as a pull-request review. */
-export function ReviewView({ review }: { review: Review }) {
+export function ReviewView({ review, still = false }: { review: Review; still?: boolean }) {
   const r = review;
   return (
+    <Still.Provider value={still}>
     <article className="pt-6 lg:pt-4">
       <header className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-12">
         <Rise>
@@ -241,5 +247,6 @@ export function ReviewView({ review }: { review: Review }) {
         </div>
       </div>
     </article>
+    </Still.Provider>
   );
 }

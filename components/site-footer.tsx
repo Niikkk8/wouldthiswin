@@ -34,6 +34,9 @@ export function SiteFooter() {
             );
           })}
         </ul>
+        <Link href="/guides" className="label-mono underline underline-offset-4 hover:text-text">
+          {f.guides}
+        </Link>
         <Link href="/privacy" className="label-mono underline underline-offset-4 hover:text-text">
           {f.privacy}
         </Link>

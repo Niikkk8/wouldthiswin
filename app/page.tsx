@@ -1,10 +1,16 @@
-import { BelowFold } from "@/components/landing/below-fold";
 import { Headline } from "@/components/landing/headline";
 import { HeroMoment } from "@/components/landing/hero-moment";
+import { FinalCta } from "@/components/landing/final-cta";
+import { FinePrint } from "@/components/landing/fine-print";
+import { MeetThePanel } from "@/components/landing/meet-the-panel";
 import { RepoForm } from "@/components/landing/repo-form";
+import { SampleSession } from "@/components/landing/sample-session";
+import { WalkAway } from "@/components/landing/walk-away";
+import { JsonLd } from "@/components/json-ld";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { copy } from "@/lib/copy";
+import { webApplication } from "@/lib/structured-data";
 
 // Yesterday's board (components/landing/yesterdays-board.tsx) stays off the page until the
 // board exists.
@@ -12,6 +18,7 @@ import { copy } from "@/lib/copy";
 export default function Home() {
   return (
     <div className="flex min-h-dvh flex-col">
+      <JsonLd data={webApplication()} />
       <SiteHeader />
       <main className="flex-1">
         {/* The hero fills one screen on desktop, demo field open or not: sizes follow the viewport's height. */}
@@ -25,7 +32,12 @@ export default function Home() {
           </div>
           <HeroMoment />
         </section>
-        <BelowFold />
+        {/* Every section's words are in the HTML; only the animations and the acts load later. */}
+        <MeetThePanel />
+        <SampleSession />
+        <WalkAway />
+        <FinePrint />
+        <FinalCta />
       </main>
       <SiteFooter />
     </div>

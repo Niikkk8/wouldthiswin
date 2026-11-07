@@ -4,7 +4,7 @@ import { LOGO_RATIO, logoDataUri } from "@/lib/logo";
 import { ogFonts } from "@/lib/og-fonts";
 
 // The landing page's share card. Review links set their own (app/og/[id]).
-export const alt = `${copy.meta.title} ${copy.meta.description}`;
+export const alt = `${copy.meta.title}. ${copy.meta.description}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -34,7 +34,7 @@ export default async function Image() {
         </div>
         <div style={{ display: "flex", marginTop: "auto", alignItems: "flex-end", justifyContent: "space-between" }}>
           <div style={{ display: "flex", maxWidth: 620, fontSize: 30, lineHeight: 1.3, color: C.muted, fontWeight: 800 }}>
-            {copy.meta.description}
+            {copy.landing.subhead}
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 14 }}>
             <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>

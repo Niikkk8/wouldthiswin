@@ -1,30 +1,25 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "cn";
-import { OddsWidget } from "@/components/odds-widget";
-import { ReviewView } from "@/components/review/review-view";
-import { DeliberationAct } from "@/components/session/deliberation-act";
-import { GrillingAct } from "@/components/session/grilling-act";
 import { SampleTag } from "@/components/landing/sample-tag";
-import { ScanAct } from "@/components/session/scan-act";
-import type { Send } from "@/components/session/session-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
-import { DEMO_ANSWERS, DEMO_ID, demoState, type DemoAt } from "@/lib/demo/fixture";
-import { demoTransport, type DemoAction } from "@/lib/demo/transport";
 import { EASE } from "@/lib/motion";
-import { reviewOf } from "@/lib/review";
-import { toView } from "@/lib/session";
+import { useDesktop } from "@/lib/use-desktop";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
+import type { StageKind } from "./sample-stage";
 
-const ANSWERS = DEMO_ANSWERS.map((a) => a.text);
+// The section's words (heading, lede, captions) render on the server. The acts themselves
+// are the heaviest code on the page: they load only when a stage is about to be seen.
+const Stage = dynamic(() => import("./sample-stage").then((m) => m.Stage), { ssr: false });
+
 const C = copy.landing.sample.captions;
-const noop = () => {};
 
-type Kind = "scan" | "grilling" | "answered" | "deliberation" | "review";
+type Kind = StageKind;
 
 /** The scroll stage on desktop: one caption per step; the grilling spans two of them. */
 const STEPS: { kind: Kind; caption: string }[] = [
@@ -43,89 +38,6 @@ const BLOCKS: { kind: Kind; caption: string | null }[] = [
   { kind: "review", caption: null },
 ];
 
-const desktopQuery = "(min-width: 64rem)";
-function useDesktop(): boolean {
-  return useSyncExternalStore(
-    (cb) => {
-      const mq = window.matchMedia(desktopQuery);
-      mq.addEventListener("change", cb);
-      return () => mq.removeEventListener("change", cb);
-    },
-    () => window.matchMedia(desktopQuery).matches,
-    () => false,
-  );
-}
-
-/** One run of the sample session from a fixed point, on the local transport. */
-function useDemoRun(at: DemoAt) {
-  const [initial] = useState(() => demoState(at));
-  const [view, setView] = useState(() => toView(initial, Date.now()));
-  const [transport] = useState(() => demoTransport(initial, { onChange: (s) => setView(toView(s, Date.now())) }));
-  const send = useCallback<Send>(
-    async (a, opts) => {
-      const r = await transport(DEMO_ID, a as DemoAction, opts?.onProgress);
-      return { ok: r.status < 300 };
-    },
-    [transport],
-  );
-  return { view, send };
-}
-
-/** The odds, pinned in the stage's corner on desktop and a plain bar above each block on a phone. */
-const ODDS_CLASS = "lg:top-6! lg:right-10! max-lg:static! max-lg:mx-0! max-lg:rounded-card max-lg:border";
-
-function ScanStage({ still }: { still: boolean }) {
-  const { view, send } = useDemoRun("scanned");
-  const [revealed, setRevealed] = useState(still ? view.events.length : 0);
-  return (
-    <>
-      <OddsWidget events={view.events.slice(0, revealed)} className={ODDS_CLASS} />
-      <ScanAct view={view} send={send} revealed={revealed} onReveal={setRevealed} onNext={noop} onWaiting={noop} pending={false} />
-    </>
-  );
-}
-
-function GrillingStage({ still, at }: { still: boolean; at: "grilling" | "answered" }) {
-  const { view, send } = useDemoRun(still && at === "grilling" ? "asking" : at);
-  const [revealed, setRevealed] = useState(view.events.length);
-  return (
-    <>
-      <OddsWidget events={view.events.slice(0, revealed)} travel className={ODDS_CLASS} />
-      <GrillingAct view={view} send={send} revealed={revealed} onReveal={setRevealed} pending={false} autoAnswers={ANSWERS} frozen={still} />
-    </>
-  );
-}
-
-function DeliberationStage({ still }: { still: boolean }) {
-  const { view, send } = useDemoRun(still ? "deliberated" : "deliberation");
-  return (
-    <>
-      <OddsWidget events={view.events} className={ODDS_CLASS} />
-      <DeliberationAct view={view} send={send} onNext={noop} pending={false} />
-    </>
-  );
-}
-
-function ReviewStage() {
-  const [review] = useState(() => reviewOf(demoState("verdict"))!);
-  return <ReviewView review={review} />;
-}
-
-function Stage({ kind, still = false }: { kind: Kind; still?: boolean }) {
-  switch (kind) {
-    case "scan":
-      return <ScanStage still={still} />;
-    case "grilling":
-      return <GrillingStage still={still} at="grilling" />;
-    case "answered":
-      return <GrillingStage still at="answered" />;
-    case "deliberation":
-      return <DeliberationStage still={still} />;
-    case "review":
-      return <ReviewStage />;
-  }
-}
-
 /** Controls that would do nothing here (next-act buttons, skip) stay hidden. */
 const FRAME = "relative [&_[data-demo-hide]]:hidden";
 
@@ -138,6 +50,14 @@ function PinnedStage() {
   const reduce = useReducedMotion();
   const outer = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(0);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = outer.current;
+    if (!el || near) return;
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "100% 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [near]);
   useEffect(() => {
     const el = outer.current;
     if (!el) return;
@@ -202,7 +122,7 @@ function PinnedStage() {
               exit={{ opacity: 0, transition: { duration: 0.2 } }}
               transition={{ duration: 0.3 }}
             >
-              <Stage kind={kind} />
+              {near && <Stage kind={kind} />}
             </motion.div>
           </AnimatePresence>
           {/* The stage is cut off at the bottom; fade it rather than slice it. */}

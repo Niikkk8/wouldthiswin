@@ -3,7 +3,7 @@ import { DemoLoader } from "@/components/demo/demo-loader";
 import { copy } from "@/lib/copy";
 
 export const metadata: Metadata = {
-  title: `${copy.demo.label} · ${copy.meta.title}`,
+  title: `${copy.demo.label} · ${copy.meta.name}`,
   description: copy.meta.description,
 };
 

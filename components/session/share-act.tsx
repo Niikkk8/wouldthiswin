@@ -193,7 +193,7 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
       window.open(imagePath(r.id, format), "_blank", "noopener");
       return;
     }
-    const data: ShareData = { files: [file], text: caption, title: copy.meta.title };
+    const data: ShareData = { files: [file], text: caption, title: copy.meta.name };
     if (navigator.canShare?.(data)) {
       try {
         await navigator.share(data);

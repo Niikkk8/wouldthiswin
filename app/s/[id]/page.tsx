@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps<"/s/[id]">): Promis
   const base: Metadata = { robots: { index: false, follow: false } };
   const review = await loadPublicReview(id).catch(() => null);
   if (!review) return base;
-  const title = `${projectName(review.repo)}: ${review.odds}% · ${copy.meta.title}`;
+  const title = `${projectName(review.repo)}: ${review.odds}% · ${copy.meta.name}`;
   const image = { url: SITE_URL + ogPath(id), width: 1200, height: 630, alt: `${review.repo}, ${review.odds}%` };
   return {
     ...base,

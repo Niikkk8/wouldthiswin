@@ -101,3 +101,19 @@
   line-height: var(--text-label--line-height);
   color: var(--color-text-subtle);
 }
+
+/* The headline's words rise in on first paint: pure CSS, so the text never waits for JavaScript. */
+@keyframes word-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(12px);
+  }
+}
+@utility word-in {
+  display: inline-block;
+  animation: word-in 0.5s var(--ease-out-quint) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

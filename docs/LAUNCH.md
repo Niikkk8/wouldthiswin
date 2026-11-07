@@ -38,3 +38,18 @@ The schema lives in the local, gitignored `supabase/schema.sql` and is run by ha
 ## Share events table
 
 Run once before share events can be recorded: `psql "$DATABASE_URL" -f docs/sql/share-events.sql`. Until then the share screen works and each logging call writes a `share.log` error line.
+
+## Guides
+
+Each guide is one MDX file in `content/guides/<slug>.mdx`, published at `/guides/<slug>` and listed on `/guides` and in the sitemap. The file starts with its metadata:
+
+```mdx
+export const meta = {
+  title: "The guide's title",
+  description: "One or two sentences for search results and link previews.",
+  date: "2026-11-07",
+  // updated: "2026-12-01",
+};
+```
+
+The slug is the file name (lowercase letters, digits and hyphens). Delete `content/guides/placeholder.mdx` once the first real guide is in. Pages are built at deploy time, so a new guide needs a push.

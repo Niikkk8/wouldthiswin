@@ -16,11 +16,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: copy.meta.title,
   description: copy.meta.description,
-  applicationName: copy.meta.title,
+  applicationName: copy.meta.name,
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    siteName: copy.meta.title,
+    siteName: copy.meta.name,
     title: copy.meta.title,
     description: copy.meta.description,
     url: "/",

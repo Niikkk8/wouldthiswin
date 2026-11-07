@@ -2,9 +2,11 @@
 
 export const copy = {
   meta: {
-    title: "Would this win?",
+    /** The site's name, for page titles ("Privacy · Would This Win?") and the app name. */
+    name: "Would This Win?",
+    title: "Would This Win? AI judge for your hackathon project",
     description:
-      "Paste your hackathon repo. Get scanned, get grilled by three judges, and watch your odds move live.",
+      "Paste your hackathon repo. An AI checks every README claim against your code, three judges grill you, and your odds of winning move live. Free, no sign-up.",
   },
   brand: "wouldthiswin",
   close: "Close",
@@ -341,7 +343,22 @@ export const copy = {
       { label: "LinkedIn", url: "https://linkedin.com/in/niket" },
     ],
     privacy: "Privacy",
+    guides: "Guides",
     note: "Judged by three AI judges. Numbers by code.",
+  },
+  guides: {
+    title: "Guides",
+    lede: "How hackathon judges think, and how to get your project ready for them.",
+    eyebrow: "Guide",
+    by: "By",
+    published: "Published {date}",
+    updated: "Updated {date}",
+    empty: "The first guides are on their way.",
+    cta: {
+      title: "Would yours win?",
+      body: "Paste your repo. Three judges check every claim, grill you for 30 seconds each, and give you your odds. Free, no sign-up.",
+      button: "Face the panel",
+    },
   },
   // Plain language. Keep in step with lib/retention.ts.
   privacy: {
