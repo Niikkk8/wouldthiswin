@@ -38,7 +38,16 @@ const noSignals: ScanSignals = { demo: { status: "none", url: null }, bulkFirstC
 const files = ["lib/queue.ts", "config/hospital.ts", "package.json"];
 const scan = (c = claims, signals = noSignals) => ({ claims: c, questions, signals, files, sources: [] });
 
-const panel: Panel = { chat: [], oneLiner: "the one that texts you", fixes: ["a", "b", "c"], charge: "of overpromising" };
+const panel: Panel = {
+  chat: [],
+  oneLiner: "the one that texts you",
+  fixes: ["a", "b", "c"],
+  reviews: {
+    tired: { status: "commented", comment: null },
+    investor: { status: "approved", comment: null },
+    engineer: { status: "changesRequested", comment: null },
+  },
+};
 
 function unwrap(r: Result): SessionState {
   if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
@@ -160,9 +169,11 @@ describe("act order", () => {
     s = answer(s, 0, "a", T0);
     s = answer(s, 1, "b", T0 + 60_000);
     s = answer(s, 2, "c", T0 + 120_000);
-    assert.deepEqual(advance(s, "grilling"), { ok: false, error: "actIncomplete" }); // no panel yet
+    s = unwrap(advance(s, "grilling"));
+    // Act 3 can't be left before the panel has deliberated.
+    assert.deepEqual(advance(s, "deliberation"), { ok: false, error: "actIncomplete" });
     s = unwrap(applyPanel(s, panel));
-    for (const act of ["grilling", "deliberation", "verdict"] as const) s = unwrap(advance(s, act));
+    for (const act of ["deliberation", "verdict"] as const) s = unwrap(advance(s, act));
     assert.equal(s.act, "share");
     assert.deepEqual(advance(s, "share"), { ok: false, error: "wrongAct" });
   });
@@ -241,20 +252,31 @@ describe("answers", () => {
 });
 
 describe("verdict", () => {
-  test("guilty when a core claim is unbacked, with the panel's charge", () => {
+  test("changes requested when a core claim is missing from the code", () => {
     let s = grilling();
     s = answer(s, 0, "a", T0, 5);
     s = answer(s, 1, "b", T0, 2);
     s = answer(s, 2, "c", T0, -4);
-    s = unwrap(applyPanel(s, panel));
-    assert.deepEqual(verdictOf(s), { odds: 38, tier: "honorable", charge: "of overpromising" });
+    assert.deepEqual(verdictOf(s), { odds: 38, tier: "honorable", readyToWin: false });
   });
 
-  test("not guilty otherwise", () => {
-    const s = unwrap(
-      applyScan(newSession("abc", "r"), scan([claims[0], claims[2]])),
-    );
-    assert.equal(verdictOf(s).charge, null);
+  test("ready to win at 55 or more with every core claim found or unclear", () => {
+    let s = unwrap(advance(unwrap(applyScan(newSession("abc", "r"), scan([claims[0], claims[2]]))), "scan"));
+    s = answer(s, 0, "a", T0, 6);
+    assert.deepEqual(verdictOf(s), { odds: 60, tier: "top3", readyToWin: true });
+  });
+});
+
+describe("deliberation", () => {
+  test("the panel is written once, and only in act 3", () => {
+    let s = grilling();
+    assert.deepEqual(applyPanel(s, panel), { ok: false, error: "wrongAct" });
+    s = answer(s, 0, "a", T0);
+    s = answer(s, 1, "b", T0);
+    s = answer(s, 2, "c", T0);
+    s = unwrap(advance(s, "grilling"));
+    s = unwrap(applyPanel(s, panel));
+    assert.deepEqual(applyPanel(s, panel), { ok: false, error: "alreadyDeliberated" });
   });
 });
 
@@ -269,16 +291,17 @@ describe("view", () => {
     assert.equal(v.questionCount, 3);
   });
 
-  test("the panel stays hidden until deliberation", () => {
+  test("the review stays hidden until act 4", () => {
     let s = grilling();
     s = answer(s, 0, "a", T0);
     s = answer(s, 1, "b", T0);
     s = answer(s, 2, "c", T0);
-    s = unwrap(applyPanel(s, panel));
-    assert.equal(toView(s, T0).panel, null);
-    assert.equal(toView(s, T0).verdict, null);
     s = unwrap(advance(s, "grilling"));
+    s = unwrap(applyPanel(s, panel));
     assert.deepEqual(toView(s, T0).panel, panel);
     assert.equal(toView(s, T0).verdict, null);
+    assert.equal(toView(s, T0).review, null);
+    s = unwrap(advance(s, "deliberation"));
+    assert.equal(toView(s, T0).review?.oneLiner, "the one that texts you");
   });
 });

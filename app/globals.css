@@ -14,9 +14,6 @@
   --color-gain: #4d7cff;
   --color-loss: #ff3b30;
   --color-unclear: #f5a524;
-  --color-paper: #ffffff;
-  --color-paper-ink: #141414;
-  --color-stamp: #b3121f;
   /* Share card only. */
   --color-share-orange: #ff4f1f;
   --color-share-blue: #2236ff;
@@ -28,7 +25,6 @@
 
   --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-  --font-paper: var(--font-courier), "Courier New", monospace;
 
   --text-hero: 128px;
   --text-hero--line-height: 0.88;

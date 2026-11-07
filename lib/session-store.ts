@@ -4,6 +4,7 @@
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
 import { ID_RE, IP_LIMIT_PER_24H, dailyCap, db, sha256 } from "./db";
+import { reviewOf, type Review } from "./review";
 import {
   newSession,
   toView,
@@ -235,4 +236,55 @@ export async function putCachedScan(repoUrl: string, latestSha: string, scan: Sc
     .from("scan_cache")
     .upsert({ repo_url: repoUrl, latest_sha: latestSha, scan, created_at: new Date().toISOString() });
   if (error) console.error(JSON.stringify({ event: "scan.cachePut", repoUrl, error: error.message }));
+}
+
+const PANEL_LOCK_SECONDS = 90;
+
+/**
+ * True if this request should run act 3's deliberation call. A lock that's older than
+ * 90s (a crashed request) can be taken over.
+ */
+export async function claimPanel(id: string): Promise<boolean> {
+  const stale = new Date(Date.now() - PANEL_LOCK_SECONDS * 1000).toISOString();
+  const { data, error } = await db()
+    .from("sessions")
+    .update({ panel_started_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("panel", null)
+    .or(`panel_started_at.is.null,panel_started_at.lt.${stale}`)
+    .select("id");
+  if (error) throw error;
+  return data.length === 1;
+}
+
+/** Lets a failed deliberation be retried straight away. */
+export async function releasePanel(id: string): Promise<void> {
+  const { error } = await db().from("sessions").update({ panel_started_at: null }).eq("id", id);
+  if (error) console.error(JSON.stringify({ event: "panel.release", id, error: error.message }));
+}
+
+/**
+ * The review for anyone with the link. Reads only what the review is built from: never
+ * the answers, the questions or the deliberation chat. Null until act 4.
+ */
+export async function loadPublicReview(id: string): Promise<Review | null> {
+  if (!ID_RE.test(id)) return null;
+  const { data, error } = await db()
+    .from("sessions")
+    .select("id, repo, act, claims, events, panel, signals")
+    .eq("id", id)
+    .maybeSingle<Pick<Row, "id" | "repo" | "act" | "claims" | "events" | "panel" | "signals">>();
+  if (error) throw error;
+  if (!data || (data.act !== "verdict" && data.act !== "share") || !data.panel) return null;
+  // Only the parts the review uses; the chat stays out even in memory.
+  const panel = { ...data.panel, chat: [] };
+  return reviewOf({ ...newSession(data.id, data.repo), act: data.act, claims: data.claims, events: data.events, panel, signals: data.signals });
+}
+
+/** True if this browser started the session. */
+export async function isOwner(id: string): Promise<boolean> {
+  const owner = await ownerHash();
+  if (!owner || !ID_RE.test(id)) return false;
+  const { data } = await db().from("sessions").select("owner_hash").eq("id", id).maybeSingle<{ owner_hash: string }>();
+  return data?.owner_hash === owner;
 }

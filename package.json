@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "signals": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/signals.ts",
+    "clear-test-data": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/clear-test-data.ts",
     "test": "node --import tsx --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
@@ -15,6 +16,7 @@
     "@number-flow/react": "^0.6.2",
     "@octokit/rest": "^22.0.1",
     "@supabase/supabase-js": "^2.119.0",
+    "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "lucide-react": "^1.70.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

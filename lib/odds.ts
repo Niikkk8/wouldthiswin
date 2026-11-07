@@ -100,8 +100,15 @@ export function tierFor(odds: number): Tier {
   return "participating";
 }
 
-export function isNotGuilty(claims: readonly { status: ClaimStatus; weight: ClaimWeight }[]) {
-  return !claims.some((c) => c.weight === "core" && c.status === "unbacked");
+/** The review's status: "Ready to win" needs 55% or more and no core claim missing from the code. */
+export const READY_ODDS = 55;
+
+export function anyCoreMissing(claims: readonly { status: ClaimStatus; weight: ClaimWeight }[]): boolean {
+  return claims.some((c) => c.weight === "core" && c.status === "unbacked");
+}
+
+export function readyToWin(odds: number, claims: readonly { status: ClaimStatus; weight: ClaimWeight }[]): boolean {
+  return odds >= READY_ODDS && !anyCoreMissing(claims);
 }
 
 export type Tone = "gain" | "loss" | "unclear" | "flat";

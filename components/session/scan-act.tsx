@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "cn";
@@ -13,6 +13,7 @@ import { toneOf, type OddsEvent, type Tone } from "@/lib/odds";
 import type { Claim, SessionView } from "@/lib/session";
 import { ActFooter, ActTitle } from "./act-parts";
 import type { Send } from "./session-shell";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 // Timing. The whole scan stays under 6 seconds whatever the number of claims.
 const ROW_STAGGER_MS = 20;

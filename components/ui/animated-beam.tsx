@@ -4,9 +4,10 @@
 // the beam draws itself once (pathLength 0 to 1) and reports when it lands, so the odds
 // can move in sync. Geometry is computed by the caller from measured elements.
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { useEffect, useId, useRef } from "react";
 import { EASE } from "@/lib/motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 export type BeamState = "hidden" | "drawing" | "drawn";
 

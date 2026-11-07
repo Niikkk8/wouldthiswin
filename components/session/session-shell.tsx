@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { OddsWidget } from "@/components/odds-widget";
@@ -14,12 +14,14 @@ import { GrillingAct } from "./grilling-act";
 import { ScanAct } from "./scan-act";
 import { ShareAct } from "./share-act";
 import { VerdictAct } from "./verdict-act";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 export type SessionAction =
   | { action: "scan" }
   | { action: "advance"; from: ActName }
   | { action: "show"; question: number }
-  | { action: "answer"; question: number; text: string };
+  | { action: "answer"; question: number; text: string }
+  | { action: "deliberate" };
 
 export type SendResult = {
   ok: boolean;
@@ -125,7 +127,7 @@ export function SessionShell({ initial }: { initial: SessionView }) {
       );
       break;
     case "deliberation":
-      act = <DeliberationAct view={view} onNext={advance("deliberation")} pending={pending} />;
+      act = <DeliberationAct view={view} send={send} onNext={advance("deliberation")} pending={pending} />;
       break;
     case "verdict":
       act = <VerdictAct view={view} onNext={advance("verdict")} pending={pending} />;

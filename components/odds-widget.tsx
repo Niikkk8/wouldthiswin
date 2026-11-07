@@ -1,12 +1,13 @@
 "use client";
 
 import NumberFlow from "@number-flow/react";
-import { motion, useAnimate, useReducedMotion } from "motion/react";
+import { motion, useAnimate } from "motion/react";
 import { useEffect, useState } from "react";
 import { cn } from "cn";
 import { copy, fill } from "@/lib/copy";
 import { EASE, EASE_CSS } from "@/lib/motion";
 import { BIG_DROP, currentOdds, toneOf, type OddsEvent, type Tone } from "@/lib/odds";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const CHIP: Record<Tone, string> = {
   gain: "bg-gain text-bg",

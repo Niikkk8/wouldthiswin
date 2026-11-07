@@ -1,9 +1,10 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { EASE } from "@/lib/motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 /** Eyebrow and title. The title rises 24px and fades in as the act arrives. */
 export function ActTitle({ eyebrow, title }: { eyebrow?: string; title: string }) {

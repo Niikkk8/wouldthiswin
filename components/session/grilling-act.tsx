@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "cn";
 import { DeltaChip, chipLayoutId, signed } from "@/components/odds-widget";
@@ -10,6 +10,7 @@ import type { OddsEvent } from "@/lib/odds";
 import { ANSWER_WINDOW_MS, MAX_ANSWER_LENGTH, type QuestionView, type SessionView } from "@/lib/session";
 import type { Send } from "./session-shell";
 import { ActFooter } from "./act-parts";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const noop = () => () => {};
 

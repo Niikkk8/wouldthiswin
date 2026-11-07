@@ -13,8 +13,16 @@ import {
 } from "@/lib/session";
 import { runSessionScan } from "@/lib/run-scan";
 import { scoreAnswer } from "@/lib/answer-score";
-import { addUsage, mutate, ownerHash, type MutateResult } from "@/lib/session-store";
-import { standInPanel } from "@/lib/stand-in";
+import { PanelError, runPanel } from "@/lib/panel";
+import {
+  addUsage,
+  claimPanel,
+  loadSession,
+  mutate,
+  ownerHash,
+  releasePanel,
+  type MutateResult,
+} from "@/lib/session-store";
 
 // The scan: GitHub (~5s), demo check in parallel, up to two model calls.
 export const maxDuration = 60;
@@ -27,14 +35,12 @@ const Body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("show"), question: Question }),
   // Longer answers are cut to MAX_ANSWER_LENGTH (300) by the state machine.
   z.object({ action: z.literal("answer"), question: Question, text: z.string().max(2000) }),
+  z.object({ action: z.literal("deliberate") }),
 ]);
 
 const ok = (s: SessionState) => Response.json({ view: toView(s, Date.now()) });
 
-/**
- * Scores any recorded-but-unscored answers in order, then writes the deliberation once
- * the last one is scored. Safe to call twice: every step checks it hasn't already run.
- */
+/** Scores any recorded-but-unscored answers in order. Safe to call twice: each is scored once. */
 async function finishPending(id: string, owner: string | null, s: SessionState): Promise<MutateResult> {
   let r: MutateResult = { ok: true, session: s };
   for (let i = 0; i < s.answers.length; i++) {
@@ -55,12 +61,46 @@ async function finishPending(id: string, owner: string | null, s: SessionState):
     }
     r = await mutate(id, owner, (cur) => settleAnswer(cur, i, scored));
   }
-  if (!r.ok) return r;
-  const done = r.session.answers.length === r.session.questions.length;
-  if (done && r.session.panel === null) {
-    r = await mutate(id, owner, (cur) => applyPanel(cur, standInPanel()));
-  }
   return r;
+}
+
+type Deliberation =
+  | { kind: "done"; session: SessionState }
+  | { kind: "pending"; session: SessionState }
+  | { kind: "notFound" }
+  | { kind: "failed"; session: SessionState };
+
+/**
+ * Act 3: one deliberation call per session. A second request while it runs gets
+ * "pending" and asks again, like the scan.
+ */
+async function deliberate(id: string, owner: string | null): Promise<Deliberation> {
+  const loaded = await loadSession(id, owner);
+  if (!loaded) return { kind: "notFound" };
+  const s = loaded.session;
+  if (s.act !== "deliberation" || s.panel !== null) return { kind: "done", session: s };
+  if (!(await claimPanel(id))) return { kind: "pending", session: s };
+  try {
+    const out = await runPanel(s);
+    await addUsage(id, out.usage);
+    console.log(
+      JSON.stringify({
+        event: "panel.done",
+        id,
+        dropped: out.dropped,
+        input_tokens: out.usage.inputTokens,
+        output_tokens: out.usage.outputTokens,
+      }),
+    );
+    const r = await mutate(id, owner, (cur) => applyPanel(cur, out.panel));
+    if (r.ok) return { kind: "done", session: r.session };
+    return r.session ? { kind: "done", session: r.session } : { kind: "notFound" };
+  } catch (err) {
+    if (err instanceof PanelError) await addUsage(id, err.usage);
+    console.error(JSON.stringify({ event: "panel.failed", id, error: err instanceof Error ? err.message : String(err) }));
+    await releasePanel(id);
+    return { kind: "failed", session: s };
+  }
 }
 
 export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">) {
@@ -92,6 +132,19 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
           case "failed":
             // The session is over: the client offers a way back to the start.
             return fail(out.error, undefined, { restart: true });
+        }
+      }
+      case "deliberate": {
+        const out = await deliberate(id, owner);
+        switch (out.kind) {
+          case "done":
+            return ok(out.session);
+          case "pending":
+            return Response.json({ pending: true, view: toView(out.session, now) }, { status: 202 });
+          case "notFound":
+            return fail("notFound");
+          case "failed":
+            return fail("judgeFailed", out.session);
         }
       }
       case "advance": {

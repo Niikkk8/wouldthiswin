@@ -11,7 +11,7 @@ import {
   clampOdds,
   currentOdds,
   demoDelta,
-  isNotGuilty,
+  readyToWin,
   makeEvent,
   tierFor,
   toneOf,
@@ -147,27 +147,23 @@ describe("verdict tiers", () => {
   }
 });
 
-describe("charge", () => {
-  test("not guilty when no core claim is unbacked", () => {
-    assert.equal(isNotGuilty([]), true);
-    assert.equal(
-      isNotGuilty([
-        { status: "backed", weight: "core" },
-        { status: "unclear", weight: "core" },
-        { status: "unbacked", weight: "minor" },
-      ]),
-      true,
-    );
+describe("review status", () => {
+  const coreBacked = { status: "backed", weight: "core" } as const;
+  const coreMissing = { status: "unbacked", weight: "core" } as const;
+  const minorMissing = { status: "unbacked", weight: "minor" } as const;
+  const coreUnclear = { status: "unclear", weight: "core" } as const;
+
+  test("ready to win at 55 or more with no core claim missing", () => {
+    assert.equal(readyToWin(55, [coreBacked, coreUnclear, minorMissing]), true);
+    assert.equal(readyToWin(99, []), true);
   });
 
-  test("guilty when any core claim is unbacked", () => {
-    assert.equal(
-      isNotGuilty([
-        { status: "backed", weight: "core" },
-        { status: "unbacked", weight: "core" },
-      ]),
-      false,
-    );
+  test("changes requested below 55", () => {
+    assert.equal(readyToWin(54, [coreBacked]), false);
+  });
+
+  test("changes requested when any core claim is missing, whatever the odds", () => {
+    assert.equal(readyToWin(90, [coreBacked, coreMissing]), false);
   });
 });
 

@@ -1,9 +1,9 @@
 "use client";
 
-import { useReducedMotion } from "motion/react";
 import { BlurFade } from "@/components/ui/blur-fade";
 import { copy } from "@/lib/copy";
 import { EASE } from "@/lib/motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 /** "Would this win?", one word at a time, 60ms apart. */
 export function Headline() {

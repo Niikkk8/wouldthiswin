@@ -3,6 +3,7 @@
 
 import { copy } from "./copy";
 import { displayTree } from "./file-tree";
+import { reviewOf, type Review } from "./review";
 import type { Source } from "./sources";
 import {
   type ClaimStatus,
@@ -18,8 +19,8 @@ import {
   demoDelta,
   clampAnswerScore,
   currentOdds,
-  isNotGuilty,
   makeEvent,
+  readyToWin,
   tierFor,
 } from "./odds";
 
@@ -81,12 +82,18 @@ export type Answer = {
 
 export type PanelMessage = { judge: Judge; text: string };
 
+export type ReviewStatus = "approved" | "changesRequested" | "commented";
+
+/** A review comment on a file the scan read. The excerpt is verbatim from that file. */
+export type ReviewComment = { file: string; excerpt: string; startLine: number; body: string };
+
+export type JudgeReview = { status: ReviewStatus; comment: ReviewComment | null };
+
 export type Panel = {
   chat: PanelMessage[];
   oneLiner: string;
   fixes: string[];
-  /** Used only when a core claim is unbacked, e.g. "of overpromising". */
-  charge: string;
+  reviews: Record<Judge, JudgeReview>;
 };
 
 export type SessionState = {
@@ -188,12 +195,9 @@ function actComplete(s: SessionState): boolean {
     case "scan":
       return s.claims !== null;
     case "grilling":
-      return (
-        s.answers.length === s.questions.length &&
-        s.answers.every((a) => a.score !== null) &&
-        s.panel !== null
-      );
+      return s.answers.length === s.questions.length && s.answers.every((a) => a.score !== null);
     case "deliberation":
+      return s.panel !== null;
     case "verdict":
       return true;
     case "share":
@@ -273,27 +277,22 @@ export function settleAnswer(
   return ok({ ...s, answers, events: [...s.events, event] });
 }
 
-/** Stores the deliberation, once every answer is scored. */
+/** Stores the deliberation, once, during act 3. */
 export function applyPanel(s: SessionState, panel: Panel): Result {
-  if (s.act !== "grilling") return fail("wrongAct");
+  if (s.act !== "deliberation") return fail("wrongAct");
   if (s.panel !== null) return fail("alreadyDeliberated");
-  const done =
-    s.answers.length === s.questions.length && s.answers.every((a) => a.score !== null);
-  if (!done) return fail("actIncomplete");
   return ok({ ...s, panel });
 }
 
 export type Verdict = {
   odds: number;
   tier: Tier;
-  /** Null means not guilty. */
-  charge: string | null;
+  readyToWin: boolean;
 };
 
 export function verdictOf(s: SessionState): Verdict {
   const odds = currentOdds(s.events);
-  const guilty = !isNotGuilty(s.claims ?? []);
-  return { odds, tier: tierFor(odds), charge: guilty ? (s.panel?.charge ?? null) : null };
+  return { odds, tier: tierFor(odds), readyToWin: readyToWin(odds, s.claims ?? []) };
 }
 
 // What the client sees. Questions stay hidden until they're shown, so nobody reads ahead
@@ -322,6 +321,8 @@ export type SessionView = {
   questions: QuestionView[];
   panel: Panel | null;
   verdict: Verdict | null;
+  /** Act 4 onwards: the code review, built in code from the session. */
+  review: Review | null;
 };
 
 export function toView(s: SessionState, now: number): SessionView {
@@ -351,5 +352,6 @@ export function toView(s: SessionState, now: number): SessionView {
     questions,
     panel: at >= ACTS.indexOf("deliberation") ? s.panel : null,
     verdict: at >= ACTS.indexOf("verdict") ? verdictOf(s) : null,
+    review: at >= ACTS.indexOf("verdict") ? reviewOf(s) : null,
   };
 }
