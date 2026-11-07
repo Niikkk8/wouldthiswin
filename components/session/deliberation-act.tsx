@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "cn";
+import { JudgeHead } from "@/components/judge-portrait";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { Button } from "@/components/ui/button";
 import { copy, fill } from "@/lib/copy";
@@ -13,27 +14,15 @@ import type { Send } from "./session-shell";
 import { ActFooter, ActTitle } from "./act-parts";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
-export const AVATAR: Record<Judge, string> = {
-  engineer: "bg-[#1f3a2e] text-[#7fd1a8]",
-  investor: "bg-[#3a3214] text-[#f5d36a]",
-  tired: "bg-[#2a2547] text-[#b8adff]",
-};
-
 const DELTA: Record<Tone, string> = { gain: "text-gain", loss: "text-loss", unclear: "text-unclear", flat: "text-text-muted" };
 const DOT: Record<Tone, string> = { gain: "#4D7CFF", loss: "#FF3B30", unclear: "#F5A524", flat: "#8A8A8E" };
 
 const projectName = (repo: string) => repo.split("/").pop() ?? repo;
 const CHART_MS = 1200;
 
+/** The judge's head, cut from their portrait. */
 export function Avatar({ judge, className }: { judge: Judge; className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn("grid size-8 shrink-0 place-items-center rounded-full text-[12px] font-bold", AVATAR[judge], className)}
-    >
-      {copy.judges[judge].initials}
-    </span>
-  );
+  return <JudgeHead judge={judge} size={32} className={className} />;
 }
 
 function Typing({ judge }: { judge: Judge }) {

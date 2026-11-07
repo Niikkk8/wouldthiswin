@@ -17,6 +17,9 @@ export const copy = {
     headline: ["Would", "this", "win?"],
     subhead:
       "Paste your hackathon repo. Get scanned, get grilled by three judges, and watch your odds move live.",
+    panel: "The panel",
+    madeBy: "Who made this",
+    credits: "Niket Shah plays the Engineer. Akshat Kharbanda plays the Investor. Krish Mehta plays the Tired Judge.",
     repoLabel: "Your GitHub repo",
     placeholder: "github.com/you/your-project",
     button: "Face the panel",
@@ -35,9 +38,9 @@ export const copy = {
     },
   },
   judges: {
-    engineer: { name: "The Engineer", initials: "EN" },
-    investor: { name: "The Investor", initials: "IN" },
-    tired: { name: "The Tired Judge", initials: "TJ" },
+    engineer: { name: "The Engineer" },
+    investor: { name: "The Investor" },
+    tired: { name: "The Tired Judge" },
   },
   // Scan findings. They describe evidence, never motives, and never use "unbacked".
   scan: {

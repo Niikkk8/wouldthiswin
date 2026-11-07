@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { copy } from "@/lib/copy";
+import { JUDGE_HEADS } from "@/lib/judge-heads";
 import { ogFonts } from "@/lib/og-fonts";
 import { loadPublicReview } from "@/lib/session-store";
 import type { Review } from "@/lib/review";
@@ -109,6 +110,8 @@ function Card({ r }: { r: Review }) {
           {r.reviewers.map((rv) => (
             <div key={rv.judge} style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "JetBrains Mono", fontSize: 21 }}>
               <MarkIcon mark={REVIEWER[rv.status].mark} color={REVIEWER[rv.status].color} size={20} />
+              {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
+              <img src={JUDGE_HEADS[rv.judge]} width={32} height={32} style={{ borderRadius: 999 }} />
               <div style={{ display: "flex", color: C.muted }}>{copy.judges[rv.judge].name}</div>
             </div>
           ))}

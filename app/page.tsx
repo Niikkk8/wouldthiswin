@@ -1,4 +1,5 @@
 import { Headline } from "@/components/landing/headline";
+import { Panel } from "@/components/landing/panel";
 import { RepoForm } from "@/components/landing/repo-form";
 import { YesterdaysBoard } from "@/components/landing/yesterdays-board";
 import { SiteFooter } from "@/components/site-footer";
@@ -17,7 +18,8 @@ export default function Home() {
           </p>
           <RepoForm />
         </section>
-        <div className="lg:pt-12">
+        <div className="grid content-start gap-14 lg:pt-12">
+          <Panel />
           <YesterdaysBoard />
         </div>
       </main>

@@ -46,3 +46,6 @@ next-env.d.ts
 
 # design reference, local only
 /Would This Win Project 34 storyboard.pdf
+
+# judge sprite previews (npm run judges)
+/.judge-previews

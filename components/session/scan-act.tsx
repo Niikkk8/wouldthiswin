@@ -7,7 +7,9 @@ import { cn } from "cn";
 import { AnimatedBeam, type BeamState } from "@/components/ui/animated-beam";
 import { buttonVariants } from "@/components/ui/button";
 import { HyperText } from "@/components/ui/hyper-text";
+import { JudgeRow, type ReactionCue } from "@/components/judge-portrait";
 import { copy, fill } from "@/lib/copy";
+import { reactionForDelta } from "@/lib/judge-sprites";
 import { EASE } from "@/lib/motion";
 import { toneOf, type OddsEvent, type Tone } from "@/lib/odds";
 import { progressLine, type ScanProgress } from "@/lib/scan-progress";
@@ -586,9 +588,17 @@ export function ScanAct({
     return () => clearTimeout(retry);
   }, [scanned, failed, attempt, send]);
 
+  // The panel reads along and reacts to each result as it lands.
+  const landed = scanned && revealed > 0 ? view.events[Math.min(revealed, view.events.length) - 1] : undefined;
+  const kind = landed ? reactionForDelta(landed.delta) : null;
+  const cue: ReactionCue | null = kind ? { kind, key: revealed } : null;
+
   return (
     <>
       <ActTitle eyebrow={copy.acts.scan.eyebrow} title={copy.acts.scan.title} />
+      {!failed && (
+        <JudgeRow rest="scan" reactions={{ engineer: cue, investor: cue, tired: cue }} className="mt-8 lg:mt-10" />
+      )}
       {failed ? (
         <div className="mt-12 max-w-xl">
           <p className="text-[20px] leading-snug" role="alert">
