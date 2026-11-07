@@ -8,6 +8,7 @@ import { OddsWidget } from "@/components/odds-widget";
 import { ReviewView } from "@/components/review/review-view";
 import { DeliberationAct } from "@/components/session/deliberation-act";
 import { GrillingAct } from "@/components/session/grilling-act";
+import { SampleTag } from "@/components/landing/sample-tag";
 import { ScanAct } from "@/components/session/scan-act";
 import type { Send } from "@/components/session/session-shell";
 import { buttonVariants } from "@/components/ui/button";
@@ -129,12 +130,7 @@ function Stage({ kind, still = false }: { kind: Kind; still?: boolean }) {
 const FRAME = "relative [&_[data-demo-hide]]:hidden";
 
 function SampleLabel() {
-  return (
-    <p className="label-mono inline-flex items-center gap-2 rounded-full border border-border-strong px-3 py-1 uppercase">
-      <span aria-hidden className="size-1.5 rounded-full bg-unclear" />
-      {copy.landing.sample.label}
-    </p>
-  );
+  return <SampleTag>{copy.landing.sample.label}</SampleTag>;
 }
 
 /** Desktop: the stage stays pinned while the page scrolls past it; scroll picks the step. */

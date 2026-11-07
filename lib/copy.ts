@@ -17,6 +17,12 @@ export const copy = {
     headline: ["Would", "this", "win?"],
     subhead:
       "Paste your hackathon repo. Get scanned, get grilled by three judges, and watch your odds move live.",
+    moment: {
+      label: "Sample",
+      describe:
+        "A sample moment from the panel, on a made-up project: the Engineer asks which file sends the SMS alerts the README promises and the odds fall from 50% to 31%; the Investor asks who pays and they rise to 36%; the Tired Judge wakes up and asks for the one-sentence version.",
+      paysReason: "Clinics pay per location",
+    },
     meet: {
       heading: "Meet the panel",
       lede: "Three judges, three angles. Each one asks one question, and you get 30 seconds.",
