@@ -6,7 +6,7 @@ Set these for **Production** (and Preview if you use preview deploys). None of t
 
 | Variable | Required | What it's for |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | The three model calls (scan, answer scoring, deliberation), all `claude-haiku-5-5`. About $0.005 per full session. |
+| `ANTHROPIC_API_KEY` | Yes | The model calls (scan, answer scoring, deliberation, and the fix check on a re-review), all `claude-haiku-5-5`. About $0.006 per full session, a little more on a re-review. |
 | `GITHUB_TOKEN` | Yes | Reading public repos: metadata, README, tree, commits, manifests and the files the scan reads. A fine-grained token with public-repo read only. Without it GitHub's anonymous limit (60 requests an hour) runs out after a few sessions. |
 | `SUPABASE_URL` | Yes | The Supabase project URL. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-side database access (sessions, scan cache, locks). Never `NEXT_PUBLIC_`; RLS blocks every other role. |
@@ -52,4 +52,4 @@ export const meta = {
 };
 ```
 
-The slug is the file name (lowercase letters, digits and hyphens). Delete `content/guides/placeholder.mdx` once the first real guide is in. Pages are built at deploy time, so a new guide needs a push.
+The slug is the file name (lowercase letters, digits and hyphens). Pages are built at deploy time, so a new guide needs a push.

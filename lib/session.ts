@@ -1,8 +1,9 @@
 // The session state machine. Pure functions: the server loads a session, applies one of
 // these, and saves the result. The client never runs them; it only mirrors SessionView.
 
-import { copy } from "./copy";
+import { copy, fill } from "./copy";
 import { displayTree } from "./file-tree";
+import type { Iteration } from "./recheck";
 import { reviewOf, type Review } from "./review";
 import type { Source } from "./sources";
 import {
@@ -12,6 +13,7 @@ import {
   type OddsEvent,
   type Tier,
   BULK_FIRST_COMMIT_DELTA,
+  fixDelta,
   SILENCE_SCORE,
   START_ODDS,
   capScanDelta,
@@ -50,7 +52,7 @@ export type Claim = {
   missing: string | null;
   /** Unbacked claims: the files that were read looking for it. */
   searched: string[];
-  /** Backed claims: a line (at most 120 characters) found verbatim in `file`. */
+  /** Backed and mocked claims: a line (at most 120 characters) found verbatim in `file`. */
   quote?: string | null;
 };
 
@@ -60,6 +62,8 @@ export type ScanSignals = {
   demo: { status: DemoStatus; url: string | null; provided?: boolean };
   /** The first commit added more than 70% of today's files. */
   bulkFirstCommit: boolean;
+  /** A re-review: what the panel found checking last round's fixes against the diff. */
+  iteration?: Iteration;
 };
 
 export type Question = {
@@ -130,6 +134,8 @@ export type Result = { ok: true; session: SessionState } | { ok: false; error: S
 const ok = (session: SessionState): Result => ({ ok: true, session });
 const fail = (error: SessionError): Result => ({ ok: false, error });
 
+const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
+
 export function newSession(id: string, repo: string): SessionState {
   return {
     id,
@@ -183,6 +189,12 @@ export function applyScan(s: SessionState, scan: Scan): Result {
   }
   if (scan.signals.bulkFirstCommit) {
     push({ kind: "commits", rawDelta: BULK_FIRST_COMMIT_DELTA, reason: copy.odds.bulkFirstCommit });
+  }
+  // A re-review's fix checks come after the scan and outside its cap: acting on the
+  // panel's feedback is its own signal, worth at most +12.
+  for (const f of scan.signals.iteration?.fixes ?? []) {
+    const reason = fill(copy.iteration.event[f.status], { fix: clip(f.fix, 48) });
+    events.push(makeEvent(events, { act: 1, kind: "iteration", rawDelta: fixDelta(f.status), reason }));
   }
   return ok({
     ...s,

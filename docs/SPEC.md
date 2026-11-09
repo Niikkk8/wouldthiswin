@@ -2,7 +2,7 @@
 
 The single source of truth for wouldthiswin.com. If code and this file disagree, this file wins, or gets updated in the same commit as the code.
 
-Status: phases A, B, C, D1 and the pre-launch round are done. D2 (GitHub auth and the board) comes after launch. Launch setup: `docs/LAUNCH.md`.
+Status: phases A, B, C, D1, the pre-launch round and the judging-realism round are done. D2 (GitHub auth and the board) comes after launch. Launch setup: `docs/LAUNCH.md`.
 
 ---
 
@@ -51,23 +51,25 @@ The engine is deterministic and lives in code. The model only classifies claims 
 |---|---|
 | Start | 50 |
 | Odds clamp | 1 to 99, applied after every event |
-| Core claim: backed / unbacked / unclear | +6 / −19 / −2 |
-| Minor claim: backed / unbacked / unclear | +3 / −9 / 0 (backed and unbacked are half the core deltas, rounded toward zero; approved) |
+| Core claim: backed / mocked / unbacked / unclear | +6 / −10 / −19 / −2 |
+| Minor claim: backed / mocked / unbacked / unclear | +3 / −5 / −9 / 0 (half the core deltas, rounded toward zero; approved) |
+| Mocked | The code fakes it: mock or sample data standing in for the real source, a hardcoded response, an in-memory array where the README names a database or queue. Judges mark "only works with pre-loaded data" down hard, but a mock is a working stand-in, not an empty promise, so it costs less than missing. Before this status existed, a repo that mocked all eight databases it claimed scored the same as one whose files were cut off. |
 | Unclear | Means unverified, not false, so it costs little. A real hackathon winner scored low when unclear cost as much as −6. |
 | Scan cap | The scan as a whole (claims, demo, commits) moves the odds by at most +20 and −30 from the start (`SCAN_CAP_UP`, `SCAN_CAP_DOWN`), so a long README can't farm points. An event past the cap is stored with the part that still fits, often 0. |
-| Live demo loads | +5, reason "Demo link loads" |
-| Demo video resolves (YouTube, Loom, Vimeo, Google Drive) | +3, reason "Demo video resolves" |
+| Live demo loads | +8, reason "Demo link loads". Judges call a demo that runs the single largest differentiator, so it is the biggest single gain the scan gives. |
+| Demo video resolves (YouTube, Loom, Vimeo, Google Drive) | +4, reason "Demo video resolves" (the fallback judges accept when the wifi dies) |
 | Demo link provided but dead | −8, reason "Demo link is dead" |
 | No demo link | 0 (no event) |
 | First commit added more than 70% of today's files | −10, reason "Most of the code arrived in one commit." |
 | Answer score from the model | Clamped in code to −12..+12. Rounded; non-numbers count as 0. |
+| Re-review fix check (§4.4) | Per fix the panel asked for last round: done +4, started +2, still open 0. Outside the scan cap, so at most +12. Reasons "Done: …", "Started: …", "Still open: …". |
 | Silence (empty answer, or later than 33s) | −12 (`SILENCE_SCORE`), reason "Said nothing" or "Answered after the buzzer". The model is not called. |
 | Big drop | Any event of −10 or worse triggers the flash and shake (`BIG_DROP`). |
 
 **Events.** Every change is stored as `{act, kind, status?, delta, reason, before, after}`.
-- `kind` is one of `claim`, `demo`, `commits` or `answer`.
+- `kind` is one of `claim`, `demo`, `commits`, `iteration` or `answer`.
 - `delta` is the change actually applied after the scan cap and the odds clamp, so a −19 at 12% is stored as −11.
-- Act 1 events come in order: one per claim, then demo, then commits. Act 2 adds one per answer.
+- Act 1 events come in order: one per claim, then demo, then commits, then (on a re-review) one per fix checked. Act 2 adds one per answer.
 - Act 3 replays them all.
 
 **Tone** (the colour of a delta): unclear claims are amber whatever their sign; otherwise up is gain (blue), down is loss (red), and zero is flat.
@@ -82,7 +84,7 @@ The engine is deterministic and lives in code. The model only classifies claims 
 | below 30 | `participating` | Thank you for participating. |
 
 **Review status** (`readyToWin` in `lib/odds.ts`; replaced guilty / not guilty):
-- "Ready to win" when the final odds are 55 or more (`READY_ODDS`) AND no core claim is unbacked.
+- "Ready to win" when the final odds are 55 or more (`READY_ODDS`) AND no core claim is unbacked or mocked.
 - Otherwise "Changes requested".
 
 ## 4. AI calls
@@ -97,24 +99,26 @@ All three calls use `claude-haiku-5-5`, effort `low`, structured JSON output and
 
 **Code fetches the files** (`lib/sources.ts`, `fetchSources` in `lib/github.ts`):
 - Every claim's first candidate, then every claim's second; no repeats; at most 10 files.
-- Fetched at the scanned commit, each cut to 6,000 characters.
+- Fetched at the scanned commit, each cut to 12,000 characters (`SOURCE_CHARS`). A file longer than that is marked `truncated` and shown to the model as `cut_off="true"`. At 6,000, half the files a real scan read were cut, and a cut file can only ever be "unclear".
 - Skipped: lockfiles, build output, minified bundles, binaries (by extension and NUL bytes), files marked generated, and env files (except `.env.example` / `.sample` / `.template`, since a committed `.env` can hold real keys).
 - A file that fails to fetch is simply not read. If the fetch fails entirely, nothing is read.
 
 **Call B: verify, then ask.**
 - Input: repo name, description and dependencies; the README; the numbered claims, each with the files read for it; every fetched file inside `<untrusted_file path="...">`.
-- Output: a verdict per claim (`status`, `file`, `quote`, `evidence`, `label`, `missing`), then one question per judge (`text` and `caught`). Questions come after verification, so they're never built on a false finding.
+- Output: a verdict per claim (`status`: backed, mocked, unbacked or unclear; `file`, `quote`, `evidence`, `label`, `missing`), then one question per judge (`text` and `caught`). Questions come after verification, so they're never built on a false finding.
+- The questions follow the ones real judges ask most: the Engineer goes for a mocked core claim first, then a missing one, else "what breaks first" or "what did you build versus wire together"; the Investor pushes for a named user and who pays; the Tired Judge asks for the one-sentence version.
+- On a re-review, call B also sees last round's fixes, and at least one question follows up on them.
 
 **Validated in code** (`lib/scan-validate.ts`); nothing the model says is trusted:
 - Candidates must be real files in the tree (not folders); paths are normalised; `..`, null bytes and paths over 200 characters are rejected.
-- **Backed** needs a `file` that was fetched and read, and a `quote` of at most 120 characters that appears verbatim in it (substring check). Otherwise **unclear**.
-- **Unbacked** needs every candidate of that claim to have been fetched and read. Otherwise **unclear**. Its `searched` list is set by code: the files that were read.
+- **Backed** and **mocked** need a `file` that was fetched and read, and a `quote` of at most 120 characters that appears in it verbatim (`quotedIn`: any run of whitespace matches any other, since models re-indent copied lines; every other character must match). Otherwise **unclear**.
+- **Unbacked** needs every candidate of that claim to have been fetched and read in full: a candidate that was cut off makes it **unclear** ("… was too long to read to the end"). Its `searched` list is set by code: the files that were read.
 - A backed claim whose evidence starts with "Partly" becomes unclear. A claim with no verdict is unclear.
 - Every judge needs a question of at most 220 characters, or the call fails. `caught` must be a substring of its question and shorter than 60% of it, or it's dropped.
 - Each call is retried once on invalid output. Two failures fail the scan.
 - The fetched files are stored on the session (`sources`) and in the cache. Review comments may only quote them (§4.3).
 
-Measured scan cost (two calls, 7 to 10 files read): about 17–28k input and 1.2–3.3k output tokens, 12–22s.
+Measured scan cost (two calls, 7 to 10 files read): about 17–28k input and 1.2–3.3k output tokens, 12–22s at 6,000 characters a file; about 23–28k input at 12,000 on the repos re-measured.
 
 **Wording users see.** Never "unbacked" or "not backed". Code writes every not-found finding from what was read: "Couldn't find an SMS provider in package.json or lib/sms.ts." and the label "Couldn't find an SMS provider". A model-written label or evidence line that uses a verdict word or a motive word (backed, fake, lying, pretending, bluffing, misleading, fraud) is replaced by code's own ("{claim}: found in code", "Found in {file}.", "{claim}: couldn't verify"). Findings describe evidence, never motives. Judges are blunt about the evidence, never about the person.
 
@@ -147,6 +151,8 @@ Measured scan cost (two calls, 7 to 10 files read): about 17–28k input and 1.2
 
 Measured: about 1.3–1.6k input and 80–165 output tokens per answer.
 
+**Rubric additions** (from what judges report scoring): the one-sentence question is answered by one plain sentence of what it does (+6 or more, +8 with who it's for); "who is this for" needs a named user, not a category; naming what breaks first is strong, "nothing" is a bluff; being clear about what's theirs scores well. Reactions never say "try again" (there is no second try; such a reaction is retried), are cut of stray JSON punctuation, and over 12 words are retried.
+
 ### 3. The deliberation: one call in act 3 (built, `lib/panel.ts`)
 
 Made when act 3 opens (`{action: "deliberate"}`), not after the last answer, so the last reaction isn't delayed; act 3's typing indicator covers the wait. A lock (`panel_started_at`, 90s) lets one request run it; others get 202 and poll every 2.5s. A failed call releases the lock and act 3 offers "Ask again".
@@ -163,6 +169,23 @@ Made when act 3 opens (`{action: "deliberate"}`), not after the last answer, so 
 - Retried once on invalid output; two failures fail the call.
 
 Measured: about 7.5–12k input and 730–830 output tokens, 9–16s including the chat playback.
+
+### 4. The re-review: one call when a team asks the panel to look again (built, `lib/recheck.ts`)
+
+The mentor check-in, built in. After the review, the owner pushes fixes and presses "Ask for a re-review" (on act 4 and the share act, never in /demo).
+
+**Starting one** (`POST /api/sessions` with `previousId`): the previous session must be this browser's own, finished (act 4 or share, panel written), of the same repo, and the repo's latest commit must differ from the one it reviewed ("Nothing new on GitHub since the last review"). It counts toward the 3-a-day limit like any session and keeps the team's demo link unless they give a new one. The link to the previous review rides in the `signals` column until the scan replaces it (`PendingSignals`), so no new column was needed; `save` leaves that column alone until then.
+
+**The scan** skips the cache in both directions and runs in parallel with the fix check:
+- GitHub's compare API (`fetchCompare`): the commits since the previous review's commit, the changed files (at most 100), and each readable file's added lines (at most 4,000 characters).
+- The model sees the three fixes, the commit messages (inside `<untrusted_commits>`), the changed-file list, and the added lines of the 8 most relevant files (inside `<untrusted_diff>`): files the last review pointed at first, then files whose path names something a fix asked for, then the biggest additions.
+- Per fix: `status` (addressed, partly, untouched), `file`, `quote`, `note`.
+
+**Validated in code:** addressed or partly needs a file whose added lines were shown and a quote (at most 160 characters) found in them (`quotedIn`). A binary file (an image, a sprite) has no lines: it counts if it's in the diff, changed and not removed. Anything else is untouched. A commit message saying a fix is done proves nothing. A skipped fix is untouched. If GitHub or the model fails, every fix is untouched with "The panel couldn't read the diff this time": nobody gains points the panel didn't check.
+
+**Then:** the fix events go after the scan (§3), the deliberation is told what was done and keeps still-open fixes in the new list, and the review leads with "Since the last review": each fix with its status, note and the added line, plus a link to the previous review.
+
+Measured on a 4-commit, 100-file diff: about 13–19k input and 200–850 output tokens.
 
 ### Cost per full session (measured on 3 real sessions)
 
@@ -195,7 +218,7 @@ The server owns the session. The client's `useReducer` only mirrors a `SessionVi
 **Storage** is the Supabase table `sessions`, with these columns:
 - Identity: `id`, `repo_url`, `repo`, `latest_sha`
 - Access and limits: `owner_hash`, `ip_hash`
-- State: `act`, `claims`, `questions` (with `issuedAt`), `answers`, `events`, `panel`, `signals`, `files` (repo paths, capped at 3,000), `sources` (files the scan read: `[{path, text}]`, at most 10 × 6,000 characters; emptied when the review is written), `demo_url` (the team's own link)
+- State: `act`, `claims`, `questions` (with `issuedAt`), `answers`, `events`, `panel`, `signals` (before the scan of a re-review: `{previousId}`; after: the signals, with `iteration` on a re-review), `files` (repo paths, capped at 3,000), `sources` (files the scan read: `[{path, text, truncated?}]`, at most 10 × 12,000 characters; emptied when the review is written), `demo_url` (the team's own link)
 - Retention: `forgotten_at` (set when answers and chat were deleted, §6 Retention)
 - Concurrency: `version`, `scan_started_at`, `panel_started_at`
 - Accounting: `input_tokens`, `output_tokens`, `created_at`, `updated_at`
@@ -390,7 +413,10 @@ Act 4 stays in the dark system (`components/review/review-view.tsx`, built from 
 - **Checks, styled like CI results:** every claim (backed passed, unbacked failed, unclear warning) and signal (demo loads passed, dead failed, none warning; bulk first commit failed, otherwise "Built across commits" passed), each with its file. A summary line, e.g. "3 passed, 1 failed, 1 warning".
 - **Reviewers sidebar:** each judge with Approved, Changes requested or Commented. If any core claim is unbacked, the Engineer is "Changes requested"; enforced in code.
 - **Comments:** one per judge, quoting a verbatim excerpt from a file the scan fetched, with line numbers, plus the comment. Validated in code (§4.3); a failing comment is dropped.
-- **"Fix before demos" checklist:** the three fixes as checkboxes (local state only).
+- **"Fix before demos" checklist:** the three fixes as checkboxes (local state only), then the re-review card for the owner (§4.4).
+- **Checks:** a mocked claim is a failed check.
+- **Judging sheet** (`lib/rubric.ts`): the night as a judge's score sheet, 1 to 5 per criterion by fixed rules, each with the rule it came from. Technical execution (claims: backed 5, unclear 3, mocked 2, missing 1, core counts double; no checkable claims is a 2), working demo (loads 5, video 4, none 2, dead 1), impact (the Investor's answer), pitch (the Tired Judge's), defending the build (the Engineer's): an answer's −12..+12 maps to 1..5 at 9 / 5 / 0 / −6, silence is a 1. On a re-review, acting on feedback (done 1, started ½, over the fixes, onto 1..5). Originality and design aren't on it: a repo can't show them honestly. The public review reads each answer's score and judge only, never the text.
+- **Since the last review** (re-reviews only, first in the main column): §4.4.
 
 ### 11.2 Share card (built, `GET /og/[id]`)
 
@@ -437,6 +463,7 @@ The share card with "Post to X" (X's post intent, prefilled: `Judges will rememb
 - **C. Done.** Act 2 for real: AI call 2, the word-by-word question with the caught phrase, timer polish, the delta chip travelling to the widget, and "Riding on this answer: up to 12 points" under the widget. Answers go to the model in delimiters as untrusted data. Also the unclear recalibration and the scan cap (§3).
 - **D1. Done.** Scan v2 (file contents), evidence wording, platform-only IP, AI call 3, act 3, act 4 review, share card, badge, public link, share screen.
 - **Pre-launch. Done.** Test data cleared; live scan progress; the optional demo link (site +5, video +3, dead −8); `/privacy` and the retention job; icons, landing metadata and share card, 404 and error pages, robots.txt; `docs/LAUNCH.md`.
+- **Judging realism. Done.** Research-grounded scoring: the mocked status, truncation-aware "not found", live demo +8 / video +4, real judges' questions and answer rubric, the judging sheet, the re-review loop (§4.4), whitespace-tolerant quotes, 12,000-character files, static landing share images, and the first real guide replacing the placeholder.
 - **D2. After launch.** GitHub auth and the board (§11.6).
 - **E.** Versus: same panel, same questions, two repos, odds racing side by side, and a rematch link for the loser.
 
@@ -454,13 +481,15 @@ Stop after each phase for review.
 - **One action bar.** Every act fills one screen below the header: short content is centred, long content scrolls inside the act with a fade at the bottom, and the page itself never scrolls. A fixed bar at the bottom (`components/session/action-bar.tsx`) has "Act X of 4" on the left, any skip link as plain text beside it, and the one primary button on the right: "Continue to the grilling", "Leave the room", "See the review", "Share it". While an act plays, the button is disabled and says what's happening ("The panel is reading your repo..."); when ready it enables with one pulse, and Enter presses it. On a phone the bar is pinned with safe-area padding and the button is full width. The same bar runs real sessions and /demo.
 - The deliberation call runs when act 3 opens, not after the last answer.
 - Question order: Tired Judge, Investor, Engineer.
-- The demo link comes from an optional landing-page field first, else the repo website field or a README hosting link. A video earns less than a live demo (+3 vs +5).
+- The demo link comes from an optional landing-page field first, else the repo website field or a README hosting link. A video earns less than a live demo (+4 vs +8; it was +3 vs +5 until the judging-realism round).
 - Code is never kept: file contents last until the review is written (at most a day); the cache, 24 hours. Answers and the chat last 30 days. The review, odds and claims are kept for good.
 - robots.txt: everyone gets `/` only (`/s/` and `/api/` disallowed); link-preview bots (X, Facebook, LinkedIn, Slack, Discord, Telegram, WhatsApp) may also read `/s/` and `/og/`, or shared reviews would lose their card. Session pages are `noindex` either way.
 - Nested manifests (up to 4) are read so monorepo dependencies aren't reported as missing.
 - The scan reads file contents (two calls, at most 10 files): a real feature must never be reported as missing because only its file name was seen.
 - Scan cache hits still count toward the limits.
 - The old `judgments` table stays until after launch, then gets dropped.
+- Scoring follows what judges report moving their scores, not only the rubric's categories: a working demo is the biggest single signal, faked features cost real points, honesty is never penalised, and acting on the panel's feedback earns points (up to +12) but only for work the diff shows. Sources: notes from a judge's year of events (dev.to, kurbaitaev) and a criteria breakdown (reskilll); summarised in the guide `content/guides/what-hackathon-judges-score.mdx`.
+- A re-review is a full session: it counts toward the 3-a-day limit.
 - `DAILY_CAP` = 50. The user sets it in `.env` and in Vercel.
 - The storyboard PDF (`Would This Win Project 34 storyboard.pdf`) is a local reference only and is gitignored. Its six screens are the approved designs, except act 4 (now a code review, §11.1) and any "guilty" language.
 
@@ -508,7 +537,10 @@ Stop after each phase for review.
 | `lib/signals.ts` | Repo signals (first-commit share, stack, deps parsers, demo URL finder) |
 | `lib/demo-check.ts` | SSRF-safe demo link liveness check |
 | `lib/panel.ts` | AI call 3: deliberation prompt, comment anchoring, validation, call with retry |
-| `lib/review.ts` | The review built from a session: checks, summary, reviewers, comments, sparkline |
+| `lib/review.ts` | The review built from a session: checks, summary, reviewers, comments, sparkline, judging sheet, re-review |
+| `lib/rubric.ts` | The judging sheet: each criterion 1 to 5 by fixed rules |
+| `lib/recheck.ts` | AI call 4 (re-reviews): the fix check against the diff, its prompt, validation and fallback |
+| `components/review/re-review.tsx` | The owner's "Ask for a re-review" card |
 | `lib/badge.ts` | The badge SVG |
 | `lib/site.ts` | Public URLs: review link, card, badge, markdown, X post |
 | `lib/og-fonts.ts` | Fonts for the share card |

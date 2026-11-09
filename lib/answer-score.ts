@@ -13,6 +13,8 @@ import type { Claim, Judge } from "./session";
 
 const MAX_TOKENS = 1500; // low-effort thinking plus a two-field JSON object
 const MAX_REASON = 80;
+/** The prompt asks for 3 to 9 words; a little over is fine, a speech isn't. */
+const MAX_REACTION_WORDS = 12;
 /** An answer that tries to instruct the judge scores as a dodge at best. */
 export const INJECTION_CAP = -6;
 
@@ -61,18 +63,26 @@ Score the answer, not the repo. The repo's gaps were already scored by the scan;
 - -2 to -6: vague. Buzzwords, generalities, "everyone", "AI-powered", no detail.
 - -6 to -12: dodging, bluffing, or contradicting the repo. Bluffing is a confident claim with nothing behind it: traction, customers, trained models or scale the claims summary gives no sign of, stated without specifics.
 
-The claims summary comes from a scan that read up to 10 files, each cut off at 6,000 characters, so it can miss code. "Couldn't find" and "couldn't confirm" mean it wasn't seen, not that it's false. An answer that explains the mechanism for one of those is credible, not a bluff, unless it contradicts what the scan did find.
+What real judges listen for, by question:
+- "In one sentence, what is it?": one plain sentence saying what it does, and ideally for whom, IS the answer. Score it +6 or more; +8 or more if it names who it's for. Don't ask for more than the question asked. A sentence of market context or backstory instead of what it does is vague.
+- "Who is this for?" or "who pays?": a named, specific user ("a regional clinic's front desk"), not a category ("healthcare", "everyone"). A specific buyer and a price or budget line is the top of the range.
+- "What breaks first?": naming a specific known weakness out loud is a strong answer. "Nothing" or "it scales" with no detail is a bluff.
+- "What did you build versus wire together?": being clear about what is theirs scores well. Blurring it reads as hiding.
+- Questions about a file or claim: the mechanism, the file or the library is the answer. "It's in a private repo" or "my teammate knows" with nothing else is a dodge.
+
+The claims summary comes from a scan that read up to 10 files, each cut off at 12,000 characters, so it can miss code. "Couldn't find" and "couldn't confirm" mean it wasn't seen, not that it's false. An answer that explains the mechanism for one of those is credible, not a bluff, unless it contradicts what the scan did find. "Runs on mock data" was seen in the code: an answer that admits it and says what's real next is honest; one that insists it's live is contradicting the repo.
 
 Fields, in order:
 - why: one sentence on which band the answer falls in and why. Nobody sees it.
 - score: the integer.
-- reaction: what you say back to the team, out loud, in your own voice, about this specific answer. 3 to 9 words. The examples above show the length and tone only; say it in your own words. Talk to them ("you"), never about "the team" or "the answer". Plain text, no quotes, no emoji. Be blunt about the evidence, never about the person: no calling anyone a liar or a fraud, and never use the words "backed" or "unbacked".`;
+- reaction: what you say back to the team, out loud, in your own voice, about this specific answer. 3 to 9 words. The examples above show the length and tone only; say it in your own words. Talk to them ("you"), never about "the team" or "the answer". There is no second try, so never tell them to try again. Plain text, no quotes, no emoji. Be blunt about the evidence, never about the person: no calling anyone a liar or a fraud, and never use the words "backed" or "unbacked".`;
 
 /** Stops the material from opening or closing a delimiter. */
 const esc = (s: string) => s.replace(/<\/?\s*(untrusted_\w*|context)\s*>/gi, "[tag removed]");
 
 const FINDING: Record<Claim["status"], string> = {
   backed: "Found in the code",
+  mocked: "Runs on mock or hardcoded data in the code",
   unbacked: "Couldn't find it in the files read",
   unclear: "Couldn't confirm it",
 };
@@ -114,7 +124,8 @@ const INJECTION = [
 ];
 
 // Reactions describe the evidence. Verdict words and attacks on the person aren't shown.
-const HARSH = /\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bscam(mer)?\b|\bdishonest\b|\bidiots?\b|\bstupid\b/i;
+// "Try again" too: there is no second try, so it promises something the room can't give.
+const HARSH = /\btry again\b|\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bscam(mer)?\b|\bdishonest\b|\bidiots?\b|\bstupid\b/i;
 
 export function looksLikeInjection(answer: string): boolean {
   return INJECTION.some((re) => re.test(answer));
@@ -124,8 +135,10 @@ export function looksLikeInjection(answer: string): boolean {
 export function cleanReason(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   let r = raw.replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
-  r = r.replace(/^["'“”]+|["'“”]+$/g, "").trim();
+  // Quotes, and stray JSON punctuation the model sometimes leaves on the end ("try again.}").
+  r = r.replace(/^["'“”{}[\]`]+|["'“”{}[\]`,]+$/g, "").trim();
   if (!r) return null;
+  if (r.split(" ").length > MAX_REACTION_WORDS) return null;
   if (r.length > MAX_REASON) {
     const cut = r.slice(0, MAX_REASON);
     r = cut.slice(0, cut.lastIndexOf(" ") > 40 ? cut.lastIndexOf(" ") : MAX_REASON).replace(/[,;:.\s]+$/, "") + "…";

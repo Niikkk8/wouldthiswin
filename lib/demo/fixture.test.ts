@@ -6,11 +6,11 @@ import { toView } from "../session";
 import { DEMO_ANSWERS, demoState } from "./fixture";
 import { demoTransport } from "./transport";
 
-test("the sample session's odds go 50, 31, 36, 38, 34", () => {
+test("the sample session's odds go 50, 34, 39, 41, 37", () => {
   const scanned = demoState("scanned");
   const answered = demoState("answered");
   const after = answered.events.slice(scanned.events.length).map((e) => e.after);
-  assert.deepEqual([START_ODDS, currentOdds(scanned.events), ...after], [50, 31, 36, 38, 34]);
+  assert.deepEqual([START_ODDS, currentOdds(scanned.events), ...after], [50, 34, 39, 41, 37]);
 });
 
 test("every stage of the sample session is reachable, and the review comes out", () => {
@@ -18,7 +18,7 @@ test("every stage of the sample session is reachable, and the review comes out",
     assert.doesNotThrow(() => demoState(at), at);
   }
   const r = reviewOf(demoState("verdict"))!;
-  assert.equal(r.odds, 34);
+  assert.equal(r.odds, 37);
   assert.equal(r.readyToWin, false);
   assert.equal(r.comments.length, 3);
 });
@@ -45,7 +45,7 @@ test("the demo transport plays a whole session without touching the network", as
     const last = await t("x", { action: "advance", from: "verdict" });
     const view = last.body.view as ReturnType<typeof toView>;
     assert.equal(view.act, "share");
-    assert.equal(view.odds, 34);
+    assert.equal(view.odds, 37);
   } finally {
     globalThis.fetch = real;
   }

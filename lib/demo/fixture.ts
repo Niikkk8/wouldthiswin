@@ -1,6 +1,6 @@
 // The sample session: queueless, a hackathon project that puts a clinic's waiting room on
 // a QR code. Every number comes from the real odds engine; the fixture only stands in for
-// the model's output and the repo. The odds go 50 → 31 (scan) → 36 → 38 → 34 (answers).
+// the model's output and the repo. The odds go 50 → 34 (scan) → 39 → 41 → 37 (answers).
 
 import { advance, applyPanel, applyScan, acceptAnswer, issueQuestion, newSession, settleAnswer } from "../session";
 import type { Panel, Scan, SessionState } from "../session";

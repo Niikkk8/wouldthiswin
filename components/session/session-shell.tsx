@@ -198,7 +198,7 @@ export function SessionShell({
       act = <DeliberationAct view={view} send={send} onNext={advance("deliberation")} pending={pending} />;
       break;
     case "verdict":
-      act = <VerdictAct view={view} onNext={advance("verdict")} pending={pending} />;
+      act = <VerdictAct view={view} onNext={advance("verdict")} pending={pending} demo={demo} />;
       break;
     case "share":
       act = <ShareAct view={view} demo={demo} />;

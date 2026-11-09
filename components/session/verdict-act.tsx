@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { ReReview } from "@/components/review/re-review";
 import { ReviewView } from "@/components/review/review-view";
 import { burst } from "@/components/ui/confetti";
 import { copy } from "@/lib/copy";
@@ -13,10 +14,12 @@ export function VerdictAct({
   view,
   onNext,
   pending,
+  demo = false,
 }: {
   view: SessionView;
   onNext: () => void;
   pending: boolean;
+  demo?: boolean;
 }) {
   const reduce = useReducedMotion();
   const review = view.review;
@@ -34,6 +37,7 @@ export function VerdictAct({
   return (
     <>
       <ReviewView review={review} />
+      {!demo && <ReReview id={review.id} repo={review.repo} className="mt-12" />}
       <ActionBar label={copy.acts.verdict.next} ready pending={pending} onNext={onNext} />
     </>
   );

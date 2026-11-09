@@ -15,7 +15,9 @@ export type ScanProgress =
   /** A candidate file came back: read, or skipped (binary, minified, missing). */
   | { type: "read"; path: string; ok: boolean }
   /** Call B started: the claims are being checked against what was read. */
-  | { type: "checking"; claims: number };
+  | { type: "checking"; claims: number }
+  /** A re-review: last round's fixes are being checked against this many new commits. */
+  | { type: "fixes"; commits: number };
 
 export type Emit = (p: ScanProgress) => void;
 
@@ -37,5 +39,7 @@ export function progressLine(p: ScanProgress): string {
       return p.ok ? fill(s.reading, { path: p.path }) : fill(s.skipped, { path: p.path });
     case "checking":
       return s.checking;
+    case "fixes":
+      return fill(s.fixes, { n: p.commits, s: p.commits === 1 ? "" : "s" });
   }
 }
