@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
   BULK_FIRST_COMMIT_DELTA,
+  anyCoreMissing,
+  fixDelta,
   SCAN_CAP_DOWN,
   SCAN_CAP_UP,
   START_ODDS,
@@ -54,9 +56,9 @@ describe("scan cap", () => {
 });
 
 describe("signal deltas", () => {
-  test("demo link: loads +5, video +3, dead -8, none 0", () => {
-    assert.equal(demoDelta("loads"), 5);
-    assert.equal(demoDelta("video"), 3);
+  test("demo link: loads +8, video +4, dead -8, none 0", () => {
+    assert.equal(demoDelta("loads"), 8);
+    assert.equal(demoDelta("video"), 4);
     assert.equal(demoDelta("dead"), -8);
     assert.equal(demoDelta("none"), 0);
   });
@@ -174,5 +176,21 @@ describe("tone", () => {
     assert.equal(toneOf({ delta: 6 }), "gain");
     assert.equal(toneOf({ delta: -1 }), "loss");
     assert.equal(toneOf({ delta: 0 }), "flat");
+  });
+});
+
+describe("mocked claims and fixes", () => {
+  test("a mocked claim costs less than a missing one and more than an unclear one", () => {
+    assert.equal(claimDelta("mocked", "core"), -10);
+    assert.equal(claimDelta("mocked", "minor"), -5);
+  });
+
+  test("a mocked core claim blocks Ready to win, like a missing one", () => {
+    assert.equal(anyCoreMissing([{ status: "mocked", weight: "core" }]), true);
+    assert.equal(anyCoreMissing([{ status: "mocked", weight: "minor" }]), false);
+  });
+
+  test("fixes: done +4, started +2, still open 0", () => {
+    assert.deepEqual([fixDelta("addressed"), fixDelta("partly"), fixDelta("untouched")], [4, 2, 0]);
   });
 });

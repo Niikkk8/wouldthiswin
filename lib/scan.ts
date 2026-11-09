@@ -1,6 +1,6 @@
 // The scan, in two model calls with a fetch between them:
 //   A. read the README against the file list: pick the claims and the files each would live in;
-//   code fetches those files (at most 10, each cut to 6,000 characters);
+//   code fetches those files (at most 10, each cut to 12,000 characters);
 //   B. verify each claim against the files' contents, then write the panel's questions.
 // Plus the two signals measured in code (demo link, first commit). The model never sets odds.
 
@@ -59,20 +59,24 @@ const SYSTEM_B = `You check a hackathon project's README claims against its code
 
 ${UNTRUSTED}
 
-Files may be cut off at 6,000 characters. Only the files shown were read.
+Files longer than 12,000 characters are cut off and marked cut_off="true". Only the files shown were read.
 
 Task 1, a verdict for every claim, by its id:
-- status: "backed" if a file shown clearly implements it. "unbacked" only if the files listed for that claim were read and show it isn't there (e.g. no SMS library in the manifest and no sending code). "unclear" if it's partly there, stubbed, mocked, hardcoded, cut off, or you can't tell.
-- file: the path of the shown file that backs it (or partly does), copied exactly. null if none.
-- quote: for "backed", one line copied character for character from that file, under 120 characters, that shows it: a call, an import, a route. Otherwise null.
-- evidence: one line under 12 words saying what the code does or doesn't do, e.g. "getNamedEntities posts transcripts to the HuggingFace API". Describe the code, never the team's intent or honesty.
-- label: under 8 words for the odds log, e.g. "HuggingFace NER call found", "One hospital is hardcoded". Never use the words backed or unbacked.
+- status:
+  - "backed" if a file shown clearly implements it for real.
+  - "mocked" if a file shown fakes it: mock or sample data standing in for the real source, a hardcoded response, random numbers posing as a model's output, an in-memory array where the README names a database or queue, a setTimeout pretending to be a network call. Judges mark "only works with pre-loaded data" down hard, so call it when the code shows it. Seed data for a demo next to real code paths is not mocked.
+  - "unbacked" only if the files listed for that claim were read in full and show it isn't there (e.g. no SMS library in the manifest and no sending code). Never for a cut_off file: the code may be past the cut.
+  - "unclear" if it's partly there, cut off before the relevant part, or you can't tell.
+- file: the path of the shown file that backs it, fakes it, or partly does, copied exactly. null if none.
+- quote: for "backed", one line copied character for character from that file, under 120 characters, that shows it: a call, an import, a route. For "mocked", the line that shows the fake: the mock array, the hardcoded value, the fake delay. Otherwise null.
+- evidence: one line under 12 words saying what the code does or doesn't do, e.g. "getNamedEntities posts transcripts to the HuggingFace API" or "Search filters a hardcoded array of five reports". Describe the code, never the team's intent or honesty.
+- label: under 8 words for the odds log, e.g. "HuggingFace NER call found", "Hospital list is hardcoded". Never use the words backed, unbacked or fake.
 - missing: for "unbacked", what's missing as a short noun phrase with its article, e.g. "an SMS provider". Otherwise null.
 
-Task 2, one question from each judge, built on the verdicts above, under 200 characters each:
-- engineer: technical. Go for the weakest core claim and name the file or dependency you read or didn't find.
-- investor: who uses it, who pays, why now, specific to what this project does.
-- tired: blunt and short, end of a long day, tuned to this project. e.g. "In one sentence. What is it?"
+Task 2, one question from each judge, built on the verdicts above, under 200 characters each. These are the questions real hackathon judges ask most; ask the version that fits this project:
+- engineer: technical. Go for the weakest core claim (a mocked one first, then a missing one) and name the file or dependency you read or didn't find. If every core claim holds up, ask what breaks first under real load, or which part they built this weekend versus wired together.
+- investor: who is this for, specifically? Push for a named user ("a clinic receptionist", not "everyone") and who pays, specific to what this project does.
+- tired: blunt and short, end of a long day, tuned to this project. Usually some form of "In one sentence. What is it?"
 - caught: 2 to 6 words copied verbatim from that same question that point at the problem, or null. Never the whole question.
 
 Tone: direct and dry. Be blunt about the evidence, never about the people.`;
@@ -122,10 +126,14 @@ export function buildClaimsPrompt(raw: RawRepoData): { system: string; user: str
   };
 }
 
+/** A re-review: what the panel asked for last round, so the questions can follow up. */
+export type PreviousRound = { fixes: readonly string[] };
+
 export function buildVerifyPrompt(
   raw: RawRepoData,
   claims: readonly Candidate[],
   sources: readonly Source[],
+  previous: PreviousRound | null = null,
 ): { system: string; user: string } {
   const read = new Set(sources.map((s) => s.path));
   const list = claims
@@ -136,8 +144,12 @@ export function buildVerifyPrompt(
     })
     .join("\n");
   const fileBlocks = sources.map(
-    (s) => `<untrusted_file path="${esc(s.path).replace(/"/g, "")}">\n${esc(s.text)}\n</untrusted_file>`,
+    (s) =>
+      `<untrusted_file path="${esc(s.path).replace(/"/g, "")}"${s.truncated ? ' cut_off="true"' : ""}>\n${esc(s.text)}\n</untrusted_file>`,
   );
+  const followUp = previous?.fixes.length
+    ? `This is a re-review. Last round the panel asked the team to:\n${previous.fixes.map((f) => `- ${esc(f)}`).join("\n")}\nAt least one judge's question should follow up on whether one of these got done.`
+    : null;
   return {
     system: SYSTEM_B,
     user: [
@@ -145,6 +157,7 @@ export function buildVerifyPrompt(
       readmeBlock(raw),
       `Claims:\n${list || "(the README makes no checkable claims)"}`,
       ...fileBlocks,
+      ...(followUp ? [followUp] : []),
       "Check each claim against the files, then write the questions.",
     ].join("\n\n"),
   };
@@ -235,7 +248,12 @@ export type ScanModelResult = {
 /** Call A, the fetch, call B. Each call is retried once on bad output. */
 export async function runScanModel(
   raw: RawRepoData,
-  deps: { call?: Call; fetch?: (paths: string[]) => Promise<Source[]>; emit?: Emit } = {},
+  deps: {
+    call?: Call;
+    fetch?: (paths: string[]) => Promise<Source[]>;
+    emit?: Emit;
+    previous?: PreviousRound | null;
+  } = {},
 ): Promise<ScanModelResult> {
   const call = deps.call ?? defaultCall;
   const emit = deps.emit ?? noEmit;
@@ -265,7 +283,7 @@ export async function runScanModel(
   }
 
   emit({ type: "checking", claims: a.claims.length });
-  const b = await callChecked("verify", buildVerifyPrompt(raw, a.claims, sources), call, usage, repo, (json) => {
+  const b = await callChecked("verify", buildVerifyPrompt(raw, a.claims, sources, deps.previous ?? null), call, usage, repo, (json) => {
     const r = validateVerify(json, a.claims, sources);
     return r.ok ? { ok: true, value: r } : r;
   });
@@ -287,10 +305,10 @@ export async function demoSignal(url: string | null, provided: boolean): Promise
  */
 export async function scanRepo(
   raw: RawRepoData,
-  opts: { emit?: Emit; demoUrl?: string | null } = {},
+  opts: { emit?: Emit; demoUrl?: string | null; previous?: PreviousRound | null } = {},
 ): Promise<{ scan: Scan; usage: Usage }> {
   const [model, auto, given] = await Promise.all([
-    runScanModel(raw, { emit: opts.emit }),
+    runScanModel(raw, { emit: opts.emit, previous: opts.previous }),
     demoSignal(findDemoUrl(raw), false),
     opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
   ]);

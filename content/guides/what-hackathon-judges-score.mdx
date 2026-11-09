@@ -1,0 +1,59 @@
+export const meta = {
+  title: "What hackathon judges actually score",
+  description: "The rubric says technical difficulty, impact and design. What moves the score in the room is a demo that runs, a one-sentence pitch, honest answers and acting on feedback.",
+  date: "2026-11-09",
+};
+
+Most hackathons hand judges a sheet with four or five criteria and a number next to each. The usual ones are technical execution, impact, the demo or presentation, completeness, and something about originality. Weights vary by event. A common split gives innovation, technical implementation and impact about a fifth to a quarter each, with the demo and completeness sharing the rest.
+
+The sheet is only half the story. Judges who have sat through a full weekend of demos say the categories compress: most teams land in the middle of every row, and the gap between first and fifth comes from a handful of things the rubric never names.
+
+## The demo runs, live
+
+A working demo is the biggest single difference judges report between projects that place and projects that don't. A live demo of a smaller project beats slides of an ambitious one almost every time.
+
+- Get one path working from start to finish before you widen anything.
+- Demo the parts that work, and describe the rest in one sentence.
+- Record a 60-second screen capture anyway. Event wifi fails, and a video is the fallback judges accept.
+
+## Nothing is faked
+
+Judges check whether a feature is real. "Only works with pre-loaded data" and "the integration is a hardcoded response" are the red flags that come up most in judging notes. A mock behind a working screen is fine for a demo, but say it's a mock. If judges find it themselves, the whole project reads as staged.
+
+If your README says the app uses a database, a model or an SMS provider, the code a judge opens should call it.
+
+## You can say what it is in one sentence
+
+Strong teams open with a plain sentence: "This is a tool that does X for Y." Weak teams open with market size, a personal story or a long problem statement, and use up a third of their slot before anyone sees the product.
+
+At the end of the day, judges score partly on whether they can explain your project to another judge. A project with one clear identity survives that conversation. Three features with no center don't.
+
+## The scope fits the weekend
+
+Narrow and well built beats broad and shallow. A team that claims a whole platform after 36 hours reads as a team that didn't finish one. Judges reward judgment under a time limit.
+
+## The answers are specific and honest
+
+Judges ask close to the same questions every time:
+
+- **Who is this for, specifically?** A category ("students", "healthcare") is not an answer. A named person with a named problem is.
+- **What did you build this weekend?** "We wired existing pieces together, and the new part is this" scores well. Blurring it reads as hiding.
+- **What breaks first?** Naming a real weakness out loud raises scores. "Nothing" loses credibility on the spot.
+
+Admitting a gap, with what you'd do about it, scores better than bluffing past it.
+
+## You acted on feedback
+
+Many events run mentor check-ins during the build, and some ask teams at judging which piece of feedback they built in. A team that heard "the SMS is a log line" on Saturday and shows a real text on Sunday tells judges more than any slide.
+
+## How Would This Win? maps to this
+
+The panel scores the parts of this a repo and three answers can show:
+
+- **Every README claim is checked against your code.** A claim the code implements gains. A claim faked with mock or hardcoded data costs 10 points. A claim missing from files read in full costs 19. A claim the scan couldn't confirm costs 2, because unverified isn't the same as false.
+- **A live demo is the biggest single gain the scan gives:** +8 for a site that loads, +4 for a video that plays.
+- **Three questions, modeled on the ones above.** Specific answers gain up to 12. Honest admissions with a plan never lose points.
+- **A re-review after you push fixes.** The panel checks each fix it asked for against the code you pushed, and acting on its feedback is worth up to 12 points.
+- **A judging sheet scores you 1 to 5** on technical execution, the demo, impact, the pitch and defending the build. Originality and design aren't on it, because a repo can't show them honestly.
+
+Sources: [notes from a year of hackathon judging](https://dev.to/kurbaitaev/what-judges-actually-score-notes-from-a-year-of-hackathon-judging-3p4l) and a [breakdown of common judging criteria](https://blogs.reskilll.com/what-hackathon-judges-look-for-complete-judging-criteria-breakdown-2026/).

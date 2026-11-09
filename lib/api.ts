@@ -18,6 +18,8 @@ const STATUS: Record<ErrorKey, number> = {
   githubAuth: 503,
   stale: 409,
   alreadyAnswered: 409,
+  nothingNew: 409,
+  notReviewed: 409,
   network: 503,
 };
 

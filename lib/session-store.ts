@@ -5,6 +5,7 @@ import type { Spent } from "./budget";
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
 import { ID_RE, IP_LIMIT_PER_24H, dailyCap, db, sha256 } from "./db";
+import { currentOdds } from "./odds";
 import { reviewOf, type Review } from "./review";
 import {
   newSession,
@@ -77,7 +78,21 @@ export type Loaded = {
   demoUrl: string | null;
   /** Model tokens this session has spent so far. */
   spent: Spent;
+  /** A re-review not yet scanned: the review it follows. */
+  previousId: string | null;
 };
+
+/**
+ * Before the scan, a re-review's link to the review it follows rides in the signals column
+ * (the scan replaces it with the real signals). No extra column, no migration.
+ */
+type PendingSignals = { previousId: string };
+
+function pendingPrevious(signals: unknown, claims: unknown): string | null {
+  if (claims !== null || !signals || typeof signals !== "object") return null;
+  const id = (signals as Partial<PendingSignals>).previousId;
+  return typeof id === "string" && ID_RE.test(id) ? id : null;
+}
 
 /** Returns the session only to the browser that started it. */
 export async function loadSession(id: string, owner: string | null): Promise<Loaded | null> {
@@ -89,6 +104,7 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     .maybeSingle<Row>();
   if (error) throw error;
   if (!data || data.owner_hash !== owner) return null;
+  const previousId = pendingPrevious(data.signals, data.claims);
   const session: SessionState = {
     id: data.id,
     repo: data.repo,
@@ -98,7 +114,7 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     answers: data.answers,
     events: data.events,
     panel: data.panel,
-    signals: data.signals,
+    signals: previousId ? null : data.signals,
     files: data.files,
     sources: data.sources ?? [],
   };
@@ -109,6 +125,7 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     latestSha: data.latest_sha,
     demoUrl: data.demo_url,
     spent: { input: data.input_tokens ?? 0, output: data.output_tokens ?? 0 },
+    previousId,
   };
 }
 
@@ -129,7 +146,8 @@ async function save(s: SessionState, version: number): Promise<boolean> {
       answers: s.answers,
       events: s.events,
       panel: s.panel,
-      signals: s.signals,
+      // Until the scan lands, the column holds a re-review's link (PendingSignals): keep it.
+      ...(s.claims === null && s.signals === null ? {} : { signals: s.signals }),
       files: s.files,
       sources: s.sources,
       version: version + 1,
@@ -204,6 +222,24 @@ export async function checkLimits(ipHash: string): Promise<LimitStatus> {
 export async function setDemoUrl(id: string, url: string): Promise<void> {
   const { error } = await db().from("sessions").update({ demo_url: url }).eq("id", id);
   if (error) throw error;
+}
+
+/** Links a re-review to the review it follows. Written right after the session is reserved. */
+export async function setPreviousId(id: string, previousId: string): Promise<void> {
+  const signals: PendingSignals = { previousId };
+  const { error } = await db().from("sessions").update({ signals }).eq("id", id);
+  if (error) throw error;
+}
+
+/** A finished review this browser owns, as a re-review needs it. Null if there isn't one. */
+export async function loadOwnReview(
+  id: string,
+  owner: string | null,
+): Promise<{ loaded: Loaded; odds: number; fixes: string[] } | null> {
+  const loaded = await loadSession(id, owner);
+  const s = loaded?.session;
+  if (!loaded || !s || (s.act !== "verdict" && s.act !== "share") || !s.panel) return null;
+  return { loaded, odds: currentOdds(s.events), fixes: s.panel.fixes };
 }
 
 /** True if this request should run the scan (nobody else is running it). */
@@ -292,14 +328,26 @@ export async function loadPublicReview(id: string): Promise<Review | null> {
   if (!ID_RE.test(id)) return null;
   const { data, error } = await db()
     .from("sessions")
-    .select("id, repo, act, claims, events, panel, signals")
+    .select("id, repo, act, claims, events, panel, signals, questions, answers")
     .eq("id", id)
-    .maybeSingle<Pick<Row, "id" | "repo" | "act" | "claims" | "events" | "panel" | "signals">>();
+    .maybeSingle<Pick<Row, "id" | "repo" | "act" | "claims" | "events" | "panel" | "signals" | "questions" | "answers">>();
   if (error) throw error;
   if (!data || (data.act !== "verdict" && data.act !== "share") || !data.panel) return null;
-  // Only the parts the review uses; the chat stays out even in memory.
+  // Only the parts the review uses; the chat, the questions' text and the answers' text stay
+  // out even in memory. The judging sheet needs who asked and what each answer scored.
   const panel = { ...data.panel, chat: [] };
-  return reviewOf({ ...newSession(data.id, data.repo), act: data.act, claims: data.claims, events: data.events, panel, signals: data.signals });
+  const questions = data.questions.map((q) => ({ judge: q.judge, text: "", caught: null, issuedAt: null }));
+  const answers = data.answers.map((a) => ({ ...a, text: "", reason: null }));
+  return reviewOf({
+    ...newSession(data.id, data.repo),
+    act: data.act,
+    claims: data.claims,
+    events: data.events,
+    panel,
+    signals: data.signals,
+    questions,
+    answers,
+  });
 }
 
 /** True if this browser started the session. */

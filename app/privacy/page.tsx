@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: copy.privacy.lede,
 };
 
-const UPDATED = "7 November 2026";
+const UPDATED = "9 November 2026";
 
 export default function PrivacyPage() {
   return (

@@ -2,10 +2,14 @@
 // fetch itself lives in github.ts.
 
 export const MAX_SOURCES = 10;
-export const SOURCE_CHARS = 6000;
+// 6,000 cut half the files a real scan read, and a cut file can only ever be "unclear".
+export const SOURCE_CHARS = 12_000;
 
-/** A file the scan fetched and the model read. Its text is untrusted. */
-export type Source = { path: string; text: string };
+/**
+ * A file the scan fetched and the model read. Its text is untrusted. `truncated`: the file
+ * is longer than SOURCE_CHARS, so not seeing something in `text` proves nothing.
+ */
+export type Source = { path: string; text: string; truncated?: boolean };
 
 const LOCKFILE = /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|poetry\.lock|Pipfile\.lock|Cargo\.lock|Gemfile\.lock|composer\.lock|go\.sum|uv\.lock)$/i;
 const GENERATED_DIR = /(^|\/)(node_modules|dist|build|out|\.next|\.nuxt|\.svelte-kit|coverage|vendor|__pycache__|\.venv|venv|generated|__generated__|target)\//i;

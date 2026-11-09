@@ -95,8 +95,8 @@ describe("scan", () => {
         ["claim", 6, 56],
         ["claim", -19, 37],
         ["claim", -2, 35],
-        ["demo", 5, 40],
-        ["commits", -10, 30],
+        ["demo", 8, 43],
+        ["commits", -10, 33],
       ],
     );
     assert.equal(s.events[4].reason, "Most of the code arrived in one commit.");
@@ -134,14 +134,14 @@ describe("scan", () => {
     assert.deepEqual(s.events.map((e) => [e.delta, e.after]), [[-19, 31], [-11, 20], [6, 26]]);
   });
 
-  test("a demo video that resolves adds 3", () => {
+  test("a demo video that resolves adds 4", () => {
     const s = unwrap(
       applyScan(
         newSession("abc", "r"),
         scan([], { demo: { status: "video", url: "https://youtu.be/abcdefghijk", provided: true }, bulkFirstCommit: false }),
       ),
     );
-    assert.deepEqual(s.events.map((e) => [e.kind, e.delta, e.reason]), [["demo", 3, "Demo video resolves"]]);
+    assert.deepEqual(s.events.map((e) => [e.kind, e.delta, e.reason]), [["demo", 4, "Demo video resolves"]]);
   });
 
   test("runs once", () => {
@@ -325,5 +325,32 @@ describe("view", () => {
     assert.equal(toView(s, T0).review, null);
     s = unwrap(advance(s, "deliberation"));
     assert.equal(toView(s, T0).review?.oneLiner, "the one that texts you");
+  });
+});
+
+describe("a re-review", () => {
+  test("each fix checked becomes an event after the scan, outside the scan's cap", () => {
+    const backed: Claim[] = Array.from({ length: 5 }, (_, i) => ({ ...claims[0], claim: `c${i}` }));
+    const iteration = {
+      previousId: "abcdefghjk",
+      previousOdds: 40,
+      commits: 3,
+      filesChanged: 2,
+      fixes: [
+        { fix: "Send a real text from notify.ts", status: "addressed" as const, file: "server/notify.ts", quote: "q", note: "n" },
+        { fix: "Put the demo link at the top", status: "partly" as const, file: "README.md", quote: "q", note: "n" },
+        { fix: "Load hospitals from the database", status: "untouched" as const, file: null, quote: null, note: "n" },
+      ],
+    };
+    const s = unwrap(applyScan(newSession("abc", "r"), scan(backed, { ...noSignals, iteration })));
+    // Five backed core claims hit the +20 cap at 70; the fixes still count.
+    assert.deepEqual(
+      s.events.filter((e) => e.kind === "iteration").map((e) => [e.delta, e.after, e.reason]),
+      [
+        [4, 74, "Done: Send a real text from notify.ts"],
+        [2, 76, "Started: Put the demo link at the top"],
+        [0, 76, "Still open: Load hospitals from the database"],
+      ],
+    );
   });
 });

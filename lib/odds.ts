@@ -9,14 +9,21 @@ export const ANSWER_MAX = 12;
 /** A late or empty answer. Fixed in code; the model never sees it. */
 export const SILENCE_SCORE = ANSWER_MIN;
 
-export type ClaimStatus = "backed" | "unbacked" | "unclear";
+/**
+ * backed: a file read implements it. mocked: a file read shows it faked (mock data, a
+ * hardcoded response, an in-memory stand-in for the service the README names). unbacked:
+ * every file it would live in was read in full and it isn't there. unclear: can't tell.
+ */
+export type ClaimStatus = "backed" | "mocked" | "unbacked" | "unclear";
 export type ClaimWeight = "core" | "minor";
 
 // Minor claims move half as much, rounded toward zero (-19 / 2 -> -9). Unclear means
-// unverified, not false, so it costs little: -2 core, nothing minor.
+// unverified, not false, so it costs little: -2 core, nothing minor. Mocked sits between:
+// judges mark "only works with pre-loaded data" down hard, but it is a working stand-in,
+// not an empty promise, and a demo can still run on it.
 const CLAIM_DELTAS: Record<ClaimWeight, Record<ClaimStatus, number>> = {
-  core: { backed: 6, unbacked: -19, unclear: -2 },
-  minor: { backed: 3, unbacked: -9, unclear: 0 },
+  core: { backed: 6, mocked: -10, unbacked: -19, unclear: -2 },
+  minor: { backed: 3, mocked: -5, unbacked: -9, unclear: 0 },
 };
 
 export function claimDelta(status: ClaimStatus, weight: ClaimWeight): number {
@@ -26,15 +33,30 @@ export function claimDelta(status: ClaimStatus, weight: ClaimWeight): number {
 /** loads: a live site answers. video: a public video on YouTube, Loom, Vimeo or Drive. */
 export type DemoStatus = "loads" | "video" | "dead" | "none";
 
-const DEMO_DELTAS: Record<DemoStatus, number> = { loads: 5, video: 3, dead: -8, none: 0 };
+// Judges call a demo that runs the single largest differentiator, so a live one is the
+// biggest single gain the scan can give. A recorded video is the fallback judges accept
+// when the wifi dies; a dead link is a broken promise.
+const DEMO_DELTAS: Record<DemoStatus, number> = { loads: 8, video: 4, dead: -8, none: 0 };
 
-/** A live demo helps most, a video a little less; a dead link hurts; no link changes nothing. */
+/** A live demo helps most, a video about half as much; a dead link hurts; no link changes nothing. */
 export function demoDelta(status: DemoStatus): number {
   return DEMO_DELTAS[status];
 }
 
 /** The first commit added more than 70% of the files. */
 export const BULK_FIRST_COMMIT_DELTA = -10;
+
+/**
+ * A re-review: the panel checks each fix it asked for last round against the diff since.
+ * Addressed +4, partly +2, untouched 0. At most three fixes, so at most +12, outside the
+ * scan cap: acting on the judges' feedback is its own signal.
+ */
+export type FixStatus = "addressed" | "partly" | "untouched";
+const FIX_DELTAS: Record<FixStatus, number> = { addressed: 4, partly: 2, untouched: 0 };
+
+export function fixDelta(status: FixStatus): number {
+  return FIX_DELTAS[status];
+}
 
 /** The scan as a whole (claims, demo, commits) moves the odds by at most +20 / -30. */
 export const SCAN_CAP_UP = 20;
@@ -55,12 +77,12 @@ export function clampOdds(n: number): number {
   return Math.min(MAX_ODDS, Math.max(MIN_ODDS, Math.round(n)));
 }
 
-/** The act an event happened in: 1 is the scan, 2 the grilling. */
+/** The act an event happened in: 1 is the scan (and a re-review's fix checks), 2 the grilling. */
 export type OddsAct = 1 | 2;
 
 export type OddsEvent = {
   act: OddsAct;
-  kind: "claim" | "demo" | "commits" | "answer";
+  kind: "claim" | "demo" | "commits" | "iteration" | "answer";
   /** Set on claim events, so the replay can color unclear claims. */
   status?: ClaimStatus;
   /** What the odds actually moved, after clamping. */
@@ -101,11 +123,12 @@ export function tierFor(odds: number): Tier {
   return "participating";
 }
 
-/** The review's status: "Ready to win" needs 55% or more and no core claim missing from the code. */
+/** The review's status: "Ready to win" needs 55% or more and no core claim missing or mocked. */
 export const READY_ODDS = 55;
 
+/** A core claim the code doesn't really deliver: missing, or faked with mock data. */
 export function anyCoreMissing(claims: readonly { status: ClaimStatus; weight: ClaimWeight }[]): boolean {
-  return claims.some((c) => c.weight === "core" && c.status === "unbacked");
+  return claims.some((c) => c.weight === "core" && (c.status === "unbacked" || c.status === "mocked"));
 }
 
 export function readyToWin(odds: number, claims: readonly { status: ClaimStatus; weight: ClaimWeight }[]): boolean {

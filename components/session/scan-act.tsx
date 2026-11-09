@@ -28,7 +28,7 @@ const MAX_STEP_MS = 900;
 const DRAW_SHARE = 0.7;
 const POLL_MS = 2500;
 
-const BEAM_COLOR = { backed: "#f4f4f2", unclear: "#f5a524", unbacked: "#ff3b30" } as const;
+const BEAM_COLOR = { backed: "#f4f4f2", unclear: "#f5a524", mocked: "#ff3b30", unbacked: "#ff3b30" } as const;
 const TONE_TEXT: Record<Tone, string> = {
   gain: "text-gain",
   loss: "text-loss",
@@ -188,6 +188,7 @@ function ClaimCard({
         !resolved && "border-border opacity-60",
         resolved && claim.status === "backed" && "border-text",
         resolved && claim.status === "unbacked" && "border-loss bg-loss/10",
+        resolved && claim.status === "mocked" && "border-loss",
         resolved && claim.status === "unclear" && "border-dashed border-unclear",
       )}
     >
@@ -209,7 +210,7 @@ function ClaimCard({
           "absolute top-1/2 -left-[5px] size-[9px] -translate-y-1/2 rounded-full transition-colors duration-300 lg:-right-[5px] lg:left-auto",
           !resolved && "bg-border-strong",
           resolved && claim.status === "backed" && "bg-text",
-          resolved && claim.status === "unbacked" && "bg-loss",
+          (resolved && (claim.status === "unbacked" || claim.status === "mocked")) && "bg-loss",
           resolved && claim.status === "unclear" && "bg-unclear",
         )}
       />
@@ -220,9 +221,16 @@ function ClaimCard({
 function SignalCard({ event, view, resolved }: { event: OddsEvent; view: SessionView; resolved: boolean }) {
   const tone = toneOf(event);
   const demo = view.signals?.demo;
-  const title = event.kind === "demo" ? copy.acts.scan.demo : copy.acts.scan.commits;
-  const detail =
+  const title =
     event.kind === "demo"
+      ? copy.acts.scan.demo
+      : event.kind === "iteration"
+        ? copy.acts.scan.iteration
+        : copy.acts.scan.commits;
+  const detail =
+    event.kind === "iteration"
+      ? event.reason
+      : event.kind === "demo"
       ? fill(
           demo?.status === "loads"
             ? copy.acts.scan.demoLoads
@@ -237,7 +245,10 @@ function SignalCard({ event, view, resolved }: { event: OddsEvent; view: Session
     <li
       className={cn(
         "rounded-card border px-5 py-4 transition-[border-color,opacity] duration-300",
-        resolved ? (tone === "gain" ? "border-gain" : "border-loss") : "border-border opacity-60",
+        !resolved && "border-border opacity-60",
+        resolved && tone === "gain" && "border-gain",
+        resolved && tone === "loss" && "border-loss",
+        resolved && (tone === "flat" || tone === "unclear") && "border-dashed border-border-strong",
       )}
     >
       <p className="text-[16px] font-bold">{title}</p>
@@ -249,7 +260,7 @@ function SignalCard({ event, view, resolved }: { event: OddsEvent; view: Session
   );
 }
 
-type Hit = "backed" | "unclear" | null;
+type Hit = "backed" | "mocked" | "unclear" | null;
 
 function FileTree({
   root,
@@ -284,6 +295,7 @@ function FileTree({
               className={cn(
                 "inline-block rounded-[6px] border px-1.5 py-0.5 transition-colors duration-300",
                 hit === "backed" && "border-text text-text",
+                hit === "mocked" && "border-loss text-loss",
                 hit === "unclear" && "border-dashed border-unclear text-unclear",
                 !hit && "border-transparent",
                 !hit && (dir ? "text-text-muted" : "text-text-subtle"),
@@ -429,17 +441,23 @@ function XRay({
   const beamState = (i: number): BeamState =>
     i < revealed ? "drawn" : i === revealed && started && !done ? "drawing" : "hidden";
 
+  // One mark per file: a file faking a claim says the most, then one that backs a claim.
+  const RANK: Record<Exclude<Hit, null>, number> = { mocked: 3, backed: 2, unclear: 1 };
   const hits = new Map<string, Hit>();
   claims.forEach((c, i) => {
     if (i >= revealed || !c.file || c.status === "unbacked") return;
-    if (hits.get(c.file) !== "backed") hits.set(c.file, c.status === "backed" ? "backed" : "unclear");
+    const hit: Exclude<Hit, null> = c.status === "backed" ? "backed" : c.status === "mocked" ? "mocked" : "unclear";
+    const had = hits.get(c.file);
+    if (!had || RANK[hit] > RANK[had]) hits.set(c.file, hit);
   });
 
   const signalEvents = view.events.slice(claims.length);
   const name = view.repo.split("/").pop() ?? view.repo;
   const footer = claims.some((c) => c.status === "unbacked" && c.weight === "core")
     ? copy.acts.scan.footer.unbacked
-    : claims.some((c) => c.status !== "backed")
+    : claims.some((c) => c.status === "mocked")
+      ? copy.acts.scan.footer.mocked
+      : claims.some((c) => c.status !== "backed")
       ? copy.acts.scan.footer.unclear
       : copy.acts.scan.footer.clean;
 
@@ -470,7 +488,7 @@ function XRay({
           {signalEvents.length > 0 && (
             <ul className="mt-6 grid gap-4">
               {signalEvents.map((e, j) => (
-                <SignalCard key={e.kind} event={e} view={view} resolved={claims.length + j < revealed} />
+                <SignalCard key={`${e.kind}-${j}`} event={e} view={view} resolved={claims.length + j < revealed} />
               ))}
             </ul>
           )}

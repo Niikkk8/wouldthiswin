@@ -61,7 +61,14 @@ Write:
 
 const esc = (s: string) => s.replace(/<\/?\s*untrusted_\w*[^>]*>/gi, "[tag removed]");
 
-const FINDING = { backed: "found in the code", unbacked: "couldn't find it in the files read", unclear: "couldn't confirm it" };
+const FINDING = {
+  backed: "found in the code",
+  mocked: "runs on mock or hardcoded data",
+  unbacked: "couldn't find it in the files read",
+  unclear: "couldn't confirm it",
+};
+
+const DEMO = { loads: "a live demo loads", video: "a demo video plays", dead: "the demo link is dead", none: "no demo link given" };
 
 export function buildPanelPrompt(s: SessionState): { system: string; user: string } {
   const odds = currentOdds(s.events);
@@ -80,12 +87,21 @@ export function buildPanelPrompt(s: SessionState): { system: string; user: strin
       ].join("\n");
     })
     .join("\n\n");
+  const it = s.signals?.iteration;
+  const iteration = it
+    ? [
+        `This is a re-review. Last round: ${it.previousOdds}%. Since then: ${it.commits} commits, ${it.filesChanged} files changed. The fixes you asked for:`,
+        ...it.fixes.map((f) => `- ${esc(f.fix)}: ${f.status}. ${esc(f.note)}`),
+        "React to what they did with your feedback. Fixes still open belong in this round's fixes again, unless something more important came up.",
+      ].join("\n")
+    : null;
   const files = s.sources.map((f) => `<untrusted_file path="${esc(f.path).replace(/"/g, "")}">\n${esc(f.text.slice(0, FILE_CHARS))}\n</untrusted_file>`);
   const user = [
     `Project: ${s.repo}`,
     `Final chance to win: ${odds}% (${tierFor(odds)}).`,
     `Scan findings:\n${claims || "(the README makes no checkable claims)"}`,
-    `Demo link: ${demo === "loads" ? "loads" : demo === "dead" ? "dead" : "none given"}. ${s.signals?.bulkFirstCommit ? "Most of the code arrived in one commit." : ""}`.trim(),
+    `Demo: ${DEMO[demo]}. ${s.signals?.bulkFirstCommit ? "Most of the code arrived in one commit." : ""}`.trim(),
+    ...(iteration ? [iteration] : []),
     `The questions and answers:\n\n${qa}`,
     files.length ? `Files the scan read:\n\n${files.join("\n\n")}` : "No files could be read, so set every review's file and excerpt to null.",
     "Deliberate, then write the review.",

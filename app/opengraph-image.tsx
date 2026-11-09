@@ -13,7 +13,13 @@ const C = { bg: "#0A0A0B", text: "#F4F4F2", muted: "#B5B5B8", subtle: "#8A8A8E",
 /** A made-up night, drawn only as a shape: up on the scan, down on an answer, up again. */
 const SPARK = [50, 56, 62, 43, 47, 41, 52, 61];
 
+/** The card never changes, so it's drawn once at build time and served as a static file. */
 export default async function Image() {
+  return new Response(await draw(), { headers: { "content-type": contentType } });
+}
+
+async function draw(): Promise<ArrayBuffer> {
+  "use cache";
   const [fonts, logo] = await Promise.all([ogFonts(), logoDataUri()]);
   const W = 420;
   const H = 120;
@@ -48,5 +54,5 @@ export default async function Image() {
       </div>
     ),
     { ...size, fonts },
-  );
+  ).arrayBuffer();
 }

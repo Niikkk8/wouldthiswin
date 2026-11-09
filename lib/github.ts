@@ -1,6 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import { parseRepoUrl, type RepoRef } from "./repo-url";
-import { readableText, type Source } from "./sources";
+import { SOURCE_CHARS, isReadablePath, readableText, type Source } from "./sources";
 
 export { parseRepoUrl, type RepoRef };
 
@@ -322,8 +322,11 @@ export async function fetchSources(
         const res = await orNull(
           gh.repos.getContent({ owner: ref.owner, repo: ref.repo, path, ref: sha, mediaType: { format: "raw" } }),
         );
-        const text = typeof res?.data === "string" ? readableText(res.data) : null;
-        results[i] = text === null ? null : { path, text };
+        const data: unknown = res?.data;
+        const raw = typeof data === "string" ? data : null;
+        const text = raw === null ? null : readableText(raw);
+        const truncated = raw !== null && raw.length > SOURCE_CHARS;
+        results[i] = text === null ? null : { path, text, ...(truncated ? { truncated: true } : {}) };
       } catch (err) {
         // One unreadable file shouldn't sink the scan; it just isn't read.
         console.warn(JSON.stringify({ event: "scan.source", path, error: String(err) }));
@@ -333,4 +336,60 @@ export async function fetchSources(
   };
   await Promise.all([worker(), worker()]);
   return results.filter((s): s is Source => s !== null);
+}
+
+/** What changed between two commits, for a re-review. Patches are untrusted. */
+export type Compare = {
+  /** Commits on the way from base to head, oldest first; GitHub caps the list at 250. */
+  commits: { message: string; date: string }[];
+  /** Changed files, with the added lines of each readable one's patch. */
+  files: { path: string; status: string; additions: number; deletions: number; added: string }[];
+  /** False when base isn't an ancestor of head (a force-push rewrote history). */
+  linear: boolean;
+};
+
+const COMPARE_FILES = 100;
+const PATCH_CHARS = 4000;
+
+/** The lines a patch adds, without their "+" marker. Context and removed lines are dropped. */
+export function addedLines(patch: string | undefined): string {
+  if (!patch) return "";
+  return patch
+    .split("\n")
+    .filter((l) => l.startsWith("+") && !l.startsWith("+++"))
+    .map((l) => l.slice(1))
+    .join("\n");
+}
+
+export async function fetchCompare(
+  ref: RepoRef,
+  base: string,
+  head: string,
+  token: string | undefined = process.env.GITHUB_TOKEN,
+): Promise<Compare> {
+  try {
+    const res = await client(token).repos.compareCommitsWithBasehead({
+      owner: ref.owner,
+      repo: ref.repo,
+      basehead: `${base}...${head}`,
+      per_page: COMPARE_FILES,
+    });
+    const d = res.data;
+    return {
+      commits: d.commits.map((c) => ({
+        message: c.commit.message.split("\n")[0].slice(0, 120),
+        date: c.commit.author?.date ?? c.commit.committer?.date ?? "",
+      })),
+      files: (d.files ?? []).slice(0, COMPARE_FILES).map((f) => ({
+        path: f.filename,
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions,
+        added: isReadablePath(f.filename) ? addedLines(f.patch).slice(0, PATCH_CHARS) : "",
+      })),
+      linear: d.status === "ahead" || d.status === "identical",
+    };
+  } catch (err) {
+    throw toGitHubError(err);
+  }
 }

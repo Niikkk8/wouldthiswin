@@ -3,6 +3,8 @@
 
 import { copy, fill } from "./copy";
 import { START_ODDS, anyCoreMissing, currentOdds, readyToWin, tierFor, type Tier } from "./odds";
+import type { Iteration } from "./recheck";
+import { sheetOf, type Criterion } from "./rubric";
 import type { Judge, ReviewComment, ReviewStatus, SessionState } from "./session";
 
 export type CheckStatus = "passed" | "failed" | "warning";
@@ -25,6 +27,10 @@ export type Review = {
   fixes: string[];
   /** The odds after each event, starting at 50: the sparkline. */
   spark: number[];
+  /** The judging sheet: each criterion 1 to 5, by fixed rules (lib/rubric.ts). */
+  sheet: Criterion[];
+  /** A re-review: last round's fixes, checked against the diff. Null on a first review. */
+  iteration: Iteration | null;
 };
 
 /** Reviewers in the order they asked. */
@@ -41,7 +47,7 @@ const host = (url: string | null) => {
 /** Every claim and signal as a CI-style check. */
 export function checksOf(s: Pick<SessionState, "claims" | "signals">): Check[] {
   const checks: Check[] = (s.claims ?? []).map((c) => ({
-    status: c.status === "backed" ? "passed" : c.status === "unbacked" ? "failed" : "warning",
+    status: c.status === "backed" ? "passed" : c.status === "unbacked" || c.status === "mocked" ? "failed" : "warning",
     title: c.claim,
     detail: c.evidence,
     file: c.file ?? c.searched[0] ?? null,
@@ -103,5 +109,7 @@ export function reviewOf(s: SessionState): Review | null {
     }),
     fixes: panel.fixes,
     spark: [START_ODDS, ...s.events.map((e) => e.after)],
+    sheet: sheetOf(s),
+    iteration: s.signals?.iteration ?? null,
   };
 }

@@ -199,8 +199,18 @@ describe("reason", () => {
     assert.equal(cleanReason('  "Twilio.\nFine."  '), "Twilio. Fine.");
     assert.equal(cleanReason(""), null);
     assert.equal(cleanReason(7), null);
-    const long = cleanReason("word ".repeat(40))!;
+    const long = cleanReason("extraordinarily ".repeat(8))!;
     assert.ok(long.length <= 81, String(long.length));
     assert.ok(long.endsWith("…"));
+  });
+
+  test("stray JSON punctuation is trimmed", () => {
+    assert.equal(cleanReason("you gave the tagline, not the answer.}"), "you gave the tagline, not the answer.");
+    assert.equal(cleanReason('{"who signs the check?"]'), "who signs the check?");
+  });
+
+  test("a speech isn't a reaction", () => {
+    assert.equal(cleanReason("word ".repeat(13)), null);
+    assert.ok(cleanReason("word ".repeat(12)));
   });
 });

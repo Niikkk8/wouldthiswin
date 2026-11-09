@@ -28,6 +28,7 @@ import {
 } from "@/lib/site";
 import { useDesktop } from "@/lib/use-desktop";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { ReReview } from "@/components/review/re-review";
 import { ActTitle } from "./act-parts";
 import { ActionBar } from "./action-bar";
 
@@ -314,5 +315,10 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
 /** After act 4. */
 export function ShareAct({ view, demo = false }: { view: SessionView; demo?: boolean }) {
   if (!view.review) return null;
-  return <ShareScreen review={view.review} demo={demo} />;
+  return (
+    <>
+      <ShareScreen review={view.review} demo={demo} />
+      {!demo && <ReReview id={view.review.id} repo={view.review.repo} className="mt-12" />}
+    </>
+  );
 }

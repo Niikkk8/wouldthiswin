@@ -5,6 +5,7 @@ import {
   MAX_CLAIMS,
   joinPaths,
   normalizePath,
+  quotedIn,
   validateClaims,
   validateVerify,
   type Candidate,
@@ -249,4 +250,69 @@ test("paths are normalized and traversal is rejected", () => {
   assert.equal(normalizePath("../secrets"), null);
   assert.equal(normalizePath(""), null);
   assert.equal(normalizePath(null), null);
+});
+
+describe("mocked features and cut-off files", () => {
+  const mockSrc: Source[] = [
+    ...sources,
+    { path: "lib/sms.ts", text: "const FAKE_SENT = [{ to: '+1555', ok: true }];\nexport const send = () => FAKE_SENT;" },
+  ];
+  const mockCandidates: Candidate[] = [{ claim: "SMS alerts", weight: "core", candidates: ["lib/sms.ts"] }];
+
+  test("mocked needs the line that shows the fake, verbatim, from a file that was read", () => {
+    const r = verify(
+      [verdict({ status: "mocked", file: "lib/sms.ts", quote: "const FAKE_SENT = [{ to: '+1555', ok: true }];", evidence: "send returns a hardcoded array", label: "SMS sends are hardcoded" })],
+      mockCandidates,
+      mockSrc,
+    );
+    assert.ok(r.ok);
+    if (r.ok) {
+      assert.equal(r.scan.claims[0].status, "mocked");
+      assert.equal(r.scan.claims[0].file, "lib/sms.ts");
+      assert.equal(r.downgraded, 0);
+    }
+  });
+
+  test("mocked without a quote that's really there is only unclear", () => {
+    const r = verify([verdict({ status: "mocked", file: "lib/sms.ts", quote: "return mockData;" })], mockCandidates, mockSrc);
+    assert.ok(r.ok);
+    if (r.ok) {
+      assert.equal(r.scan.claims[0].status, "unclear");
+      assert.equal(r.downgraded, 1);
+    }
+  });
+
+  test("a mocked label using a verdict word is replaced by code's own", () => {
+    const r = verify(
+      [verdict({ status: "mocked", file: "lib/sms.ts", quote: "export const send = () => FAKE_SENT;", label: "SMS is faked" })],
+      mockCandidates,
+      mockSrc,
+    );
+    assert.ok(r.ok);
+    if (r.ok) assert.equal(r.scan.claims[0].label, "SMS alerts: runs on mock data");
+  });
+
+  test("not found in a cut-off file is unclear: the code may be past the cut", () => {
+    const cut: Source[] = [{ path: "package.json", text: '{ "dependencies": {} }', truncated: true }, sources[1]];
+    const r = verify([verdict({ id: 2, status: "unbacked", file: null, quote: null, missing: "an SMS provider" })], candidates, cut);
+    assert.ok(r.ok);
+    if (r.ok) {
+      const sms = r.scan.claims[1];
+      assert.equal(sms.status, "unclear");
+      assert.match(sms.evidence, /package\.json was too long to read to the end/);
+    }
+  });
+
+  test("not found in files read in full still stands", () => {
+    const r = verify([verdict({ id: 2, status: "unbacked", file: null, quote: null, missing: "an SMS provider" })]);
+    assert.ok(r.ok);
+    if (r.ok) assert.equal(r.scan.claims[1].status, "unbacked");
+  });
+});
+
+test("a quote matches whatever its whitespace, but not with any other character changed", () => {
+  const text = "export async function getCachedScan(\n  repoUrl: string,\n  latestSha: string,\n) {";
+  assert.equal(quotedIn(text, "export async function getCachedScan( repoUrl: string,"), true);
+  assert.equal(quotedIn(text, "export async function getCachedScan(repoUrl: string,"), false);
+  assert.equal(quotedIn(text, "   "), false);
 });

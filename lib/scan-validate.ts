@@ -1,7 +1,7 @@
 // Checks the model's scan in code. Nothing it says about the repo is trusted: candidate
-// files must exist, "backed" needs a line found verbatim in a file that was actually read,
-// and "unbacked" needs every file it would live in to have been read. Code writes every
-// "couldn't find" finding, so users see evidence, never a verdict word.
+// files must exist, "backed" and "mocked" need a line found verbatim in a file that was
+// actually read, and "unbacked" needs every file it would live in to have been read in
+// full. Code writes every "couldn't find" finding, so users see evidence, never a verdict word.
 
 import { z } from "zod";
 import { copy, fill } from "./copy";
@@ -25,7 +25,7 @@ export const ClaimsOutput = z.object({ claims: z.array(ModelCandidate) });
 // Call B: a verdict per claim (by 1-based id) and the questions.
 const ModelVerdict = z.object({
   id: z.number(),
-  status: z.enum(["backed", "unbacked", "unclear"]),
+  status: z.enum(["backed", "mocked", "unbacked", "unclear"]),
   file: z.string().nullable(),
   quote: z.string().nullable(),
   evidence: z.string(),
@@ -48,6 +48,16 @@ export function normalizePath(p: string | null): string | null {
   s = s.replace(/^\.\//, "").replace(/^\/+/, "");
   if (!s || s.length > 200 || s.split("/").includes("..") || /[\0\r\n]/.test(s)) return null;
   return s;
+}
+
+/**
+ * True if `quote` appears in `text`, character for character except that any run of
+ * whitespace matches any other (models re-indent and collapse spaces when they copy a line).
+ */
+export function quotedIn(text: string, quote: string): boolean {
+  const squash = (s: string) => s.replace(/\s+/g, " ").trim();
+  const q = squash(quote);
+  return q.length > 0 && squash(text).includes(q);
 }
 
 export type Candidate = { claim: string; weight: ClaimWeight; candidates: string[] };
@@ -96,9 +106,10 @@ export type ScanCheck =
 
 /**
  * Call B, checked against what was actually read:
- * - "backed" must name a file that was read and quote a line (at most 120 characters) found
- *   in it verbatim. Otherwise "unclear".
- * - "unbacked" needs every candidate file of the claim to have been read. Otherwise "unclear".
+ * - "backed" and "mocked" must name a file that was read and quote a line (at most 120
+ *   characters) found in it verbatim. Otherwise "unclear".
+ * - "unbacked" needs every candidate file of the claim to have been read, none of them cut
+ *   off: a missing line in a truncated file proves nothing. Otherwise "unclear".
  * - A claim with no verdict is "unclear".
  * - Every judge needs a question of at most 220 characters, or the whole call fails (and is retried).
  */
@@ -113,6 +124,7 @@ export function validateVerify(
   if (!top.success) return { ok: false, reason: "shape" };
 
   const read = new Map(sources.map((s) => [s.path, s.text]));
+  const cutOff = new Set(sources.filter((s) => s.truncated).map((s) => s.path));
   const verdicts = new Map<number, z.infer<typeof ModelVerdict>>();
   for (const v of top.data.verdicts) {
     const p = ModelVerdict.safeParse(v);
@@ -147,10 +159,15 @@ export function validateVerify(
     const clean = (s: string) => s && !VERDICT_WORDS.test(s);
 
     if (v.status === "unbacked") {
-      // "Not there" is only a finding if every place it would live was read.
+      // "Not there" is only a finding if every place it would live was read, all the way down.
       if (!c.candidates.length || readHere.length !== c.candidates.length) {
         downgraded++;
         return unclear(readHere.length ? copy.scan.notAllRead : copy.scan.notRead);
+      }
+      const partial = readHere.find((p) => cutOff.has(p));
+      if (partial) {
+        downgraded++;
+        return unclear(fill(copy.scan.cutOff, { path: clip(partial, 80) }));
       }
       const missing = clip(oneLine(v.missing ?? "") || c.claim, 60);
       return {
@@ -166,6 +183,27 @@ export function validateVerify(
       };
     }
 
+    if (v.status === "mocked") {
+      // A fake is a finding only with the line that shows it, from a file that was read.
+      const text = file ? read.get(file) : undefined;
+      const quote = (v.quote ?? "").trim();
+      if (!file || text === undefined || !quote || quote.length > MAX_QUOTE || !quotedIn(text, quote)) {
+        downgraded++;
+        return unclear(copy.scan.notConfirmed, file && read.has(file) ? file : null);
+      }
+      return {
+        claim: c.claim,
+        weight: c.weight,
+        status: "mocked",
+        file,
+        evidence: clean(modelEvidence) ? modelEvidence : fill(copy.scan.mockedIn, { path: clip(file, 80) }),
+        label: clean(modelLabel) ? modelLabel : fill(copy.scan.mockedLabel, { claim: name }),
+        missing: null,
+        searched: [],
+        quote,
+      };
+    }
+
     if (v.status === "backed") {
       const text = file ? read.get(file) : undefined;
       if (!file || text === undefined) {
@@ -173,7 +211,7 @@ export function validateVerify(
         return unclear(file ? fill(copy.scan.citedUnread, { path: clip(file, 80) }) : copy.scan.citedNothing);
       }
       const quote = (v.quote ?? "").trim();
-      if (!quote || quote.length > MAX_QUOTE || !text.includes(quote)) {
+      if (!quote || quote.length > MAX_QUOTE || !quotedIn(text, quote)) {
         downgraded++;
         return unclear(fill(copy.scan.quoteMissing, { path: clip(file, 80) }), file);
       }
