@@ -1,0 +1,985 @@
+{
+ "9x16": {
+  "aspect": "9x16",
+  "answerDrop": 937,
+  "scenes": [
+   {
+    "kind": "hook",
+    "duration": 150,
+    "swapAt": 90
+   },
+   {
+    "kind": "capture",
+    "take": "landing",
+    "from": 206,
+    "duration": 90,
+    "shift": -136
+   },
+   {
+    "kind": "capture",
+    "take": "demo",
+    "from": 107,
+    "duration": 210,
+    "shift": -136,
+    "caption": {
+     "text": "it reads your actual code",
+     "top": 1385
+    }
+   },
+   {
+    "kind": "capture",
+    "take": "demo",
+    "from": 330,
+    "duration": 300,
+    "shift": -136,
+    "caption": {
+     "text": "three judges. 30 seconds a question.",
+     "top": 1385
+    }
+   },
+   {
+    "kind": "capture",
+    "take": "doze",
+    "from": 1033,
+    "duration": 150,
+    "shift": -136,
+    "caption": {
+     "text": "one of them is very tired",
+     "top": 1385
+    }
+   },
+   {
+    "kind": "capture",
+    "take": "demo",
+    "from": 1016,
+    "duration": 189,
+    "shift": -136,
+    "caption": {
+     "text": "they talk about you. in front of you.",
+     "top": 1385
+    }
+   },
+   {
+    "kind": "capture",
+    "take": "demo",
+    "from": 1211,
+    "duration": 150,
+    "shift": -136,
+    "caption": {
+     "text": "and tell you what to fix",
+     "top": 470,
+     "at": 56
+    }
+   },
+   {
+    "kind": "end",
+    "duration": 120
+   }
+  ],
+  "cues": [
+   {
+    "f": 160,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 162,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 164,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 166,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 168,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 170,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 172,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 175,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 177,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 179,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 181,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 183,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 185,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 187,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 190,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 193,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 195,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 197,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 212,
+    "sfx": "tap",
+    "volume": 0.45
+   },
+   {
+    "f": 303,
+    "sfx": "whoosh",
+    "volume": 0.4
+   },
+   {
+    "f": 330,
+    "sfx": "whoosh",
+    "volume": 0.4
+   },
+   {
+    "f": 357,
+    "sfx": "whoosh",
+    "volume": 0.4
+   },
+   {
+    "f": 384,
+    "sfx": "whoosh",
+    "volume": 0.4
+   },
+   {
+    "f": 357,
+    "sfx": "thud",
+    "volume": 0.8
+   },
+   {
+    "f": 411,
+    "sfx": "thud",
+    "volume": 0.8
+   },
+   {
+    "f": 505,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 507,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 509,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 511,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 513,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 515,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 517,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 519,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 521,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 523,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 525,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 527,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 529,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 531,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 533,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 535,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 537,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 539,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 541,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 543,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 545,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 547,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 549,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 551,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 553,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 555,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 557,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 559,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 728,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 730,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 732,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 734,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 736,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 738,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 740,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 742,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 744,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 746,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 748,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 904,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 947,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 974,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 1001,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 1028,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 1055,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 1092,
+    "sfx": "tap",
+    "volume": 0.6
+   },
+   {
+    "f": 1243,
+    "sfx": "chime",
+    "volume": 0.5
+   }
+  ],
+  "duration": 1359,
+  "cover": 381,
+  "captions": [
+   {
+    "from": 0,
+    "to": 90,
+    "text": "the night before submission, every team asks one question"
+   },
+   {
+    "from": 90,
+    "to": 150,
+    "text": "would this win?"
+   },
+   {
+    "from": 240,
+    "to": 450,
+    "text": "it reads your actual code"
+   },
+   {
+    "from": 450,
+    "to": 750,
+    "text": "three judges. 30 seconds a question."
+   },
+   {
+    "from": 750,
+    "to": 900,
+    "text": "one of them is very tired"
+   },
+   {
+    "from": 900,
+    "to": 1089,
+    "text": "they talk about you. in front of you."
+   },
+   {
+    "from": 1145,
+    "to": 1239,
+    "text": "and tell you what to fix"
+   },
+   {
+    "from": 1239,
+    "to": 1359,
+    "text": "wouldthiswin.com. free. no sign-up."
+   }
+  ],
+  "key": [
+   212,
+   357,
+   411,
+   1092,
+   1243,
+   1089
+  ]
+ },
+ "16x9": {
+  "aspect": "16x9",
+  "answerDrop": 941,
+  "scenes": [
+   {
+    "kind": "hook",
+    "duration": 150,
+    "swapAt": 90
+   },
+   {
+    "kind": "capture",
+    "take": "landing",
+    "from": 206,
+    "duration": 90,
+    "shift": 0
+   },
+   {
+    "kind": "capture",
+    "take": "demo",
+    "from": 111,
+    "duration": 210,
+    "shift": 0,
+    "caption": {
+     "text": "it reads your actual code",
+     "top": 950
+    }
+   },
+   {
+    "kind": "capture",
+    "take": "demo",
+    "from": 334,
+    "duration": 300,
+    "shift": 0,
+    "caption": {
+     "text": "three judges. 30 seconds a question.",
+     "top": 950
+    }
+   },
+   {
+    "kind": "capture",
+    "take": "doze",
+    "from": 1033,
+    "duration": 150,
+    "shift": 0,
+    "caption": {
+     "text": "one of them is very tired",
+     "top": 950
+    }
+   },
+   {
+    "kind": "capture",
+    "take": "demo",
+    "from": 1020,
+    "duration": 190,
+    "shift": 0,
+    "caption": {
+     "text": "they talk about you. in front of you.",
+     "top": 950
+    }
+   },
+   {
+    "kind": "capture",
+    "take": "demo",
+    "from": 1216,
+    "duration": 150,
+    "shift": 0,
+    "caption": {
+     "text": "and tell you what to fix before you submit",
+     "top": 950
+    }
+   },
+   {
+    "kind": "end",
+    "duration": 120
+   }
+  ],
+  "cues": [
+   {
+    "f": 160,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 162,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 164,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 166,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 168,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 170,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 172,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 175,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 177,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 179,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 181,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 183,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 185,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 187,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 190,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 193,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 195,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 197,
+    "sfx": "click",
+    "volume": 0.35
+   },
+   {
+    "f": 212,
+    "sfx": "tap",
+    "volume": 0.45
+   },
+   {
+    "f": 303,
+    "sfx": "whoosh",
+    "volume": 0.4
+   },
+   {
+    "f": 330,
+    "sfx": "whoosh",
+    "volume": 0.4
+   },
+   {
+    "f": 357,
+    "sfx": "whoosh",
+    "volume": 0.4
+   },
+   {
+    "f": 384,
+    "sfx": "whoosh",
+    "volume": 0.4
+   },
+   {
+    "f": 357,
+    "sfx": "thud",
+    "volume": 0.8
+   },
+   {
+    "f": 411,
+    "sfx": "thud",
+    "volume": 0.8
+   },
+   {
+    "f": 505,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 507,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 509,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 511,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 513,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 515,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 517,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 519,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 521,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 523,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 525,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 527,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 529,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 531,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 533,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 535,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 537,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 539,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 541,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 543,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 545,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 547,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 549,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 551,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 553,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 555,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 557,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 559,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 728,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 730,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 732,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 734,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 736,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 738,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 740,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 742,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 744,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 746,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 748,
+    "sfx": "click",
+    "volume": 0.3
+   },
+   {
+    "f": 904,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 947,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 974,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 1001,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 1028,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 1055,
+    "sfx": "click",
+    "volume": 0.22
+   },
+   {
+    "f": 1093,
+    "sfx": "tap",
+    "volume": 0.6
+   },
+   {
+    "f": 1244,
+    "sfx": "chime",
+    "volume": 0.5
+   }
+  ],
+  "duration": 1360,
+  "cover": 381,
+  "captions": [
+   {
+    "from": 0,
+    "to": 90,
+    "text": "the night before submission, every team asks one question"
+   },
+   {
+    "from": 90,
+    "to": 150,
+    "text": "would this win?"
+   },
+   {
+    "from": 240,
+    "to": 450,
+    "text": "it reads your actual code"
+   },
+   {
+    "from": 450,
+    "to": 750,
+    "text": "three judges. 30 seconds a question."
+   },
+   {
+    "from": 750,
+    "to": 900,
+    "text": "one of them is very tired"
+   },
+   {
+    "from": 900,
+    "to": 1090,
+    "text": "they talk about you. in front of you."
+   },
+   {
+    "from": 1090,
+    "to": 1240,
+    "text": "and tell you what to fix before you submit"
+   },
+   {
+    "from": 1240,
+    "to": 1360,
+    "text": "wouldthiswin.com. free. no sign-up."
+   }
+  ],
+  "key": [
+   212,
+   357,
+   411,
+   1093,
+   1244,
+   1090
+  ]
+ }
+}

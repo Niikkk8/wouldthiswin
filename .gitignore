@@ -49,3 +49,24 @@ next-env.d.ts
 
 # judge sprite previews (npm run judges)
 /.judge-previews
+
+# product video: renders, captures and raw footage stay local
+/video/out/
+/video/node_modules/
+/video/.cache/
+/video/public/capture/
+/video/footage/
+/video/.venv/
+/video/public/sfx/
+/video/public/judges/
+/video/public/logo.png
+/video/public/reel/
+/video/*.log
+/video/.dev.log
+/video/.bin/
+/video/audio/build/
+/video/.venv-tts/
+/video/**/__pycache__/
+/video/audio/voice/takes/*.wav
+/video/.claude/skills/
+/video/.agents/

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The product video is its own project (video/package.json).
+    "video/**",
   ]),
 ]);
 

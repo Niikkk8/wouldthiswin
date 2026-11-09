@@ -1,0 +1,8 @@
+{
+  "svg": "logo.qa.svg",
+  "source": "fit_work\\source_silhouette.png",
+  "overlay": "fit_iterations\\05_final_overlay.png",
+  "iou": 0.9911,
+  "src_only_px": 13,
+  "render_only_px": 12
+}

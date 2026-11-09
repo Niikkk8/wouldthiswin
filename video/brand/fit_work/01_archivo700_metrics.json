@@ -1,0 +1,8 @@
+{
+  "svg": "fit_work\\01_archivo700.qa.svg",
+  "source": "fit_work\\source_silhouette.png",
+  "overlay": "fit_iterations\\01_archivo700_overlay.png",
+  "iou": 0.7794,
+  "src_only_px": 582,
+  "render_only_px": 44
+}

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* The product video (video/) is its own project: keep its classes out of the site CSS. */
+@source not "../video";
 
 @theme {
   --color-*: initial;

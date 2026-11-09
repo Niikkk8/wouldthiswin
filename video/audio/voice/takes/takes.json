@@ -1,0 +1,238 @@
+{
+ "1": [
+  {
+   "file": "line-1-take0.wav",
+   "seconds": 1.741
+  },
+  {
+   "file": "line-1-take1.wav",
+   "seconds": 1.533
+  },
+  {
+   "file": "line-1-take2.wav",
+   "seconds": 1.782
+  },
+  {
+   "file": "line-1-take3.wav",
+   "seconds": 1.78
+  },
+  {
+   "file": "line-1-take4.wav",
+   "seconds": 1.45
+  }
+ ],
+ "2": [
+  {
+   "file": "line-2-take0.wav",
+   "seconds": 2.22
+  },
+  {
+   "file": "line-2-take1.wav",
+   "seconds": 0.861
+  },
+  {
+   "file": "line-2-take2.wav",
+   "seconds": 1.195
+  },
+  {
+   "file": "line-2-take3.wav",
+   "seconds": 2.322
+  },
+  {
+   "file": "line-2-take4.wav",
+   "seconds": 0.975
+  }
+ ],
+ "3": [
+  {
+   "file": "line-3-take0.wav",
+   "seconds": 1.18
+  },
+  {
+   "file": "line-3-take1.wav",
+   "seconds": 0.94
+  },
+  {
+   "file": "line-3-take2.wav",
+   "seconds": 2.18
+  },
+  {
+   "file": "line-3-take3.wav",
+   "seconds": 1.365
+  },
+  {
+   "file": "line-3-take4.wav",
+   "seconds": 1.049
+  }
+ ],
+ "4": [
+  {
+   "file": "line-4-take0.wav",
+   "seconds": 2.924
+  },
+  {
+   "file": "line-4-take1.wav",
+   "seconds": 2.466
+  },
+  {
+   "file": "line-4-take2.wav",
+   "seconds": 2.649
+  },
+  {
+   "file": "line-4-take3.wav",
+   "seconds": 2.9
+  },
+  {
+   "file": "line-4-take4.wav",
+   "seconds": 2.49
+  }
+ ],
+ "5": [
+  {
+   "file": "line-5-take0.wav",
+   "seconds": 2.814
+  },
+  {
+   "file": "line-5-take1.wav",
+   "seconds": 2.691
+  },
+  {
+   "file": "line-5-take2.wav",
+   "seconds": 2.437
+  },
+  {
+   "file": "line-5-take3.wav",
+   "seconds": 2.656
+  }
+ ],
+ "6": [
+  {
+   "file": "line-6-take0.wav",
+   "seconds": 1.62
+  },
+  {
+   "file": "line-6-take1.wav",
+   "seconds": 2.336
+  },
+  {
+   "file": "line-6-take2.wav",
+   "seconds": 1.735
+  },
+  {
+   "file": "line-6-take3.wav",
+   "seconds": 1.939
+  }
+ ],
+ "6a": [
+  {
+   "file": "line-6a-take0.wav",
+   "seconds": 1.353
+  },
+  {
+   "file": "line-6a-take1.wav",
+   "seconds": 1.54
+  },
+  {
+   "file": "line-6a-take2.wav",
+   "seconds": 1.279
+  },
+  {
+   "file": "line-6a-take3.wav",
+   "seconds": 1.159
+  }
+ ],
+ "6b": [
+  {
+   "file": "line-6b-take0.wav",
+   "seconds": 2.0
+  },
+  {
+   "file": "line-6b-take1.wav",
+   "seconds": 1.627
+  },
+  {
+   "file": "line-6b-take2.wav",
+   "seconds": 1.786
+  },
+  {
+   "file": "line-6b-take3.wav",
+   "seconds": 2.034
+  }
+ ],
+ "6c": [
+  {
+   "file": "line-6c-take0.wav",
+   "seconds": 4.863
+  },
+  {
+   "file": "line-6c-take1.wav",
+   "seconds": 4.518
+  },
+  {
+   "file": "line-6c-take2.wav",
+   "seconds": 4.449
+  },
+  {
+   "file": "line-6c-take3.wav",
+   "seconds": 4.716
+  }
+ ],
+ "7": [
+  {
+   "file": "line-7-take0.wav",
+   "seconds": 2.788
+  },
+  {
+   "file": "line-7-take1.wav",
+   "seconds": 2.089
+  },
+  {
+   "file": "line-7-take2.wav",
+   "seconds": 2.628
+  },
+  {
+   "file": "line-7-take3.wav",
+   "seconds": 3.273
+  }
+ ],
+ "8": [
+  {
+   "file": "line-8-take0.wav",
+   "seconds": 2.059
+  },
+  {
+   "file": "line-8-take1.wav",
+   "seconds": 3.24
+  },
+  {
+   "file": "line-8-take2.wav",
+   "seconds": 1.86
+  },
+  {
+   "file": "line-8-take3.wav",
+   "seconds": 2.737
+  }
+ ],
+ "9": [
+  {
+   "file": "line-9-take0.wav",
+   "seconds": 3.641
+  },
+  {
+   "file": "line-9-take1.wav",
+   "seconds": 3.336
+  },
+  {
+   "file": "line-9-take2.wav",
+   "seconds": 3.347
+  },
+  {
+   "file": "line-9-take3.wav",
+   "seconds": 4.66
+  },
+  {
+   "file": "line-9-take4.wav",
+   "seconds": 4.3
+  }
+ ]
+}

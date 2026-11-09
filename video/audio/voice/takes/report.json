@@ -1,0 +1,568 @@
+{
+ "1": [
+  {
+   "file": "line-1-take0.wav",
+   "seconds": 1.741,
+   "heard": "Ekathon project due tonight?",
+   "errors": 1,
+   "pitchSt": 12.35,
+   "loudDb": 4.01,
+   "wpm": 138,
+   "score": 14.65
+  },
+  {
+   "file": "line-1-take1.wav",
+   "seconds": 1.533,
+   "heard": "Akathon Project due tonight.",
+   "errors": 1,
+   "pitchSt": 4.05,
+   "loudDb": 5.85,
+   "wpm": 157,
+   "score": 7.56
+  },
+  {
+   "file": "line-1-take2.wav",
+   "seconds": 1.782,
+   "heard": "Hackathon project due tonight?",
+   "errors": 0,
+   "pitchSt": 7.84,
+   "loudDb": 4.22,
+   "wpm": 135,
+   "score": 10.11,
+   "chosen": true
+  },
+  {
+   "file": "line-1-take3.wav",
+   "seconds": 1.78,
+   "heard": "Akathon Project due tonight?",
+   "errors": 1,
+   "pitchSt": 8.19,
+   "loudDb": 5.61,
+   "wpm": 135,
+   "score": 11.3
+  },
+  {
+   "file": "line-1-take4.wav",
+   "seconds": 1.45,
+   "heard": "Akathon Project due tonight.",
+   "errors": 1,
+   "pitchSt": 9.14,
+   "loudDb": 4.19,
+   "wpm": 165,
+   "score": 11.66
+  }
+ ],
+ "2": [
+  {
+   "file": "line-2-take0.wav",
+   "seconds": 2.22,
+   "heard": "Cost tense with this win and",
+   "errors": 4,
+   "pitchSt": 11.6,
+   "loudDb": 5.04,
+   "wpm": 81,
+   "score": 11.67
+  },
+  {
+   "file": "line-2-take1.wav",
+   "seconds": 0.861,
+   "heard": "Would this win?",
+   "errors": 0,
+   "pitchSt": 5.63,
+   "loudDb": 4.22,
+   "wpm": 209,
+   "score": 7.71
+  },
+  {
+   "file": "line-2-take2.wav",
+   "seconds": 1.195,
+   "heard": "Would this win?",
+   "errors": 0,
+   "pitchSt": 11.74,
+   "loudDb": 6.62,
+   "wpm": 151,
+   "score": 15.71,
+   "chosen": true
+  },
+  {
+   "file": "line-2-take3.wav",
+   "seconds": 2.322,
+   "heard": "Would this win A's?",
+   "errors": 1,
+   "pitchSt": 13.26,
+   "loudDb": 6.66,
+   "wpm": 78,
+   "score": 14.13
+  },
+  {
+   "file": "line-2-take4.wav",
+   "seconds": 0.975,
+   "heard": "Would this win?",
+   "errors": 0,
+   "pitchSt": 4.86,
+   "loudDb": 5.84,
+   "wpm": 185,
+   "score": 8.36
+  }
+ ],
+ "3": [
+  {
+   "file": "line-3-take0.wav",
+   "seconds": 1.18,
+   "heard": "Haste your Rebo.",
+   "errors": 2,
+   "pitchSt": 7.6,
+   "loudDb": 3.74,
+   "wpm": 153,
+   "score": 9.85
+  },
+  {
+   "file": "line-3-take1.wav",
+   "seconds": 0.94,
+   "heard": "Ace your Rebo.",
+   "errors": 2,
+   "pitchSt": 5.28,
+   "loudDb": 3.72,
+   "wpm": 191,
+   "score": 7.51
+  },
+  {
+   "file": "line-3-take2.wav",
+   "seconds": 2.18,
+   "heard": "Haste your rebo, singer!",
+   "errors": 3,
+   "pitchSt": 7.54,
+   "loudDb": 5.55,
+   "wpm": 83,
+   "score": 8.0
+  },
+  {
+   "file": "line-3-take3.wav",
+   "seconds": 1.365,
+   "heard": "Paste your repo.",
+   "errors": 0,
+   "pitchSt": 7.97,
+   "loudDb": 3.8,
+   "wpm": 132,
+   "score": 9.84
+  },
+  {
+   "file": "line-3-take4.wav",
+   "seconds": 1.049,
+   "heard": "Paste your repo.",
+   "errors": 0,
+   "pitchSt": 12.7,
+   "loudDb": 4.88,
+   "wpm": 172,
+   "score": 15.63,
+   "chosen": true
+  }
+ ],
+ "4": [
+  {
+   "file": "line-4-take0.wav",
+   "seconds": 2.924,
+   "heard": "Yes, it checks your README against your actual code.",
+   "errors": 1,
+   "pitchSt": 6.83,
+   "loudDb": 5.05,
+   "wpm": 164,
+   "score": 9.86
+  },
+  {
+   "file": "line-4-take1.wav",
+   "seconds": 2.466,
+   "heard": "It checks your README against your actual code.",
+   "errors": 0,
+   "pitchSt": 8.17,
+   "loudDb": 5.05,
+   "wpm": 195,
+   "score": 11.2
+  },
+  {
+   "file": "line-4-take2.wav",
+   "seconds": 2.649,
+   "heard": "It checks your readme against your actual code.",
+   "errors": 0,
+   "pitchSt": 7.29,
+   "loudDb": 4.13,
+   "wpm": 181,
+   "score": 9.76
+  },
+  {
+   "file": "line-4-take3.wav",
+   "seconds": 2.9,
+   "heard": "It checks your README against your actual code.",
+   "errors": 0,
+   "pitchSt": 9.41,
+   "loudDb": 4.96,
+   "wpm": 166,
+   "score": 12.38
+  },
+  {
+   "file": "line-4-take4.wav",
+   "seconds": 2.49,
+   "heard": "It checks your readme, against your actual code.",
+   "errors": 0,
+   "pitchSt": 10.28,
+   "loudDb": 5.13,
+   "wpm": 193,
+   "score": 13.36,
+   "chosen": true
+  }
+ ],
+ "5": [
+  {
+   "file": "line-5-take0.wav",
+   "seconds": 2.814,
+   "heard": "promise something you didn't build, your odds drop.",
+   "errors": 0,
+   "pitchSt": 13.04,
+   "loudDb": 5.45,
+   "wpm": 171,
+   "score": 16.31,
+   "chosen": true
+  },
+  {
+   "file": "line-5-take1.wav",
+   "seconds": 2.691,
+   "heard": "Promise something you didn't build, your odds drop!",
+   "errors": 0,
+   "pitchSt": 10.24,
+   "loudDb": 5.81,
+   "wpm": 178,
+   "score": 13.73
+  },
+  {
+   "file": "line-5-take2.wav",
+   "seconds": 2.437,
+   "heard": "Promise something you didn't build? Your odds drop.",
+   "errors": 0,
+   "pitchSt": 7.78,
+   "loudDb": 5.15,
+   "wpm": 197,
+   "score": 10.87
+  },
+  {
+   "file": "line-5-take3.wav",
+   "seconds": 2.656,
+   "heard": "Promise something you didn't build, your odds drop.",
+   "errors": 0,
+   "pitchSt": 10.68,
+   "loudDb": 5.34,
+   "wpm": 181,
+   "score": 13.88
+  }
+ ],
+ "6": [
+  {
+   "file": "line-6-take0.wav",
+   "seconds": 1.62,
+   "heard": "Then, three judges grill you.",
+   "errors": 0,
+   "pitchSt": 8.5,
+   "loudDb": 4.17,
+   "wpm": 185,
+   "score": 11.0,
+   "chosen": true
+  },
+  {
+   "file": "line-6-take1.wav",
+   "seconds": 2.336,
+   "heard": "Apping, then three judges grill you.",
+   "errors": 1,
+   "pitchSt": 8.74,
+   "loudDb": 5.21,
+   "wpm": 128,
+   "score": 11.29
+  },
+  {
+   "file": "line-6-take2.wav",
+   "seconds": 1.735,
+   "heard": "then three judges grill you.",
+   "errors": 0,
+   "pitchSt": 6.64,
+   "loudDb": 5.38,
+   "wpm": 173,
+   "score": 9.87
+  },
+  {
+   "file": "line-6-take3.wav",
+   "seconds": 1.939,
+   "heard": "and three judges grill you.",
+   "errors": 1,
+   "pitchSt": 6.18,
+   "loudDb": 5.19,
+   "wpm": 155,
+   "score": 9.29
+  }
+ ],
+ "6a": [
+  {
+   "file": "line-6a-take0.wav",
+   "seconds": 1.353,
+   "heard": "The engineer wants proof.",
+   "errors": 0,
+   "pitchSt": 11.53,
+   "loudDb": 4.24,
+   "wpm": 177,
+   "score": 14.08,
+   "chosen": true
+  },
+  {
+   "file": "line-6a-take1.wav",
+   "seconds": 1.54,
+   "heard": "The engineer wants proof.",
+   "errors": 0,
+   "pitchSt": 5.03,
+   "loudDb": 4.82,
+   "wpm": 156,
+   "score": 7.92
+  },
+  {
+   "file": "line-6a-take2.wav",
+   "seconds": 1.279,
+   "heard": "The engineer wants proof.",
+   "errors": 0,
+   "pitchSt": 4.28,
+   "loudDb": 5.05,
+   "wpm": 188,
+   "score": 7.31
+  },
+  {
+   "file": "line-6a-take3.wav",
+   "seconds": 1.159,
+   "heard": "The engineer wants proof.",
+   "errors": 0,
+   "pitchSt": 4.78,
+   "loudDb": 4.13,
+   "wpm": 207,
+   "score": 6.91
+  }
+ ],
+ "6b": [
+  {
+   "file": "line-6b-take0.wav",
+   "seconds": 2.0,
+   "heard": "The investor wants to know who's paying.",
+   "errors": 0,
+   "pitchSt": 6.7,
+   "loudDb": 5.12,
+   "wpm": 210,
+   "score": 9.27
+  },
+  {
+   "file": "line-6b-take1.wav",
+   "seconds": 1.627,
+   "heard": "The investor wants to know who's paying.",
+   "errors": 0,
+   "pitchSt": 4.44,
+   "loudDb": 5.07,
+   "wpm": 258,
+   "score": 4.57
+  },
+  {
+   "file": "line-6b-take2.wav",
+   "seconds": 1.786,
+   "heard": "The investor wants to know who's paying.",
+   "errors": 0,
+   "pitchSt": 6.16,
+   "loudDb": 4.87,
+   "wpm": 235,
+   "score": 7.32
+  },
+  {
+   "file": "line-6b-take3.wav",
+   "seconds": 2.034,
+   "heard": "The investor wants to know who's paying.",
+   "errors": 0,
+   "pitchSt": 10.14,
+   "loudDb": 4.87,
+   "wpm": 206,
+   "score": 12.73,
+   "chosen": true
+  }
+ ],
+ "6c": [
+  {
+   "file": "line-6c-take0.wav",
+   "seconds": 4.863,
+   "heard": "An entire judge has seen 40 demos today, one sentence.  Go!",
+   "errors": 3,
+   "pitchSt": 9.48,
+   "loudDb": 5.42,
+   "wpm": 148,
+   "score": 12.73
+  },
+  {
+   "file": "line-6c-take1.wav",
+   "seconds": 4.518,
+   "heard": "and the tired judge has seen 40 demos today, one sentence, go!",
+   "errors": 0,
+   "pitchSt": 7.79,
+   "loudDb": 6.09,
+   "wpm": 159,
+   "score": 11.44
+  },
+  {
+   "file": "line-6c-take2.wav",
+   "seconds": 4.449,
+   "heard": "and the tired judge has seen 40 demos today.  One sentence, go.",
+   "errors": 0,
+   "pitchSt": 5.65,
+   "loudDb": 5.71,
+   "wpm": 162,
+   "score": 9.08
+  },
+  {
+   "file": "line-6c-take3.wav",
+   "seconds": 4.716,
+   "heard": "and the tired judge has seen 40 demos today.  One sentence, go!",
+   "errors": 0,
+   "pitchSt": 10.18,
+   "loudDb": 5.95,
+   "wpm": 153,
+   "score": 13.75,
+   "chosen": true
+  }
+ ],
+ "7": [
+  {
+   "file": "line-7-take0.wav",
+   "seconds": 2.788,
+   "heard": "Then they talk about you, right in front of you.",
+   "errors": 0,
+   "pitchSt": 10.03,
+   "loudDb": 5.25,
+   "wpm": 215,
+   "score": 12.42,
+   "chosen": true
+  },
+  {
+   "file": "line-7-take1.wav",
+   "seconds": 2.089,
+   "heard": "Then they talk about you, right in front of you.",
+   "errors": 0,
+   "pitchSt": 7.53,
+   "loudDb": 5.89,
+   "wpm": 287,
+   "score": 6.7
+  },
+  {
+   "file": "line-7-take2.wav",
+   "seconds": 2.628,
+   "heard": "Then they talk about you right in front of you.",
+   "errors": 0,
+   "pitchSt": 9.96,
+   "loudDb": 5.59,
+   "wpm": 228,
+   "score": 11.89
+  },
+  {
+   "file": "line-7-take3.wav",
+   "seconds": 3.273,
+   "heard": "Then they talk about you, right in front of you.",
+   "errors": 0,
+   "pitchSt": 8.61,
+   "loudDb": 5.45,
+   "wpm": 183,
+   "score": 11.88
+  }
+ ],
+ "8": [
+  {
+   "file": "line-8-take0.wav",
+   "seconds": 2.059,
+   "heard": "and tell you exactly what to fix.",
+   "errors": 0,
+   "pitchSt": 7.23,
+   "loudDb": 5.2,
+   "wpm": 204,
+   "score": 10.15
+  },
+  {
+   "file": "line-8-take1.wav",
+   "seconds": 3.24,
+   "heard": "and tell you exactly what to fix.  And...",
+   "errors": 1,
+   "pitchSt": 13.26,
+   "loudDb": 5.4,
+   "wpm": 130,
+   "score": 15.99
+  },
+  {
+   "file": "line-8-take2.wav",
+   "seconds": 1.86,
+   "heard": "and tell you exactly what to fix.",
+   "errors": 0,
+   "pitchSt": 5.37,
+   "loudDb": 4.49,
+   "wpm": 226,
+   "score": 6.77
+  },
+  {
+   "file": "line-8-take3.wav",
+   "seconds": 2.737,
+   "heard": "and tell you exactly what to fix.",
+   "errors": 0,
+   "pitchSt": 18.8,
+   "loudDb": 5.31,
+   "wpm": 153,
+   "score": 19.19,
+   "chosen": true
+  }
+ ],
+ "9": [
+  {
+   "file": "line-9-take0.wav",
+   "seconds": 3.641,
+   "heard": "Would yours win? Try it free at WoodThisWin.com",
+   "errors": 0,
+   "pitchSt": 8.01,
+   "loudDb": 5.5,
+   "wpm": 198,
+   "score": 11.31
+  },
+  {
+   "file": "line-9-take1.wav",
+   "seconds": 3.336,
+   "heard": "Would yours win? Try it free at wooddiswin.com.",
+   "errors": 0,
+   "pitchSt": 11.61,
+   "loudDb": 4.88,
+   "wpm": 216,
+   "score": 13.74
+  },
+  {
+   "file": "line-9-take2.wav",
+   "seconds": 3.347,
+   "heard": "Would yours win? Try it free at www.woodthiswin.com",
+   "errors": 0,
+   "pitchSt": 7.62,
+   "loudDb": 5.95,
+   "wpm": 215,
+   "score": 10.43
+  },
+  {
+   "file": "line-9-take3.wav",
+   "seconds": 4.66,
+   "heard": "Would yours win? Try it free at www.woodthiswin.com",
+   "errors": 0,
+   "pitchSt": 11.0,
+   "loudDb": 5.61,
+   "wpm": 155,
+   "score": 14.37
+  },
+  {
+   "file": "line-9-take4.wav",
+   "seconds": 4.3,
+   "heard": "Would yours win? Try it free at woodthiswin.com",
+   "errors": 0,
+   "pitchSt": 11.38,
+   "loudDb": 5.08,
+   "wpm": 167,
+   "score": 14.43,
+   "chosen": true
+  }
+ ]
+}

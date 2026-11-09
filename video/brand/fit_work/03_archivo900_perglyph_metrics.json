@@ -1,0 +1,8 @@
+{
+  "svg": "fit_work\\03_archivo900_perglyph.qa.svg",
+  "source": "fit_work\\source_silhouette.png",
+  "overlay": "fit_iterations\\03_archivo900_perglyph_overlay.png",
+  "iou": 0.9911,
+  "src_only_px": 14,
+  "render_only_px": 11
+}

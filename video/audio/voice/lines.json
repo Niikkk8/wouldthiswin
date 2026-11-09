@@ -1,0 +1,89 @@
+{
+ "voice": "chatterbox",
+ "lines": [
+  {
+   "line": "1",
+   "text": "hackathon project due tonight?",
+   "spoken": "Hackathon project due tonight?",
+   "seconds": 1.782,
+   "take": "line-1-take2.wav"
+  },
+  {
+   "line": "2",
+   "text": "would this win?",
+   "spoken": "Would this win?",
+   "seconds": 1.195,
+   "take": "line-2-take2.wav"
+  },
+  {
+   "line": "3",
+   "text": "paste your repo.",
+   "spoken": "Paste your repo.",
+   "seconds": 1.049,
+   "take": "line-3-take4.wav"
+  },
+  {
+   "line": "4",
+   "text": "it checks your readme against your actual code.",
+   "spoken": "It checks your read-me... against your actual code.",
+   "seconds": 2.49,
+   "take": "line-4-take4.wav"
+  },
+  {
+   "line": "5",
+   "text": "promised something you didn't build? your odds drop.",
+   "spoken": "Promised something you didn't build? Your odds drop.",
+   "seconds": 2.814,
+   "take": "line-5-take0.wav"
+  },
+  {
+   "line": "6",
+   "text": "then three judges grill you.",
+   "spoken": "Then three judges grill you.",
+   "seconds": 1.62,
+   "take": "line-6-take0.wav"
+  },
+  {
+   "line": "6a",
+   "text": "the engineer wants proof.",
+   "spoken": "The engineer wants proof.",
+   "seconds": 1.353,
+   "take": "line-6a-take0.wav"
+  },
+  {
+   "line": "6b",
+   "text": "the investor wants to know who's paying.",
+   "spoken": "The investor wants to know who's paying.",
+   "seconds": 2.034,
+   "take": "line-6b-take3.wav"
+  },
+  {
+   "line": "6c",
+   "text": "and the tired judge has seen forty demos today. one sentence. go.",
+   "spoken": "And the tired judge... has seen forty demos today. One sentence. Go.",
+   "seconds": 4.716,
+   "take": "line-6c-take3.wav"
+  },
+  {
+   "line": "7",
+   "text": "then they talk about you. right in front of you.",
+   "spoken": "Then they talk about you. Right in front of you.",
+   "seconds": 2.788,
+   "take": "line-7-take0.wav"
+  },
+  {
+   "line": "8",
+   "text": "and tell you exactly what to fix.",
+   "spoken": "And tell you exactly what to fix.",
+   "seconds": 2.737,
+   "take": "line-8-take3.wav"
+  },
+  {
+   "line": "9",
+   "text": "would yours win? try it free at wouldthiswin dot com.",
+   "spoken": "Would yours win? Try it free, at would-this-win dot com.",
+   "seconds": 4.3,
+   "take": "line-9-take4.wav"
+  }
+ ]
+}
