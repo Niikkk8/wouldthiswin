@@ -143,7 +143,35 @@ const safeLookup: net.LookupFunction = (hostname, options, callback) => {
   });
 };
 
-type Hop = { status: number; location: string | null; title: string | null };
+type Hop = { status: number; location: string | null; title: string | null; cookies: string[] };
+
+/**
+ * Cookies set during the redirect chain, sent back on later hops. Some hosts (Streamlit
+ * Community Cloud) bounce a cookieless visitor through an auth redirect that only ends once
+ * the cookie it just set comes back, so without this a live app looks like a redirect loop.
+ */
+export type Jar = Map<string, { value: string; domain: string; hostOnly: boolean }>;
+
+export function keepCookies(jar: Jar, setCookie: string[], host: string) {
+  for (const line of setCookie) {
+    const [pair, ...attrs] = line.split(";");
+    const eq = pair.indexOf("=");
+    if (eq <= 0) continue;
+    const name = pair.slice(0, eq).trim();
+    const value = pair.slice(eq + 1).trim();
+    const domainAttr = attrs.map((a) => a.trim().match(/^domain=\.?(.+)$/i)?.[1]?.toLowerCase()).find(Boolean);
+    // A Domain attribute must cover the host that set it, or the cookie is ignored.
+    if (domainAttr && host !== domainAttr && !host.endsWith("." + domainAttr)) continue;
+    jar.set(`${name}@${domainAttr ?? host}`, { value: `${name}=${value}`, domain: domainAttr ?? host, hostOnly: !domainAttr });
+  }
+}
+
+export function cookieHeader(jar: Jar, host: string): string | undefined {
+  const sent = [...jar.values()]
+    .filter((c) => host === c.domain || (!c.hostOnly && host.endsWith("." + c.domain)))
+    .map((c) => c.value);
+  return sent.length ? sent.join("; ") : undefined;
+}
 
 const TITLE_SCAN_BYTES = 64 * 1024;
 
@@ -172,7 +200,7 @@ function readTitle(res: http.IncomingMessage): Promise<string | null> {
   });
 }
 
-function requestOnce(url: URL, signal: AbortSignal): Promise<Hop> {
+function requestOnce(url: URL, signal: AbortSignal, cookie?: string): Promise<Hop> {
   return new Promise((resolve, reject) => {
     const mod = url.protocol === "https:" ? https : http;
     const req = mod.request(
@@ -184,18 +212,20 @@ function requestOnce(url: URL, signal: AbortSignal): Promise<Hop> {
         headers: {
           "user-agent": "Mozilla/5.0 (compatible; WouldThisWinDemoCheck/1.0)",
           accept: "text/html,application/xhtml+xml,*/*;q=0.8",
+          ...(cookie ? { cookie } : {}),
         },
       },
       (res) => {
         const status = res.statusCode ?? 0;
         const location = typeof res.headers.location === "string" ? res.headers.location : null;
+        const cookies = res.headers["set-cookie"] ?? [];
         const html = /text\/html/i.test(String(res.headers["content-type"] ?? ""));
         if (status >= 200 && status < 300 && html) {
           // Only the <title> is needed; stop reading as soon as it's seen.
-          readTitle(res).then((title) => resolve({ status, location, title }));
+          readTitle(res).then((title) => resolve({ status, location, title, cookies }));
         } else {
           res.destroy(); // headers are enough; don't download the body
-          resolve({ status, location, title: null });
+          resolve({ status, location, title: null, cookies });
         }
       },
     );
@@ -237,6 +267,7 @@ export async function checkDemo(input: string): Promise<DemoCheck> {
   }
 
   const signal = AbortSignal.timeout(TIMEOUT_MS);
+  const jar: Jar = new Map();
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const shape = checkUrlShape(url);
@@ -244,7 +275,9 @@ export async function checkDemo(input: string): Promise<DemoCheck> {
 
     let res: Hop;
     try {
-      res = await requestOnce(url, signal);
+      const host = url.hostname.toLowerCase();
+      res = await requestOnce(url, signal, cookieHeader(jar, host));
+      keepCookies(jar, res.cookies, host);
     } catch (err) {
       const e = err as NodeJS.ErrnoException;
       const reason: DemoCheck["reason"] =
