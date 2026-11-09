@@ -122,6 +122,7 @@ async function checkFixes(
   const review = {
     id: previous.loaded.session.id,
     odds: previous.odds,
+    round: previous.loaded.session.signals?.iteration?.round ?? (previous.loaded.session.signals?.iteration ? 2 : 1),
     fixes: previous.fixes,
     claims: previous.loaded.session.claims ?? [],
   };

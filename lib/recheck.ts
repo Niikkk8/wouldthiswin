@@ -37,6 +37,8 @@ export type Iteration = {
   /** The review this one follows. Public, like any review link. */
   previousId: string;
   previousOdds: number;
+  /** 2 for the first re-review, 3 for the next: each one follows the round before. */
+  round?: number;
   commits: number;
   filesChanged: number;
   fixes: FixCheck[];
@@ -45,6 +47,8 @@ export type Iteration = {
 export type PreviousReview = {
   id: string;
   odds: number;
+  /** The round the previous review was: 1 unless it was itself a re-review. */
+  round?: number;
   fixes: readonly string[];
   claims: readonly Claim[];
 };
@@ -214,6 +218,7 @@ export async function recheckFixes(
   const base = {
     previousId: previous.id,
     previousOdds: previous.odds,
+    round: (previous.round ?? 1) + 1,
     commits: diff.commits.length,
     filesChanged: diff.files.length,
   };

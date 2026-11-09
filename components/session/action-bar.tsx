@@ -16,7 +16,7 @@ type Slots = { left: HTMLElement | null; right: HTMLElement | null };
 const BarSlots = createContext<Slots | null>(null);
 
 /** The act's own scroll area, so the page itself never scrolls. */
-export const ActScroll = createContext<React.RefObject<HTMLDivElement | null> | null>(null);
+export const ActScroll = createContext<React.RefObject<HTMLElement | null> | null>(null);
 export const useActScroll = () => useContext(ActScroll);
 
 export function ActFrame({
@@ -33,7 +33,7 @@ export function ActFrame({
   children: React.ReactNode;
 }) {
   const [slots, setSlots] = useState<Slots>({ left: null, right: null });
-  const scroller = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLElement>(null);
   const [fade, setFade] = useState(false);
   // Stable, so React doesn't detach and reattach them (and set state) on every render.
   const leftRef = useCallback((left: HTMLDivElement | null) => setSlots((s) => (s.left === left ? s : { ...s, left })), []);
@@ -65,11 +65,18 @@ export function ActFrame({
         <div className="flex h-dvh flex-col overflow-hidden">
           {header}
           <div className="relative min-h-0 flex-1">
-            <div ref={scroller} data-act-scroll className="h-full overflow-x-hidden overflow-y-auto overscroll-contain">
+            {/* The act is the page's main content; the bar below is its controls. */}
+            <main
+              id="main"
+              tabIndex={-1}
+              ref={scroller}
+              data-act-scroll
+              className="h-full overflow-x-hidden overflow-y-auto overscroll-contain focus-visible:outline-none"
+            >
               <div className="page-x flex min-h-full flex-col">
                 <div className="relative my-auto w-full py-6 lg:py-10">{children}</div>
               </div>
-            </div>
+            </main>
             <div
               aria-hidden
               className={cn(

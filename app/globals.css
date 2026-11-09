@@ -63,6 +63,20 @@
     background: var(--color-bg);
     color: var(--color-text);
     color-scheme: dark;
+    /* Every tappable thing has its own hover, active and focus states. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* No double-tap-to-zoom wait on controls; pinch zoom still works. */
+  a,
+  button,
+  input,
+  textarea,
+  select,
+  label,
+  summary,
+  [role="button"] {
+    touch-action: manipulation;
   }
 
   body {
@@ -81,6 +95,11 @@
   :focus-visible {
     outline: 2px solid var(--color-text);
     outline-offset: 2px;
+  }
+
+  /* Landmarks focused by the skip link don't need a ring around the whole page. */
+  main:focus-visible {
+    outline: none;
   }
 
   button:not(:disabled),

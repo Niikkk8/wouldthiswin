@@ -8,7 +8,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
   return (
     <html lang="en">
       <body className="min-h-dvh">
-        <main className="page-x pt-24 pb-24">
+        <main id="main" tabIndex={-1} className="page-x pt-24 pb-24">
           <p className="max-w-2xl text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act">
             {copy.serverError.message}
           </p>

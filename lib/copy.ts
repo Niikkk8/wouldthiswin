@@ -10,6 +10,7 @@ export const copy = {
   },
   brand: "wouldthiswin",
   close: "Close",
+  skipToContent: "Skip to content",
   header: {
     act: "Act {n} of 4",
     question: "Act 2 of 4: question {i} of {total}",
@@ -141,6 +142,7 @@ export const copy = {
     },
     status: { addressed: "Done", partly: "Started", untouched: "Still open" },
     heading: "Since the last review",
+    round: "Round {n}",
     summary: "{commits} commit{cs}, {files} file{fs} changed. Last round: {odds}%.",
     previous: "See the last review",
     again: {

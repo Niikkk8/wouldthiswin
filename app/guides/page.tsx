@@ -20,7 +20,7 @@ export default async function GuidesPage() {
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader />
-      <main className="page-x flex-1 pt-10 pb-20 lg:pt-14">
+      <main id="main" tabIndex={-1} className="page-x flex-1 pt-10 pb-20 lg:pt-14">
         <h1 className="text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act">{G.title}</h1>
         <p className="mt-6 max-w-[640px] text-[19px] leading-[1.45] text-text-muted lg:text-[22px]">{G.lede}</p>
         {guides.length === 0 ? (

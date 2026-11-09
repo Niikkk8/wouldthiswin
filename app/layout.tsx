@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 // The phone keyboard shrinks the layout instead of covering it, so act 2's answer field stays visible.
-export const viewport: Viewport = { interactiveWidget: "resizes-content" };
+export const viewport: Viewport = { interactiveWidget: "resizes-content", themeColor: "#0a0a0b" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -38,6 +38,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${archivo.variable} ${mono.variable} antialiased`}
     >
       <body className="min-h-dvh">
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-control bg-text px-4 py-3 font-mono text-[14px] text-bg focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        >
+          {copy.skipToContent}
+        </a>
         <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
         <Toaster />
         {/* Page views only: no cookies, nothing that identifies a visitor. */}

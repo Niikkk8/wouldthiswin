@@ -157,3 +157,10 @@ describe("finding the right files in a big diff", () => {
     assert.ok(made.ok && made.fixes[0].status === "untouched");
   });
 });
+
+test("each re-review counts its round from the one before", async () => {
+  const first = await recheckFixes(diff, previous, () => Promise.reject(new Error("down")));
+  assert.equal(first.iteration.round, 2);
+  const second = await recheckFixes(diff, { ...previous, round: 2 }, () => Promise.reject(new Error("down")));
+  assert.equal(second.iteration.round, 3);
+});

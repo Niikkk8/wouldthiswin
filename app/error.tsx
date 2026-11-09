@@ -15,7 +15,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader />
-      <main className="page-x flex-1 pt-16 pb-24 lg:pt-24">
+      <main id="main" tabIndex={-1} className="page-x flex-1 pt-16 pb-24 lg:pt-24">
         <p className="max-w-2xl text-[36px] leading-none font-black tracking-[-0.04em] text-balance lg:text-act">
           {copy.serverError.message}
         </p>

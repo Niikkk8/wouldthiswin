@@ -123,8 +123,9 @@ function SinceLast({ it }: { it: Iteration }) {
   return (
     <section aria-labelledby="since" className="rounded-panel border border-border bg-surface">
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-4">
-        <h2 id="since" className="text-[17px] font-bold">
+        <h2 id="since" className="flex items-baseline gap-3 text-[17px] font-bold">
           {c.heading}
+          {it.round && <span className="font-mono text-[12px] font-medium text-gain uppercase">{fill(c.round, { n: it.round })}</span>}
         </h2>
         <Link
           href={reviewPath(it.previousId)}

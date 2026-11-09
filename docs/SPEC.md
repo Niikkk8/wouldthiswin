@@ -183,6 +183,8 @@ The mentor check-in, built in. After the review, the owner pushes fixes and pres
 
 **Validated in code:** addressed or partly needs a file whose added lines were shown and a quote (at most 160 characters) found in them (`quotedIn`). A binary file (an image, a sprite) has no lines: it counts if it's in the diff, changed and not removed. Anything else is untouched. A commit message saying a fix is done proves nothing. A skipped fix is untouched. If GitHub or the model fails, every fix is untouched with "The panel couldn't read the diff this time": nobody gains points the panel didn't check.
 
+**Rounds:** each re-review stores its round (`round`: 2 for the first, then one more than the review it follows), shown as "Round N" beside "Since the last review".
+
 **Then:** the fix events go after the scan (§3), the deliberation is told what was done and keeps still-open fixes in the new list, and the review leads with "Since the last review": each fix with its status, note and the added line, plus a link to the previous review.
 
 Measured on a 4-commit, 100-file diff: about 13–19k input and 200–850 output tokens.
@@ -402,6 +404,9 @@ Use the Motion library. Default easing is `[0.22, 1, 0.36, 1]`. Animate transfor
 - Focus ring: 2px in the text colour, 2px offset (global `:focus-visible`).
 - AA contrast everywhere. Chips use dark text on gain, loss and amber backgrounds.
 - The answer field is read-only until React hydrates, so early typing isn't lost.
+- A "Skip to content" link is the first Tab stop on every page; it targets `#main`. Every page has one `<main id="main">`; in a session it's the act's scroll area, with the action bar outside it.
+- `theme-color` matches the page background. Controls use `touch-action: manipulation` (no double-tap delay; pinch zoom still works), and the tap highlight is off because every control has its own states.
+- Checked with the Vercel Web Interface Guidelines (`.claude/skills/web-design-guidelines`) and a scripted play-through of /demo at 1440 and 390: no horizontal overflow, no console errors.
 
 ## 11. Phase D
 

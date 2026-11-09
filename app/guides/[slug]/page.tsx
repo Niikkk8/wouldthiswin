@@ -49,7 +49,7 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
     <div className="flex min-h-dvh flex-col">
       <JsonLd data={article({ ...meta, url: SITE_URL + guidePath(meta.slug) })} />
       <SiteHeader />
-      <main className="page-x flex-1 pt-10 pb-20 lg:pt-14">
+      <main id="main" tabIndex={-1} className="page-x flex-1 pt-10 pb-20 lg:pt-14">
         <article className="max-w-[720px]">
           <header>
             <p className="label-mono uppercase">
