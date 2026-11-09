@@ -19,7 +19,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { REEL_SCRIPT, type ReelLine } from "../src/reel-script";
+import { CAPTION_FIXES, REEL_SCRIPT, type ReelLine } from "../src/reel-script";
 import type { ReelLineTake, ReelTakes, ReelWord } from "../src/ReelFace";
 import { CACHE, ensureCaptures, ffmpeg, master, OUT, preparePublic, probe, PUBLIC, render, run, VIDEO } from "./lib";
 import { plan } from "./plan";
@@ -247,37 +247,58 @@ export function cut(take: Take, words: Word[], line: ReelLine): { segments: Segm
   };
   const duration = segments.reduce((x, s) => x + s.to - s.from, 0);
 
-  // The script's own words (spelling and punctuation as written), timed from the take.
-  const display = line.text.split(/\s+/);
-  const timed: ReelWord[] = [];
-  let k = 0;
-  for (const d of display) {
-    const n = tokens(d).length;
-    const idx = take.map.slice(k, k + n).filter((x): x is number => x !== null);
-    k += n;
-    timed.push(idx.length ? { text: d, start: toCut(words[idx[0]].start), end: toCut(words[idx.at(-1)!].end) } : { text: d, start: NaN, end: NaN });
-  }
-  // Words the transcript missed: spread them between their neighbours.
-  for (let i = 0; i < timed.length; i++) {
-    if (!Number.isNaN(timed[i].start)) continue;
-    let j = i;
-    while (j < timed.length && Number.isNaN(timed[j].start)) j++;
-    const a = i > 0 ? timed[i - 1].end : toCut(span[0].start);
-    const b = j < timed.length ? timed[j].start : toCut(span.at(-1)!.end);
-    const step = (b - a) / (j - i + 1);
-    for (let q = i; q < j; q++) timed[q] = { text: timed[q].text, start: a + step * (q - i + 0.5), end: a + step * (q - i + 1) };
-  }
+  // The words as actually said (a natural take paraphrases the script), lowercased like the
+  // app, with the transcriber's known mishears fixed, timed on the cut's clock.
+  const timed: ReelWord[] = asSaid(span).map((w) => ({ text: w.text, start: toCut(w.start), end: toCut(w.end) }));
   return { segments, words: timed, duration };
+}
+
+/** Heard words -> caption words: lowercased (the app's style), CAPTION_FIXES applied. */
+export function asSaid(span: { word: string; start: number; end: number }[]): { text: string; start: number; end: number }[] {
+  const out = span.map((w) => ({ text: w.word.trim().toLowerCase(), start: w.start, end: w.end }));
+  const bare = (s: string) => s.toLowerCase().replace(/[^a-z0-9']/g, "");
+  for (const [heard, meant] of CAPTION_FIXES) {
+    const h = heard.split(" ");
+    for (let i = 0; i + h.length <= out.length; i++) {
+      if (!h.every((x, k) => bare(out[i + k].text) === x)) continue;
+      // Keep the last heard word's trailing punctuation ("tag." -> "stack.").
+      const tail = out[i + h.length - 1].text.match(/[^a-z0-9']+$/i)?.[0] ?? "";
+      out.splice(i, h.length, { text: meant + tail, start: out[i].start, end: out[i + h.length - 1].end });
+    }
+  }
+  return out;
+}
+
+/**
+ * A line with no take of its own, when the lines either side were found in one continuous
+ * take: the words between them are that line, as said. (One natural run-through says each
+ * line once and may reorder or rephrase, which can drop a line below the match threshold.)
+ */
+function between(line: ReelLine, picks: Map<number, { take: Take; of: number }>, words: Word[]): Take | null {
+  const prev = picks.get(line.id - 1)?.take;
+  const next = picks.get(line.id + 1)?.take;
+  if (!prev || !next || prev.file !== next.file || next.from <= prev.to) return null;
+  const from = prev.to;
+  const to = next.from;
+  const span = words.slice(from, to);
+  let stall = 0;
+  for (let k = 1; k < span.length; k++) stall = Math.max(stall, span[k].start - span[k - 1].end);
+  return { line: line.id, file: prev.file, from, to, match: 0, fillers: span.filter((w) => FILLERS.has(tokens(w.word)[0] ?? "")).length, stall, confidence: span.reduce((x, w) => x + w.p, 0) / span.length, quality: 0, map: [] };
 }
 
 // ---------------------------------------------------------------------------- media
 
-/** The grade and framing: 1080x1920 cover, 30fps, a light lift; HDR phone footage tone-mapped to SDR. */
+/**
+ * Framing (1080x1920 cover, 30fps) and an honest conversion, no "look": HDR phone footage is
+ * tone-mapped to SDR with mobius at the HLG reference white (203 nits, BT.2408), which keeps
+ * skin natural. Nothing is added on top: an earlier grade (hable with desaturation off, plus
+ * saturation, contrast and sharpening) made faces red and over-processed.
+ */
 function videoChain(file: string): string {
   const v = probe(file).streams.find((s) => s.codec_type === "video")!;
   const hdr = v.color_transfer === "arib-std-b67" || v.color_transfer === "smpte2084";
-  const tonemap = hdr ? "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv," : "";
-  return `${tonemap}scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,setsar=1,fps=30,eq=contrast=1.04:saturation=1.07:gamma=1.02,unsharp=5:5:0.25,format=yuv420p`;
+  const tonemap = hdr ? "zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=mobius:desat=0.5,zscale=t=bt709:m=bt709:r=tv," : "";
+  return `${tonemap}scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,setsar=1,fps=30,format=yuv420p`;
 }
 
 function encodeLine(file: string, segments: Segment[], output: string) {
@@ -316,7 +337,7 @@ async function main() {
       ffmpeg(["-i", f, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", wav]);
       return wav;
     });
-    console.log(`transcribing locally (faster-whisper ${process.env.WHISPER_MODEL ?? "small.en"})...`);
+    console.log(`transcribing locally (faster-whisper ${process.env.WHISPER_MODEL ?? "medium.en"})...`);
     run(PY, [join(VIDEO, "scripts", "transcribe.py"), wordsFile, ...wavs], { quiet: false });
     for (const w of wavs) rmSync(w);
   } else console.log("transcript: cached");
@@ -326,6 +347,24 @@ async function main() {
   // 3-4. Takes, and the pick.
   const takes = findTakes(words, REEL_SCRIPT);
   const picks = pick(takes, REEL_SCRIPT);
+  for (const line of REEL_SCRIPT) {
+    if (picks.has(line.id)) continue;
+    const t = between(line, picks, words);
+    if (t) {
+      picks.set(line.id, { take: t, of: 1 });
+      console.log(`line ${line.id}: no close match; using what was said between lines ${line.id - 1} and ${line.id + 1}`);
+    }
+  }
+  // A take only starts on a word close to the script's first ("I have" isn't "i've"), so
+  // words said just before it, unclaimed and run on without a pause, belong to it.
+  const claimed = new Set<number>();
+  for (const { take } of picks.values()) for (let k = take.from; k < take.to; k++) claimed.add(k);
+  for (const { take } of picks.values()) {
+    let from = take.from;
+    while (from > 0 && !claimed.has(from - 1) && words[from - 1].file === take.file && words[from].start - words[from - 1].end < 0.45) from--;
+    for (let k = from; k < take.from; k++) claimed.add(k);
+    take.from = from;
+  }
   const missing = REEL_SCRIPT.filter((l) => !picks.has(l.id));
   if (missing.length) throw new Error(`no usable take for line(s) ${missing.map((l) => l.id).join(", ")}: re-record or check footage`);
 
@@ -344,7 +383,7 @@ async function main() {
     const heard = words.slice(take.from, take.to).map((w) => w.word).join(" ");
     const t0 = words[take.from].start;
     report.push(
-      `line ${line.id}: take ${takes.filter((t) => t.line === line.id).indexOf(take) + 1} of ${of} (${basename(take.file)} @ ${t0.toFixed(1)}s), match ${(take.match * 100).toFixed(0)}%, fillers ${take.fillers}, longest pause ${take.stall.toFixed(2)}s, ${real.toFixed(2)}s after cutting\n    heard: ${heard}`,
+      `line ${line.id}: ${take.match === 0 ? "between its neighbours" : `take ${takes.filter((t) => t.line === line.id).indexOf(take) + 1} of ${of}`} (${basename(take.file)} @ ${t0.toFixed(1)}s), match ${(take.match * 100).toFixed(0)}%, fillers ${take.fillers}, longest pause ${take.stall.toFixed(2)}s, ${real.toFixed(2)}s after cutting\n    heard: ${heard}`,
     );
   }
   const out: ReelTakes = { lines };

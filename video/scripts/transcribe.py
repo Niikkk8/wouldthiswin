@@ -2,7 +2,9 @@
 
 Usage: python transcribe.py <out.json> <audio.wav> [<audio.wav> ...]
 Writes {"<audio path>": [{"start", "end", "word", "p"}, ...], ...}.
-Model: WHISPER_MODEL env (default small.en), CPU int8. Downloads once to the HF cache.
+Model: WHISPER_MODEL env (default medium.en: on real footage it hears names and fast speech
+better than small.en, e.g. "Akshat is" where small.en heard "Akshay, this is"), CPU int8.
+Downloads once to the HF cache.
 """
 
 import json
@@ -25,7 +27,7 @@ def load(path: str) -> np.ndarray:
 
 def main() -> None:
     out, files = sys.argv[1], sys.argv[2:]
-    model = WhisperModel(os.environ.get("WHISPER_MODEL", "small.en"), device="cpu", compute_type="int8")
+    model = WhisperModel(os.environ.get("WHISPER_MODEL", "medium.en"), device="cpu", compute_type="int8")
     result = {}
     for path in files:
         segments, _ = model.transcribe(

@@ -119,7 +119,8 @@ export async function render(id: string, output: string, inputProps: Record<stri
     imageFormat: "png",
     audioCodec: "aac",
     audioBitrate: "320k",
-    concurrency: 6,
+    // Fewer workers use less memory (each is a browser tab decoding video): RENDER_CONCURRENCY=2.
+    concurrency: Number(process.env.RENDER_CONCURRENCY ?? 6),
     outputLocation: output,
     onProgress: ({ progress }) => {
       const p = Math.floor(progress * 10);

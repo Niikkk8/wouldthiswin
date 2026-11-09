@@ -61,13 +61,19 @@ function Words({ words, top, skip = false }: { words: ReelWord[]; top: number; s
   const f = useCurrentFrame();
   const t = f / FPS;
   if (skip || !words.length) return null;
-  // Phrases of up to 4 words or ~20 characters, broken after punctuation.
+  // Phrases of up to 4 words and at most 20 characters (what fits the width at this size),
+  // broken after punctuation. A word that would push a phrase past 20 starts the next one.
+  const MAX = 20;
   const phrases: ReelWord[][] = [];
   let cur: ReelWord[] = [];
   for (const w of words) {
+    if (cur.length && [...cur, w].map((x) => x.text).join(" ").length > MAX) {
+      phrases.push(cur);
+      cur = [];
+    }
     cur.push(w);
     const chars = cur.map((x) => x.text).join(" ").length;
-    if (cur.length >= 4 || chars >= 20 || /[.,?!…]$/.test(w.text)) {
+    if (cur.length >= 4 || chars >= MAX || /[.,?!…]$/.test(w.text)) {
       phrases.push(cur);
       cur = [];
     }
@@ -116,20 +122,45 @@ function BigLine({ words }: { words: ReelWord[] }) {
 /** Line 4: each question as a big card, from the moment it's said. */
 function QuestionCards({ words, duration }: { words: ReelWord[]; duration: number }) {
   const t = useCurrentFrame() / FPS;
-  let after = 0;
-  const starts = REEL_QUESTIONS.map((q) => {
-    const s = wordAt(words, q.split(" ")[0], after) ?? after;
-    after = s + 0.1;
-    return s;
-  });
+  const asked = questionsAsked(words);
+  let starts: number[];
+  let texts: string[];
+  if (asked.length) {
+    starts = asked.map((q) => q.start);
+    texts = asked.map((q) => q.text);
+  } else {
+    let after = 0;
+    starts = REEL_QUESTIONS.map((q) => {
+      const s = wordAt(words, q.split(" ")[0], after) ?? after;
+      after = s + 0.1;
+      return s;
+    });
+    texts = REEL_QUESTIONS;
+  }
   const i = starts.findLastIndex((s) => t >= s - 0.05);
   if (i < 0) return null;
   const until = starts[i + 1] ?? duration;
   return (
     <Sequence key={i} from={Math.round(starts[i] * FPS) - 1} layout="none">
-      <Card text={REEL_QUESTIONS[i]} end={Math.round((until - starts[i]) * FPS) + 2} />
+      <Card text={texts[i]} end={Math.round((until - starts[i]) * FPS) + 2} />
     </Sequence>
   );
+}
+
+/** The questions as actually asked: each sentence ending in "?", minus a leading "and"/"so". */
+function questionsAsked(words: ReelWord[]): { text: string; start: number }[] {
+  const out: { text: string; start: number }[] = [];
+  let cur: ReelWord[] = [];
+  for (const w of words) {
+    cur.push(w);
+    if (!/[.?!]$/.test(w.text)) continue;
+    if (w.text.endsWith("?")) {
+      const q = cur[0] && /^(and|so|but),?$/.test(cur[0].text) && cur.length > 1 ? cur.slice(1) : cur;
+      out.push({ text: q.map((x) => x.text.replace(/,$/, "")).join(" "), start: q[0].start });
+    }
+    cur = [];
+  }
+  return out;
 }
 function Card({ text, end }: { text: string; end: number }) {
   const { opacity, y } = useEnter(0, 5, end + 6, 1);
@@ -175,7 +206,7 @@ function OddsRun({ demo, frames }: { demo: Plan; frames: number }) {
 /** Line 7: you on top, the judge you name below at 4x, crisp. */
 function SplitJudges({ src, words }: { src: string; words: ReelWord[] }) {
   const t = useCurrentFrame() / FPS;
-  const inv = wordAt(words, "akshat's") ?? wordAt(words, "investor") ?? Infinity;
+  const inv = wordAt(words, "akshat's") ?? wordAt(words, "akshat") ?? wordAt(words, "investor") ?? Infinity;
   const krish = wordAt(words, "krish", inv === Infinity ? 0 : inv) ?? Infinity;
   const tired = wordAt(words, "tired", krish === Infinity ? 0 : krish) ?? Infinity;
   let judge: Judge = "engineer";

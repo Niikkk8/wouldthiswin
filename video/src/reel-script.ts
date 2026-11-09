@@ -59,5 +59,23 @@ export const REEL_SCRIPT: ReelLine[] = [
   },
 ];
 
-/** The questions in line 4, as the cards show them. */
+/**
+ * The questions in line 4, as the cards show them, when the take has none of its own. The
+ * cards normally use the questions as they were actually asked, in the order asked (every
+ * sentence of line 4 that ends in "?"), so they always match the voice.
+ */
 export const REEL_QUESTIONS = ["who's actually using this?", "what did you build this weekend?", "what breaks first?"];
+
+/**
+ * Captions show what was actually said (lowercased, like the app), not the script: a
+ * natural delivery paraphrases. These fix what the transcriber mishears, matched on whole
+ * words (lowercase, punctuation ignored). Each is [heard, meant].
+ */
+export const CAPTION_FIXES: [string, string][] = [
+  ["text tag", "tech stack"],
+  ["akshad", "akshat"],
+  ["akshay", "akshat"],
+  ["akshit", "akshat"],
+  ["chris", "krish"],
+  ["krisch", "krish"],
+];
