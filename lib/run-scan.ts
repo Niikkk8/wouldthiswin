@@ -9,6 +9,7 @@ import { recheckFixes, type Iteration } from "./recheck";
 import { snapshotOf } from "./rejudge";
 import { mergeUsage, newUsage, type Usage } from "./model";
 import { ScanError, demoSignal, scanRepo } from "./scan";
+import { judgeContextFor } from "./events";
 import { cacheKey, scanWithCache } from "./scan-cache";
 import { noEmit, type Emit } from "./scan-progress";
 import { applyScan, type Scan, type SessionState } from "./session";
@@ -54,8 +55,11 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
     const previous = previousId ? await loadOwnReview(previousId, owner) : null;
     const ref = parseRepoUrl(repoUrl);
     if (!ref) return await fail(id, "invalidUrl", usage);
-    // A re-review is never cached: its questions follow up on the round before.
-    const key = previous ? null : cacheKey(ref.owner, ref.repo, latestSha);
+    // A re-review is never cached: its questions follow up on the round before. Nor is an
+    // event's scan: the event's note shapes its questions.
+    const eventContext = judgeContextFor(session.eventSlug);
+    const cacheable = !previous && !eventContext;
+    const key = cacheable ? cacheKey(ref.owner, ref.repo, latestSha) : null;
     const result = await scanWithCache<Usage>({
       key,
       get: async (k) => {
@@ -81,11 +85,11 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
         if (!raw.readmeFull.trim()) throw new ScanStop("emptyReadme");
         const scanStarted = Date.now();
         const [fresh, fixes] = await Promise.all([
-          scanRepo(raw, { emit, demoUrl, previous: previous ? { fixes: previous.fixes } : null }),
+          scanRepo(raw, { emit, demoUrl, previous: previous ? { fixes: previous.fixes } : null, eventContext }),
           previous ? checkFixes(raw, previous, emit) : Promise.resolve(null),
         ]);
         await addStepTiming(id, "scan.total", Date.now() - scanStarted);
-        if (!fixes || !previous) return { ...fresh, key: previous ? null : cacheKey(ref.owner, ref.repo, raw.latestSha) };
+        if (!fixes || !previous) return { ...fresh, key: cacheable ? cacheKey(ref.owner, ref.repo, raw.latestSha) : null };
         const iteration = { ...fixes.iteration, previous: snapshotOf(previous.loaded.session) };
         return {
           scan: { ...fresh.scan, signals: { ...fresh.scan.signals, iteration } },

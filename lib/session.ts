@@ -14,7 +14,8 @@ import {
 import { displayTree } from "./file-tree";
 import type { Iteration } from "./recheck";
 import { reviewOf, type Review } from "./review";
-import { DEFAULT_RUBRIC, aggregate, rubricDelta, type Rubric, type ScoredCriterion } from "./rubric";
+import { rubricFor } from "./events";
+import { aggregate, rubricDelta, type Rubric, type ScoredCriterion } from "./rubric";
 import type { Source } from "./sources";
 import {
   type ClaimStatus,
@@ -149,6 +150,8 @@ export type SessionState = {
   settings: SessionSettings;
   /** Opt-ins, both off by default: a public /v link, and a place on the public board. */
   visibility: Visibility;
+  /** The event this session was judged for (lib/events): its rubric and judge context. */
+  eventSlug: string | null;
 };
 
 export type Visibility = { shareable: boolean; listed: boolean };
@@ -197,6 +200,7 @@ export function newSession(id: string, repo: string): SessionState {
     sources: [],
     settings: DEFAULT_SETTINGS,
     visibility: PRIVATE,
+    eventSlug: null,
   };
 }
 
@@ -391,7 +395,7 @@ export function settleAnswer(
  * Stores the deliberation, once, during act 3, and with it the rubric's one odds event
  * (lib/rubric.ts rubricDelta): the weighted score, mapped into a bounded move.
  */
-export function applyPanel(s: SessionState, panel: Panel, rubric: Rubric = DEFAULT_RUBRIC): Result {
+export function applyPanel(s: SessionState, panel: Panel, rubric: Rubric = rubricFor(s.eventSlug)): Result {
   if (s.act !== "deliberation") return fail("wrongAct");
   if (s.panel !== null) return fail("alreadyDeliberated");
   const events = [...s.events];

@@ -20,11 +20,13 @@ import {
 } from "./scan-validate";
 import type { Scan, ScanSignals } from "./session";
 import { computeSignals, findDemoUrl, npmDeps, pyDeps } from "./signals";
+import { eventBlock } from "./events";
 import { log } from "./log";
 import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
 import { HAIKU } from "./pricing";
 import { noEmit, type Emit } from "./scan-progress";
 import { pickFiles, type Source } from "./sources";
+import { escapeDelimiters } from "./prompt-safety";
 
 export const MODEL = HAIKU;
 const MAX_TOKENS_A = 4000;
@@ -83,8 +85,7 @@ Task 2, one question from each judge, built on the verdicts above, under 200 cha
 
 Tone: direct and dry. Be blunt about the evidence, never about the people.`;
 
-/** Stops the material from opening or closing a delimiter. */
-const esc = (s: string) => s.replace(/<\/?\s*untrusted_\w*[^>]*>/gi, "[tag removed]");
+const esc = escapeDelimiters;
 
 const SKIP = /(^|\/)(node_modules|\.git|dist|build|\.next|out|coverage|vendor|__pycache__|\.venv|venv)\//;
 const NOISE = /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?)$|\.(png|jpe?g|gif|webp|ico|svg|mp4|mov|woff2?|ttf|otf|map)$/i;
@@ -136,6 +137,7 @@ export function buildVerifyPrompt(
   claims: readonly Candidate[],
   sources: readonly Source[],
   previous: PreviousRound | null = null,
+  eventContext = "",
 ): { system: string; user: string } {
   const read = new Set(sources.map((s) => s.path));
   const list = claims
@@ -160,6 +162,7 @@ export function buildVerifyPrompt(
       `Claims:\n${list || "(the README makes no checkable claims)"}`,
       ...fileBlocks,
       ...(followUp ? [followUp] : []),
+      ...eventBlock(eventContext),
       "Check each claim against the files, then write the questions.",
     ].join("\n\n"),
   };
@@ -236,6 +239,7 @@ export async function runScanModel(
     fetch?: (paths: string[]) => Promise<Source[]>;
     emit?: Emit;
     previous?: PreviousRound | null;
+    eventContext?: string;
   } = {},
 ): Promise<ScanModelResult> {
   const call = deps.call ?? defaultCall;
@@ -266,7 +270,7 @@ export async function runScanModel(
   }
 
   emit({ type: "checking", claims: a.claims.length });
-  const b = await callChecked("verify", buildVerifyPrompt(raw, a.claims, sources, deps.previous ?? null), call, usage, (json) => {
+  const b = await callChecked("verify", buildVerifyPrompt(raw, a.claims, sources, deps.previous ?? null, deps.eventContext), call, usage, (json) => {
     const r = validateVerify(json, a.claims, sources);
     return r.ok ? { ok: true, value: r } : r;
   });
@@ -288,10 +292,10 @@ export async function demoSignal(url: string | null, provided: boolean): Promise
  */
 export async function scanRepo(
   raw: RawRepoData,
-  opts: { emit?: Emit; demoUrl?: string | null; previous?: PreviousRound | null } = {},
+  opts: { emit?: Emit; demoUrl?: string | null; previous?: PreviousRound | null; eventContext?: string } = {},
 ): Promise<{ scan: Scan; usage: Usage }> {
   const [model, auto, given] = await Promise.all([
-    runScanModel(raw, { emit: opts.emit, previous: opts.previous }),
+    runScanModel(raw, { emit: opts.emit, previous: opts.previous, eventContext: opts.eventContext }),
     demoSignal(findDemoUrl(raw), false),
     opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
   ]);

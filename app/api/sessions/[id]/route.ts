@@ -18,6 +18,7 @@ import { runSessionScan } from "@/lib/run-scan";
 import type { Emit } from "@/lib/scan-progress";
 import { scoreAnswer } from "@/lib/answer-score";
 import { PanelError, runPanel } from "@/lib/panel";
+import { judgeContextFor } from "@/lib/events";
 import { errorText, log } from "@/lib/log";
 import {
   addUsage,
@@ -63,6 +64,7 @@ async function finishPending(id: string, owner: string | null, s: SessionState):
         question: q.text,
         answer: a.text,
         claims: r.session.claims ?? [],
+        eventContext: judgeContextFor(r.session.eventSlug),
       });
       await addUsage(id, out.usage);
       scored = out;

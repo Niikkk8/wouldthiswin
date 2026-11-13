@@ -3,6 +3,7 @@ import { badRequest, clientIp, fail, limitKey } from "@/lib/api";
 import { ID_RE, hashIp, newId } from "@/lib/db";
 import { fetchLatestSha, GitHubError, parseRepoUrl } from "@/lib/github";
 import { parseDemoLink } from "@/lib/demo-link";
+import { eventBySlug, eventStatus } from "@/lib/events";
 import { nextReset, type LimitStatus } from "@/lib/limits";
 import { log } from "@/lib/log";
 import {
@@ -23,6 +24,8 @@ const Body = z.object({
   demoUrl: z.string().max(500).optional(),
   /** A re-review: the finished review, by this browser, of the same repo, that this one follows. */
   previousId: z.string().regex(ID_RE).optional(),
+  /** An event's session (/e/[slug]): judged on that event's rubric, while the event is open. */
+  eventSlug: z.string().max(60).optional(),
 });
 
 /**
@@ -60,10 +63,15 @@ export async function POST(req: Request) {
     return fail("judgeFailed");
   }
 
+  const event = body.eventSlug ? eventBySlug(body.eventSlug) : null;
+  if (body.eventSlug && (!event || eventStatus(event, Date.now()) !== "open")) return fail("eventClosed");
+
   try {
     const previous = body.previousId ? await loadOwnReview(body.previousId, await ownerHash()) : null;
     if (body.previousId && !previous) return fail("notReviewed");
     if (previous && previous.loaded.repoUrl !== ref.url) return fail("notReviewed");
+    // A re-judge stays with the event the first round was for.
+    const eventSlug = previous ? previous.loaded.session.eventSlug : (event?.slug ?? null);
 
     const pre = await checkLimits(ipHash);
     if (pre !== "ok") return await asleep(pre);
@@ -73,7 +81,7 @@ export async function POST(req: Request) {
     const owner = await ensureOwner();
     const id = newId();
     const repo = `${ref.owner}/${ref.repo}`;
-    const reserved = await reserveSession({ id, repoUrl: ref.url, repo, latestSha, owner, ipHash });
+    const reserved = await reserveSession({ id, repoUrl: ref.url, repo, latestSha, owner, ipHash, eventSlug });
     if (reserved !== "ok") return await asleep(reserved);
     // A re-review keeps the demo link the team gave last round, unless they gave a new one.
     const demoUrl = demo?.url ?? previous?.loaded.demoUrl ?? null;

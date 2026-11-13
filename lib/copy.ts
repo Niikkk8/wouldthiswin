@@ -375,6 +375,19 @@ export const copy = {
       open: "Open",
     },
   },
+  // An event's page, /e/[slug].
+  events: {
+    eyebrow: "Event",
+    deadline: "Deadline:",
+    site: "Event site",
+    lede: "Run your repo past the panel before you submit. Same three judges, scored on this event's own criteria.",
+    judgedOn: "Judged on",
+    closed: "Submissions for {name} have closed. The panel still works without the event.",
+    upcoming: "{name} hasn't started yet. Come back when it opens, or face the panel without it now.",
+    withoutEvent: "Face the panel without the event",
+    metaTitle: "{name}: pre-flight check",
+    metaDescription: "Before you submit to {name}: three AI judges check your repo's claims, grill you, and score it on {name}'s criteria. Free.",
+  },
   // The shareable verdict at /v/[id], and its preview card.
   verdict: {
     eyebrow: "Verdict",
@@ -488,6 +501,7 @@ export const copy = {
     lifelineUsed: "You've already used your lifeline.",
     voiceUnavailable: "Voice answers aren't working right now. Type yours instead.",
     voiceEmpty: "Didn't catch any words. Try again, or type it.",
+    eventClosed: "This event isn't taking repos right now. Face the panel without it from the home page.",
   },
   demo: {
     header: "Sample session · {repo}",

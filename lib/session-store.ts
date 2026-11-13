@@ -51,7 +51,7 @@ export async function ensureOwner(): Promise<string> {
 }
 
 const COLUMNS =
-  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, settings, shareable, listed, version, owner_hash, demo_url, input_tokens, output_tokens";
+  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, settings, shareable, listed, event_slug, version, owner_hash, demo_url, input_tokens, output_tokens";
 
 const Settings = z.object({ extendedTime: z.boolean() });
 
@@ -81,6 +81,7 @@ type Row = {
   settings: unknown;
   shareable: boolean | null;
   listed: boolean | null;
+  event_slug: string | null;
   input_tokens: number | null;
   output_tokens: number | null;
 };
@@ -136,6 +137,7 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     sources: data.sources ?? [],
     settings: parseSettings(data.settings),
     visibility: { shareable: data.shareable === true, listed: data.listed === true },
+    eventSlug: data.event_slug,
   };
   return {
     session,
@@ -453,10 +455,10 @@ export async function loadPublicReview(id: string): Promise<Review | null> {
   if (!ID_RE.test(id)) return null;
   const { data, error } = await db()
     .from("sessions")
-    .select("id, repo, act, claims, events, panel, signals, questions, answers, shareable, listed")
+    .select("id, repo, act, claims, events, panel, signals, questions, answers, shareable, listed, event_slug")
     .eq("id", id)
     .eq("shareable", true)
-    .maybeSingle<Pick<Row, "id" | "repo" | "act" | "claims" | "events" | "panel" | "signals" | "questions" | "answers" | "shareable" | "listed">>();
+    .maybeSingle<Pick<Row, "id" | "repo" | "act" | "claims" | "events" | "panel" | "signals" | "questions" | "answers" | "shareable" | "listed" | "event_slug">>();
   if (error) throw error;
   if (!data || (data.act !== "verdict" && data.act !== "share") || !data.panel) return null;
   // Only the parts the review uses; the chat, the questions' text and the answers' text stay
@@ -474,6 +476,7 @@ export async function loadPublicReview(id: string): Promise<Review | null> {
     questions,
     answers,
     visibility: { shareable: true, listed: data.listed === true },
+    eventSlug: data.event_slug,
   });
 }
 

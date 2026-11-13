@@ -16,6 +16,7 @@ import { normalizePath, quotedIn } from "./scan-validate";
 import { isReadablePath } from "./sources";
 import type { PreviousRound } from "./rejudge";
 import type { Claim } from "./session";
+import { escapeDelimiters } from "./prompt-safety";
 
 const MAX_TOKENS = 3000;
 /** Changed files whose added lines the model sees. */
@@ -80,7 +81,7 @@ A fix about images, sprites or other binary files can't be quoted, and you can't
 
 A fix about the README, the pitch or the demo link counts if the README or config diff shows it. Be strict: renaming, comments or formatting don't address a fix that asked for working code.`;
 
-const esc = (s: string) => s.replace(/<\/?\s*untrusted_\w*[^>]*>/gi, "[tag removed]");
+const esc = escapeDelimiters;
 
 const STOP = new Set(["with", "from", "that", "this", "into", "instead", "before", "after", "your", "make", "real", "demo", "file", "code", "until", "there", "their", "when", "then", "them", "what", "which", "only", "each"]);
 

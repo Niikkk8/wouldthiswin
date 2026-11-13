@@ -9,7 +9,8 @@ import { z } from "zod";
 import { copy } from "./copy";
 import { findingsOf } from "./findings";
 import { anyCoreMissing, currentOdds, tierFor } from "./odds";
-import { DEFAULT_RUBRIC, ModelCriterion, fallbackCriteria, sheetOf, validateCriteria, type Rubric } from "./rubric";
+import { eventBlock, judgeContextFor, rubricFor } from "./events";
+import { ModelCriterion, fallbackCriteria, sheetOf, validateCriteria, type Rubric } from "./rubric";
 import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
 import { MODEL } from "./scan";
 import { normalizePath } from "./scan-validate";
@@ -23,6 +24,7 @@ import {
   type SessionState,
 } from "./session";
 import type { Source } from "./sources";
+import { escapeDelimiters } from "./prompt-safety";
 
 const MAX_TOKENS = 6000;
 /** How much of each read file the model sees. Excerpts are checked against the full stored text. */
@@ -68,7 +70,7 @@ Write:
   - reason: one plain sentence under 25 words saying why, from the findings and answers. Describe the evidence, never the people.
   - findings: the ids of up to 4 findings the score rests on, copied exactly from the findings list. Empty if none apply.`;
 
-const esc = (s: string) => s.replace(/<\/?\s*untrusted_\w*[^>]*>/gi, "[tag removed]");
+const esc = escapeDelimiters;
 
 /** The findings, by id, in evidence words: what the criteria may cite. */
 function findingLines(s: SessionState): string {
@@ -85,7 +87,7 @@ const FINDING = {
 
 const DEMO = { loads: "a live demo loads", video: "a demo video plays", dead: "the demo link is dead", none: "no demo link given" };
 
-export function buildPanelPrompt(s: SessionState, rubric: Rubric = DEFAULT_RUBRIC): { system: string; user: string } {
+export function buildPanelPrompt(s: SessionState, rubric: Rubric = rubricFor(s.eventSlug)): { system: string; user: string } {
   const odds = currentOdds(s.events);
   const claims = (s.claims ?? [])
     .map((c) => `- ${c.weight}: ${esc(c.claim)}. ${FINDING[c.status]}: ${esc(c.evidence)}${c.file ? ` (${c.file})` : ""}`)
@@ -121,6 +123,7 @@ export function buildPanelPrompt(s: SessionState, rubric: Rubric = DEFAULT_RUBRI
     files.length ? `Files the scan read:\n\n${files.join("\n\n")}` : "No files could be read, so set every review's file and excerpt to null.",
     `Findings (cite these ids in criteria):\n${findingLines(s)}`,
     `Rubric:\n${rubric.criteria.map((c) => `- ${c.key} (${c.name}, weight ${c.weight}): ${esc(c.description)}`).join("\n")}`,
+    ...eventBlock(judgeContextFor(s.eventSlug)),
     "Deliberate, then write the review.",
   ].join("\n\n");
   return { system: SYSTEM, user };
@@ -171,7 +174,7 @@ export type PanelCheck = { ok: true; panel: Panel; dropped: number } | { ok: fal
 export function validatePanel(
   output: unknown,
   s: SessionState,
-  rubric: Rubric = DEFAULT_RUBRIC,
+  rubric: Rubric = rubricFor(s.eventSlug),
   /** On the last attempt, unusable criterion scores fall back to fixed rules instead of failing. */
   { fallback = false }: { fallback?: boolean } = {},
 ): PanelCheck {
@@ -236,7 +239,7 @@ const defaultCall: Call = (system, user) =>
 export async function runPanel(
   s: SessionState,
   call: Call = defaultCall,
-  rubric: Rubric = DEFAULT_RUBRIC,
+  rubric: Rubric = rubricFor(s.eventSlug),
 ): Promise<{ panel: Panel; usage: Usage; dropped: number }> {
   const { system, user } = buildPanelPrompt(s, rubric);
   const usage = newUsage();

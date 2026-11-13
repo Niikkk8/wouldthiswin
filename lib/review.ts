@@ -5,7 +5,8 @@ import { copy, fill } from "./copy";
 import { START_ODDS, anyCoreMissing, currentOdds, readyToWin, tierFor, type Tier } from "./odds";
 import type { Iteration } from "./recheck";
 import { findingsOf, type Finding } from "./findings";
-import { DEFAULT_RUBRIC, aggregate, rubricDelta, sheetOf, type Criterion, type Rubric, type RubricCriterion, type ScoredCriterion } from "./rubric";
+import { rubricFor } from "./events";
+import { aggregate, rubricDelta, sheetOf, type Criterion, type Rubric, type RubricCriterion, type ScoredCriterion } from "./rubric";
 import type { Judge, ReviewComment, ReviewStatus, SessionState } from "./session";
 
 export type CheckStatus = "passed" | "failed" | "warning";
@@ -38,6 +39,7 @@ export type Review = {
   rubric: RubricView | null;
   /** The commit the scan read: evidence links point here. */
   commit: string | null;
+  eventSlug: string | null;
   shareable: boolean;
   listed: boolean;
 };
@@ -111,7 +113,7 @@ export function summaryLine(summary: Record<CheckStatus, number>): string {
 }
 
 /** The review, once the panel has deliberated. Null before that. */
-export function reviewOf(s: SessionState, audience: Audience = "public", rubric: Rubric = DEFAULT_RUBRIC): Review | null {
+export function reviewOf(s: SessionState, audience: Audience = "public", rubric: Rubric = rubricFor(s.eventSlug)): Review | null {
   const panel = s.panel;
   if (!panel || !panel.reviews) return null;
   const odds = currentOdds(s.events);
@@ -146,6 +148,7 @@ export function reviewOf(s: SessionState, audience: Audience = "public", rubric:
     findings,
     rubric: rubricView(panel.criteria, rubric, new Set(findings.map((f) => f.id))),
     commit: s.signals?.commit ?? null,
+    eventSlug: s.eventSlug ?? null,
     shareable: s.visibility?.shareable === true,
     listed: s.visibility?.listed === true,
   };

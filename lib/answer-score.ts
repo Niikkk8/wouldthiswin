@@ -7,10 +7,12 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { copy } from "./copy";
 import { ANSWER_MAX, ANSWER_MIN, clampAnswerScore } from "./odds";
+import { eventBlock } from "./events";
 import { log } from "./log";
 import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
 import { MODEL } from "./scan";
 import type { Claim, Judge } from "./session";
+import { escapeDelimiters } from "./prompt-safety";
 
 const MAX_TOKENS = 1500; // low-effort thinking plus a two-field JSON object
 const MAX_REASON = 80;
@@ -78,8 +80,7 @@ Fields, in order:
 - score: the integer.
 - reaction: what you say back to the team, out loud, in your own voice, about this specific answer. 3 to 9 words. The examples above show the length and tone only; say it in your own words. Talk to them ("you"), never about "the team" or "the answer". There is no second try, so never tell them to try again. Plain text, no quotes, no emoji. Be blunt about the evidence, never about the person: no calling anyone a liar or a fraud, and never use the words "backed" or "unbacked".`;
 
-/** Stops the material from opening or closing a delimiter. */
-const esc = (s: string) => s.replace(/<\/?\s*(untrusted_\w*|context)\s*>/gi, "[tag removed]");
+const esc = escapeDelimiters;
 
 const FINDING: Record<Claim["status"], string> = {
   backed: "Found in the code",
@@ -101,12 +102,15 @@ export type AnswerInput = {
   question: string;
   answer: string;
   claims: readonly Claim[];
+  /** An event's judge context (lib/events), if the session is for one. */
+  eventContext?: string;
 };
 
 export function buildAnswerPrompt(input: AnswerInput): { system: string; user: string } {
   const user = [
     `<context>\nYou are ${VOICES[input.judge]}\n\nYour question: ${esc(input.question)}\n\nClaims summary:\n${esc(claimSummary(input.claims))}\n</context>`,
     `<untrusted_answer>\n${esc(input.answer)}\n</untrusted_answer>`,
+    ...eventBlock(input.eventContext ?? ""),
     "Score this answer.",
   ].join("\n\n");
   return { system: SYSTEM, user };
@@ -121,7 +125,7 @@ const INJECTION = [
   /\b(give|award|assign|grant|set)\b.{0,25}?(\+\s?\d+|\b\d+\s*(points?|pts)\b|\bfull marks\b|\bmax(imum)? (score|points)\b)/i,
   /\b(score|rate)\s+(this|me|us|it|the answer)\b.{0,20}?(\+\s?\d+|\b1[0-2]\b|\bhigh(ly|est)?\b|\bmax)/i,
   /\b(score|reason|reaction|why)"?\s*:\s*["+\-\d]/i,
-  /<\/?\s*(untrusted_\w*|context|system)\s*>/i,
+  /<\/?\s*(untrusted_\w*|event_context|context|system)\b[^>]*>/i,
 ];
 
 // Reactions describe the evidence. Verdict words and attacks on the person aren't shown.

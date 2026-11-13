@@ -26,6 +26,7 @@ const STATUS: Record<ErrorKey, number> = {
   lifelineUsed: 409,
   voiceUnavailable: 503,
   voiceEmpty: 422,
+  eventClosed: 409,
 };
 
 /** An error response. Pass the session when there is one, so the client can resync to it. */
