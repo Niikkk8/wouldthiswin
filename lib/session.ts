@@ -147,7 +147,19 @@ export type SessionState = {
   /** The files the scan fetched and read (truncated). Review comments may only quote these. */
   sources: Source[];
   settings: SessionSettings;
+  /** Opt-ins, both off by default: a public /v link, and a place on the public board. */
+  visibility: Visibility;
 };
+
+export type Visibility = { shareable: boolean; listed: boolean };
+export const PRIVATE: Visibility = { shareable: false, listed: false };
+
+/** Listing needs a shareable verdict; turning sharing off takes it off the board too. */
+export function nextVisibility(current: Visibility, change: Partial<Visibility>): Visibility {
+  const shareable = change.shareable ?? current.shareable;
+  const listed = shareable ? (change.listed ?? current.listed) : false;
+  return { shareable, listed: listed && shareable };
+}
 
 export type SessionError =
   | "wrongAct"
@@ -184,6 +196,7 @@ export function newSession(id: string, repo: string): SessionState {
     files: [],
     sources: [],
     settings: DEFAULT_SETTINGS,
+    visibility: PRIVATE,
   };
 }
 

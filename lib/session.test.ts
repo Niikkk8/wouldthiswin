@@ -14,6 +14,7 @@ import {
   applyScan,
   issueQuestion,
   newSession,
+  nextVisibility,
   settleAnswer,
   startRecording,
   toView,
@@ -431,5 +432,19 @@ describe("a re-review", () => {
         [0, 76, "Still open: Load hospitals from the database"],
       ],
     );
+  });
+});
+
+describe("visibility", () => {
+  test("both opt-ins start off", () => {
+    assert.deepEqual(newSession("abc", "r").visibility, { shareable: false, listed: false });
+  });
+
+  test("listing needs sharing; turning sharing off unlists", () => {
+    const off = { shareable: false, listed: false };
+    assert.deepEqual(nextVisibility(off, { listed: true }), off);
+    const shared = nextVisibility(off, { shareable: true });
+    assert.deepEqual(nextVisibility(shared, { listed: true }), { shareable: true, listed: true });
+    assert.deepEqual(nextVisibility({ shareable: true, listed: true }, { shareable: false }), off);
   });
 });

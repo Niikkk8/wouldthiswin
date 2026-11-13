@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, ExternalLink } from "lucide-react";
+import { Download } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -23,11 +23,13 @@ import {
   captionFor,
   imageFileName,
   imagePath,
-  linkedInUrl,
   postToXUrl,
   reviewUrl,
+  shareText,
 } from "@/lib/site";
 import { useDesktop } from "@/lib/use-desktop";
+import { ShareLinks } from "@/components/share/share-links";
+import { VisibilityPanel } from "@/components/share/visibility-panel";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { ReReview } from "@/components/review/re-review";
 import { ActTitle } from "./act-parts";
@@ -160,8 +162,11 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
   const reduce = useReducedMotion();
   const desktop = useDesktop();
   const [format, setFormat] = useState<PostFormat>("landscape");
+  const [visibility, setVisibility] = useState({ shareable: r.shareable, listed: r.listed });
+  // Nothing that points at the verdict link appears until the owner turns the link on.
+  const shared = visibility.shareable;
   const getFile = useImageFiles(r, !demo && !desktop, format);
-  const caption = captionFor(r);
+  const caption = shared ? captionFor(r) : shareText(r);
   const origin = useSyncExternalStore(noSubscribe, () => window.location.origin, () => SITE_URL);
 
   const shareImage = async () => {
@@ -211,19 +216,21 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
             <p className="text-[20px] leading-snug font-bold">{copy.demo.shareNote}</p>
           ) : (
             <>
-              {/* Desktop posting; on a phone the share sheet covers all of it. */}
+              {!phone && <VisibilityPanel id={r.id} value={visibility} onChange={setVisibility} />}
+              {shared ? (
+                <ShareLinks
+                  review={r}
+                  onShare={(kind) => {
+                    if (kind === "x") logShare(r.id, { kind: "x_clicked" });
+                    if (kind === "linkedin") logShare(r.id, { kind: "linkedin_clicked" });
+                  }}
+                />
+              ) : (
+                <p className="text-[15px] leading-snug text-text-muted">{S.visibility.off}</p>
+              )}
+              {/* Desktop downloads; on a phone the share sheet covers it. */}
               <section className="grid gap-3 max-lg:hidden">
-                <a
-                  href={linkedInUrl(r.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => logShare(r.id, { kind: "linkedin_clicked" })}
-                  className={cn(buttonVariants({ variant: "secondary" }), "w-full")}
-                >
-                  {S.postLinkedIn}
-                  <ExternalLink aria-hidden size={16} strokeWidth={1.75} />
-                </a>
-                <h2 className="label-mono mt-4 uppercase">{S.downloads}</h2>
+                <h2 className="label-mono uppercase">{S.downloads}</h2>
                 <div className="grid grid-cols-3 gap-2">
                   {POST_FORMATS.map((f) => (
                     <a
@@ -251,7 +258,7 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
                 </div>
               </section>
 
-              {!phone && (
+              {!phone && shared && (
                 <section className="flex items-center gap-5 max-lg:hidden">
                   <QrCode text={`${origin}/s/${r.id}/share`} label={S.qrNote} />
                   <div>
@@ -261,11 +268,15 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
                 </section>
               )}
 
-              <Field label={S.link} note={S.linkNote} value={reviewUrl(r.id)} />
-              <Field label={S.badge} note={S.badgeNote} value={badgeMarkdown(r.id)}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={badgePath(r.id)} alt={`would this win: ${r.odds}% ${copy.tiers[r.tier]}`} height={20} className="mt-3 h-5 w-auto" />
-              </Field>
+              {shared && (
+                <>
+                  <Field label={S.link} note={S.linkNote} value={reviewUrl(r.id)} />
+                  <Field label={S.badge} note={S.badgeNote} value={badgeMarkdown(r.id)}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={badgePath(r.id)} alt={`would this win: ${r.odds}% ${copy.tiers[r.tier]}`} height={20} className="mt-3 h-5 w-auto" />
+                  </Field>
+                </>
+              )}
             </>
           )}
         </motion.div>
@@ -276,7 +287,8 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
       ) : desktop ? (
         <ActionBar
           label={S.postX}
-          ready
+          ready={shared}
+          status={S.visibility.off}
           onNext={() => {
             logShare(r.id, { kind: "x_clicked" });
             window.open(postToXUrl(r), "_blank", "noopener,noreferrer");

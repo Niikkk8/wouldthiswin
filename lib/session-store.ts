@@ -20,7 +20,9 @@ import {
   type SessionState,
   type SessionView,
   type SessionSettings,
+  type Visibility,
   DEFAULT_SETTINGS,
+  nextVisibility,
 } from "./session";
 
 const OWNER_COOKIE = "wtw_owner";
@@ -49,7 +51,7 @@ export async function ensureOwner(): Promise<string> {
 }
 
 const COLUMNS =
-  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, settings, version, owner_hash, demo_url, input_tokens, output_tokens";
+  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, settings, shareable, listed, version, owner_hash, demo_url, input_tokens, output_tokens";
 
 const Settings = z.object({ extendedTime: z.boolean() });
 
@@ -77,6 +79,8 @@ type Row = {
   owner_hash: string;
   demo_url: string | null;
   settings: unknown;
+  shareable: boolean | null;
+  listed: boolean | null;
   input_tokens: number | null;
   output_tokens: number | null;
 };
@@ -131,6 +135,7 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     files: data.files,
     sources: data.sources ?? [],
     settings: parseSettings(data.settings),
+    visibility: { shareable: data.shareable === true, listed: data.listed === true },
   };
   return {
     session,
@@ -416,17 +421,42 @@ export async function releasePanel(id: string): Promise<void> {
   if (error) console.error(JSON.stringify({ event: "panel.release", id, error: error.message }));
 }
 
+/** Sets the owner's sharing opt-ins on a finished review. Null if it isn't theirs or isn't finished. */
+export async function setVisibility(id: string, owner: string | null, change: Partial<Visibility>): Promise<Visibility | null> {
+  const loaded = await loadSession(id, owner);
+  const s = loaded?.session;
+  if (!s || (s.act !== "verdict" && s.act !== "share") || !s.panel) return null;
+  const next = nextVisibility(s.visibility, change);
+  const { error } = await db().from("sessions").update({ shareable: next.shareable, listed: next.listed }).eq("id", id);
+  if (error) throw error;
+  return next;
+}
+
 /**
- * The review for anyone with the link. Reads only what the review is built from: never
- * the answers, the questions or the deliberation chat. Null until act 4.
+ * A review for its share images: anyone's once it's shareable (cached publicly), and the
+ * owner's own before that (cached privately, so a CDN never holds an unshared one).
+ */
+export async function loadReviewForImage(id: string): Promise<{ review: Review; cache: string } | null> {
+  const shared = await loadPublicReview(id);
+  if (shared) return { review: shared, cache: "public, max-age=86400, s-maxage=31536000, immutable" };
+  const loaded = await loadSession(id, await ownerHash());
+  const own = loaded ? reviewOf(loaded.session, "public") : null;
+  return own ? { review: own, cache: "private, no-store" } : null;
+}
+
+/**
+ * The review for anyone with the link, once its owner made it shareable. Reads only what the
+ * review is built from: never the answers, the questions or the deliberation chat, and only
+ * public findings. Null until act 4, and null while sharing is off.
  */
 export async function loadPublicReview(id: string): Promise<Review | null> {
   if (!ID_RE.test(id)) return null;
   const { data, error } = await db()
     .from("sessions")
-    .select("id, repo, act, claims, events, panel, signals, questions, answers")
+    .select("id, repo, act, claims, events, panel, signals, questions, answers, shareable, listed")
     .eq("id", id)
-    .maybeSingle<Pick<Row, "id" | "repo" | "act" | "claims" | "events" | "panel" | "signals" | "questions" | "answers">>();
+    .eq("shareable", true)
+    .maybeSingle<Pick<Row, "id" | "repo" | "act" | "claims" | "events" | "panel" | "signals" | "questions" | "answers" | "shareable" | "listed">>();
   if (error) throw error;
   if (!data || (data.act !== "verdict" && data.act !== "share") || !data.panel) return null;
   // Only the parts the review uses; the chat, the questions' text and the answers' text stay
@@ -443,6 +473,7 @@ export async function loadPublicReview(id: string): Promise<Review | null> {
     signals: data.signals,
     questions,
     answers,
+    visibility: { shareable: true, listed: data.listed === true },
   });
 }
 

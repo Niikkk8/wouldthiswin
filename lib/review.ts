@@ -38,6 +38,8 @@ export type Review = {
   rubric: RubricView | null;
   /** The commit the scan read: evidence links point here. */
   commit: string | null;
+  shareable: boolean;
+  listed: boolean;
 };
 
 export type RubricView = {
@@ -144,5 +146,7 @@ export function reviewOf(s: SessionState, audience: Audience = "public", rubric:
     findings,
     rubric: rubricView(panel.criteria, rubric, new Set(findings.map((f) => f.id))),
     commit: s.signals?.commit ?? null,
+    shareable: s.visibility?.shareable === true,
+    listed: s.visibility?.listed === true,
   };
 }
