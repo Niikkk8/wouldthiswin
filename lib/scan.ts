@@ -12,7 +12,10 @@ import { ExtractError, extractClaims, type ExtractedClaim } from "./evidence/ext
 import type { RepoReader } from "./evidence/repo-tools";
 import { claimSources, fetchDevpost, type Devpost } from "./evidence/sources";
 import { verifyClaims, type Verdict } from "./evidence/verify";
-import { readFileAt, type RawRepoData } from "./github";
+import { collectSnapshot } from "./checks/collect";
+import { runChecks } from "./checks";
+import type { Finding } from "./findings";
+import { commitsTouching, readFileAt, readRawAt, type RawRepoData } from "./github";
 import { QuestionsError, buildQuestionsPrompt, writeQuestions, type WrittenQuestion } from "./grill/questions";
 import { log } from "./log";
 import { newUsage, type Usage } from "./model";
@@ -127,6 +130,20 @@ export async function demoSignal(url: string | null, provided: boolean): Promise
   return { status, url: status === "none" ? null : (link?.url ?? null), ...(provided ? { provided } : {}) };
 }
 
+/** The deterministic checks over a snapshot of the repo. A failure leaves no findings, never a guess. */
+async function deterministicChecks(raw: RawRepoData): Promise<Finding[]> {
+  try {
+    const snap = await collectSnapshot(
+      { repo: `${raw.ref.owner}/${raw.ref.repo}`, tree: raw.headFilePaths, sizes: raw.headFileSizes, readme: raw.readmeFull },
+      { read: (p) => readRawAt(raw.ref, raw.latestSha, p), commits: (p) => commitsTouching(raw.ref, p) },
+    );
+    return runChecks(snap);
+  } catch (err) {
+    log.warn("scan.checks.failed", { repo: raw.ref.url, error: String(err) });
+    return [];
+  }
+}
+
 /**
  * The whole scan: the model steps and the demo checks in parallel, the first-commit check in
  * code. A demo link the team gave beats the one found in the repo; the found one is still
@@ -142,10 +159,11 @@ export async function scanRepo(
     submission?: SubmissionInput | null;
   } = {},
 ): Promise<{ scan: Scan; usage: Usage }> {
-  const [model, auto, given] = await Promise.all([
+  const [model, auto, given, checks] = await Promise.all([
     runScanModel(raw, opts),
     demoSignal(findDemoUrl(raw), false),
     opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
+    deterministicChecks(raw),
   ]);
   const { firstCommitAddedOver70Pct } = computeSignals(raw, null);
   log.info("scan.validated", { repo: raw.ref.url, claims: model.claims.length, read: model.sources.length });
@@ -153,7 +171,7 @@ export async function scanRepo(
     scan: {
       claims: model.claims,
       questions: model.questions,
-      signals: { demo: given ?? auto, bulkFirstCommit: firstCommitAddedOver70Pct, commit: raw.latestSha },
+      signals: { demo: given ?? auto, bulkFirstCommit: firstCommitAddedOver70Pct, commit: raw.latestSha, checks },
       files: raw.headFilePaths.slice(0, STORED_FILES),
       sources: model.sources,
       autoDemo: auto,

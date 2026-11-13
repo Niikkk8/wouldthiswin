@@ -7,7 +7,7 @@ import { SwampedError } from "./anthropic-retry";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { copy } from "./copy";
-import { findingsOf } from "./findings";
+import { findingsOf, publicFindings } from "./findings";
 import { anyCoreMissing, currentOdds, tierFor } from "./odds";
 import { eventBlock, judgeContextFor, rubricFor } from "./events";
 import { ModelCriterion, fallbackCriteria, sheetOf, validateCriteria, type Rubric } from "./rubric";
@@ -74,7 +74,8 @@ const esc = escapeDelimiters;
 
 /** The findings, by id, in evidence words: what the criteria may cite. */
 function findingLines(s: SessionState): string {
-  const lines = findingsOf(s).map((f) => `- ${f.id} [${f.outcome}]: ${esc(f.title)}. ${esc(f.detail)}`);
+  // Private findings (secrets, timeline) never reach the panel: its words can end up public.
+  const lines = publicFindings(findingsOf(s)).map((f) => `- ${f.id} [${f.outcome}]: ${esc(f.title)}. ${esc(f.detail)}`);
   return lines.join("\n") || "(none)";
 }
 
@@ -208,7 +209,7 @@ export function validatePanel(
     reviews[judge] = { status, comment };
   }
 
-  const ids = new Set(findingsOf(s).map((f) => f.id));
+  const ids = new Set(publicFindings(findingsOf(s)).map((f) => f.id));
   const scored = validateCriteria(p.criteria, rubric, ids);
   if (!scored && !fallback) return { ok: false, reason: "criteria" };
   const criteria = scored ?? fallbackCriteria(rubric, sheetOf(s), copy.review.rubric.fallback);

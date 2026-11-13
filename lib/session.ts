@@ -13,6 +13,7 @@ import {
 } from "./deadline";
 import { displayTree } from "./file-tree";
 import type { ClaimCategory } from "./evidence/extract";
+import type { Finding } from "./findings";
 import type { SourceKind } from "./evidence/sources";
 import type { Iteration } from "./recheck";
 import { reviewOf, type Review } from "./review";
@@ -89,6 +90,8 @@ export type ScanSignals = {
   iteration?: Iteration;
   /** The commit the scan read. Evidence links point at files at exactly this commit. */
   commit?: string;
+  /** What the deterministic checks found (lib/checks). Scans from before them have none. */
+  checks?: Finding[];
 };
 
 export type Question = {

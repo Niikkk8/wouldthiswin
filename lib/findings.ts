@@ -112,10 +112,11 @@ function demoFinding(demo: ScanSignals["demo"]): Finding {
   }
 }
 
-/** Every finding for a scanned session, in a stable order: claims, then the demo, then history. */
+/** Every finding for a scanned session, in a stable order: claims, the demo, history, then the checks. */
 export function findingsOf(s: Pick<SessionState, "claims" | "signals">): Finding[] {
   const out = (s.claims ?? []).map(claimFinding);
   if (!s.signals) return out;
+  const checks = s.signals.checks ?? [];
   out.push(demoFinding(s.signals.demo));
   if (s.signals.bulkFirstCommit) {
     // Timeline signals are framed as what a judge might ask, and kept to the owner.
@@ -132,7 +133,7 @@ export function findingsOf(s: Pick<SessionState, "claims" | "signals">): Finding
       visibility: "private",
     });
   }
-  return out;
+  return [...out, ...checks];
 }
 
 export const publicFindings = (fs: readonly Finding[]) => fs.filter((f) => f.visibility === "public");
