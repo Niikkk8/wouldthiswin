@@ -13,6 +13,8 @@ import type { RepoReader } from "./evidence/repo-tools";
 import { claimSources, fetchDevpost, type Devpost } from "./evidence/sources";
 import { verifyClaims, type Verdict } from "./evidence/verify";
 import { collectSnapshot } from "./checks/collect";
+import { checkDemos, demoCandidates } from "./checks/demo";
+import { fetchPage } from "./demo-check";
 import { runChecks } from "./checks";
 import type { Finding } from "./findings";
 import { commitsTouching, readFileAt, readRawAt, type RawRepoData } from "./github";
@@ -82,6 +84,8 @@ export async function runScanModel(
     previous?: PreviousRound | null;
     eventContext?: string;
     submission?: SubmissionInput | null;
+    /** Already fetched by the caller, so the demo check can share it. */
+    devpost?: Devpost | null;
     deps?: Partial<ScanDeps>;
   } = {},
 ): Promise<ScanModelResult> {
@@ -93,7 +97,8 @@ export async function runScanModel(
     throw new ScanError(err instanceof Error ? err.message : String(err), usage, swamped);
   };
 
-  const devpost = opts.submission?.devpostUrl ? await deps.devpost(opts.submission.devpostUrl).catch(() => null) : null;
+  const devpost =
+    opts.devpost !== undefined ? opts.devpost : opts.submission?.devpostUrl ? await deps.devpost(opts.submission.devpostUrl).catch(() => null) : null;
   const sources = claimSources({ readme: raw.readmeFull, devpost, submission: opts.submission?.text ?? null });
   const extracted = await deps.extract(sources, usage).catch(wrap);
   emit({ type: "claims", claims: extracted.map((c) => c.text) });
@@ -131,13 +136,17 @@ export async function demoSignal(url: string | null, provided: boolean): Promise
 }
 
 /** The deterministic checks over a snapshot of the repo. A failure leaves no findings, never a guess. */
-async function deterministicChecks(raw: RawRepoData): Promise<Finding[]> {
+async function deterministicChecks(raw: RawRepoData, devpost: Devpost | null): Promise<Finding[]> {
   try {
-    const snap = await collectSnapshot(
-      { repo: `${raw.ref.owner}/${raw.ref.repo}`, tree: raw.headFilePaths, sizes: raw.headFileSizes, readme: raw.readmeFull },
-      { read: (p) => readRawAt(raw.ref, raw.latestSha, p), commits: (p) => commitsTouching(raw.ref, p) },
-    );
-    return runChecks(snap);
+    const demos = demoCandidates({ readme: raw.readmeFull, homepage: raw.meta.homepage, devpostLinks: devpost?.links ?? [] });
+    const [snap, demo] = await Promise.all([
+      collectSnapshot(
+        { repo: `${raw.ref.owner}/${raw.ref.repo}`, tree: raw.headFilePaths, sizes: raw.headFileSizes, readme: raw.readmeFull },
+        { read: (p) => readRawAt(raw.ref, raw.latestSha, p), commits: (p) => commitsTouching(raw.ref, p) },
+      ),
+      checkDemos(demos, (u) => fetchPage(u), raw.ref.repo),
+    ]);
+    return [...runChecks(snap), ...demo];
   } catch (err) {
     log.warn("scan.checks.failed", { repo: raw.ref.url, error: String(err) });
     return [];
@@ -159,11 +168,12 @@ export async function scanRepo(
     submission?: SubmissionInput | null;
   } = {},
 ): Promise<{ scan: Scan; usage: Usage }> {
+  const devpost = opts.submission?.devpostUrl ? await fetchDevpost(opts.submission.devpostUrl).catch(() => null) : null;
   const [model, auto, given, checks] = await Promise.all([
-    runScanModel(raw, opts),
+    runScanModel(raw, { ...opts, devpost }),
     demoSignal(findDemoUrl(raw), false),
     opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
-    deterministicChecks(raw),
+    deterministicChecks(raw, devpost),
   ]);
   const { firstCommitAddedOver70Pct } = computeSignals(raw, null);
   log.info("scan.validated", { repo: raw.ref.url, claims: model.claims.length, read: model.sources.length });
