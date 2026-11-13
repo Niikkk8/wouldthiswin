@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { copy, fill } from "@/lib/copy";
 import { summaryLine, type CheckStatus, type Review } from "@/lib/review";
 import type { ReviewStatus } from "@/lib/session";
+import { fixItems } from "@/lib/fix-list";
+import { FixList } from "./fix-list";
 import { JudgingSheet } from "./judging-sheet";
 import { ICON, Lines, Rise, StatusPill, Still, projectName } from "./review-parts";
 import { RubricBreakdown } from "./rubric-breakdown";
@@ -50,7 +52,16 @@ function Fixes({ fixes }: { fixes: string[] }) {
 }
 
 /** Act 4, and the public review link: the night as a pull-request review. */
-export function ReviewView({ review, still = false }: { review: Review; still?: boolean }) {
+export function ReviewView({
+  review,
+  still = false,
+  fixList,
+}: {
+  review: Review;
+  still?: boolean;
+  /** The owner's fix list: "full" with GitHub issue links, "sample" without (the sample repo isn't real). */
+  fixList?: "full" | "sample";
+}) {
   const r = review;
   return (
     <Still.Provider value={still}>
@@ -197,10 +208,16 @@ export function ReviewView({ review, still = false }: { review: Review; still?: 
             </section>
           </Rise>
 
+          {fixList && (
+            <Rise delay={0.43}>
+              <FixList items={fixItems(r.findings, r.repo, r.commit)} repo={r.repo} reviewId={r.id} issues={fixList === "full"} />
+            </Rise>
+          )}
+
           <Rise delay={0.46}>
             <section aria-labelledby="fixes">
               <h2 id="fixes" className="label-mono uppercase">
-                {copy.review.fixes}
+                {fixList ? copy.fixList.panelNotes : copy.review.fixes}
               </h2>
               <Fixes fixes={r.fixes} />
               <p className="label-mono mt-4">{copy.review.fixesNote}</p>

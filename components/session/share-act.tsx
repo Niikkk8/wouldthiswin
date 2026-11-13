@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Copy, Download, ExternalLink } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
+import { CopyButton } from "@/components/copy-button";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { REPO_FOCUS } from "@/components/landing/repo-form";
@@ -34,30 +35,6 @@ import { ActionBar } from "./action-bar";
 
 const S = copy.acts.share;
 
-function CopyButton({ text, label, onCopied }: { text: string; label: string; onCopied?: () => void }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      className={cn(buttonVariants({ variant: "secondary" }), "h-10 shrink-0 gap-2 px-3 text-[14px]")}
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          setCopied(true);
-          onCopied?.();
-          setTimeout(() => setCopied(false), 1600);
-        } catch {
-          setCopied(false);
-        }
-      }}
-      aria-label={`${S.copy}: ${label}`}
-    >
-      {copied ? <Check aria-hidden size={16} strokeWidth={1.75} /> : <Copy aria-hidden size={16} strokeWidth={1.75} />}
-      <span aria-live="polite">{copied ? S.copied : S.copy}</span>
-    </button>
-  );
-}
-
 function Field({ label, note, value, children }: { label: string; note: string; value: string; children?: React.ReactNode }) {
   return (
     <section className="min-w-0">
@@ -67,7 +44,7 @@ function Field({ label, note, value, children }: { label: string; note: string; 
         <code className="flex min-w-0 flex-1 items-center overflow-x-auto rounded-control border border-border bg-surface px-3 py-2 font-mono text-[13px] whitespace-nowrap text-text-muted">
           {value}
         </code>
-        <CopyButton text={value} label={label} />
+        <CopyButton value={value} label={label} />
       </div>
       <p className="label-mono mt-2">{note}</p>
     </section>
@@ -270,7 +247,7 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
                   {caption}
                 </p>
                 <div className="mt-2">
-                  <CopyButton text={caption} label={S.captionLabel} onCopied={() => logShare(r.id, { kind: "caption_copied" })} />
+                  <CopyButton value={caption} label={S.captionLabel} onCopied={() => logShare(r.id, { kind: "caption_copied" })} />
                 </div>
               </section>
 

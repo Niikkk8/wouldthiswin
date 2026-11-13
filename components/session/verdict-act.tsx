@@ -36,7 +36,7 @@ export function VerdictAct({
   if (!review) return null;
   return (
     <>
-      <ReviewView review={review} />
+      <ReviewView review={review} fixList={demo ? "sample" : "full"} />
       {!demo && <ReReview id={review.id} repo={review.repo} className="mt-12" />}
       <ActionBar label={copy.acts.verdict.next} ready pending={pending} onNext={onNext} />
     </>
