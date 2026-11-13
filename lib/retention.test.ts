@@ -29,10 +29,11 @@ test("after 30 days the answer text and the chat go; scores and the review stay"
   assert.deepEqual(out.panel?.fixes, panel.fixes);
 });
 
-test("cutoffs: 30 days for answers, 1 day for file contents, 24 hours for the cache", () => {
+test("cutoffs: 30 days for answers, 1 day for file contents, 24 hours for the old cache, 7 days for findings", () => {
   const now = Date.UTC(2026, 11, 31);
   const c = cutoffs(now);
   assert.equal(c.answers, new Date(Date.UTC(2026, 11, 1)).toISOString());
   assert.equal(c.sources, new Date(Date.UTC(2026, 11, 30)).toISOString());
   assert.equal(c.cache, c.sources);
+  assert.equal(c.findings, new Date(Date.UTC(2026, 11, 24)).toISOString());
 });

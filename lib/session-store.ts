@@ -8,6 +8,7 @@ import { ID_RE, db, sha256 } from "./db";
 import { limitsFromEnv, type LimitStatus } from "./limits";
 import { log } from "./log";
 import type { Usage } from "./model";
+import { isCachedScan, type CacheKey, type CachedScan } from "./scan-cache";
 import { currentOdds } from "./odds";
 import { reviewOf, type Review } from "./review";
 import {
@@ -17,7 +18,6 @@ import {
   type SessionError,
   type SessionState,
   type SessionView,
-  type Scan,
 } from "./session";
 
 const OWNER_COOKIE = "wtw_owner";
@@ -323,28 +323,34 @@ export async function addStepTiming(id: string, step: string, ms: number) {
   if (error) log.error("session.step", { id, step, error: error.message });
 }
 
-const CACHE_HOURS = 24;
-
-/** A scan of this exact commit from the last 24 hours, if there is one. */
-export async function getCachedScan(repoUrl: string, latestSha: string): Promise<Scan | null> {
-  const since = new Date(Date.now() - CACHE_HOURS * 3600 * 1000).toISOString();
+/**
+ * Cached findings for this repo, commit and scan version (lib/scan-cache.ts). Findings at a
+ * commit never change, but checks do: SCAN_VERSION is part of the key, and rows go after
+ * CACHE_DAYS (lib/retention.ts) so nothing lingers.
+ */
+export async function getCachedScan(key: CacheKey): Promise<CachedScan | null> {
   const { data, error } = await db()
-    .from("scan_cache")
+    .from("scan_cache_v2")
     .select("scan")
-    .eq("repo_url", repoUrl)
-    .eq("latest_sha", latestSha)
-    .gte("created_at", since)
-    .maybeSingle<{ scan: Scan }>();
+    .eq("owner", key.owner)
+    .eq("repo", key.repo)
+    .eq("sha", key.sha)
+    .eq("scan_version", key.version)
+    .maybeSingle<{ scan: unknown }>();
   if (error) throw error;
-  // Scans from before the files were read (no `sources`) are re-run.
-  return data?.scan && Array.isArray(data.scan.sources) ? data.scan : null;
+  return data && isCachedScan(data.scan) ? data.scan : null;
 }
 
-export async function putCachedScan(repoUrl: string, latestSha: string, scan: Scan) {
-  const { error } = await db()
-    .from("scan_cache")
-    .upsert({ repo_url: repoUrl, latest_sha: latestSha, scan, created_at: new Date().toISOString() });
-  if (error) console.error(JSON.stringify({ event: "scan.cachePut", repoUrl, error: error.message }));
+export async function putCachedScan(key: CacheKey, scan: CachedScan) {
+  const { error } = await db().from("scan_cache_v2").upsert({
+    owner: key.owner,
+    repo: key.repo,
+    sha: key.sha,
+    scan_version: key.version,
+    scan,
+    created_at: new Date().toISOString(),
+  });
+  if (error) log.error("scan.cachePut", { repo: `${key.owner}/${key.repo}`, error: error.message });
 }
 
 const PANEL_LOCK_SECONDS = 90;

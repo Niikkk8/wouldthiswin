@@ -436,7 +436,7 @@ export const copy = {
       {
         heading: "Your code is never kept",
         body: [
-          "To check your claims we read up to 10 files from your public repo. We keep them only until the review is written, a few minutes at most, and delete them within a day if you leave before then. A cache of a scan, so the same commit isn't paid for twice, is deleted after 24 hours.",
+          "To check your claims we read up to 10 files from your public repo. We keep them only until the review is written, a few minutes at most, and delete them within a day if you leave before then. So the same commit isn't paid for twice, we keep its findings (never the code) for 7 days.",
           "When you ask for a re-review, we also read the lines you added since the last review, to check each fix the judges asked for. We keep only the one line that shows each fix, with the review.",
           "Each review comment quotes a few lines from one of those files, the way a code review does. Those few lines stay with the review.",
         ],

@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { db } from "@/lib/db";
+import { errorText, log } from "@/lib/log";
 import { cutoffs, forgetAnswers } from "@/lib/retention";
 import type { Answer, Panel } from "@/lib/session";
 
@@ -63,11 +64,20 @@ export async function GET(req: Request) {
       .select("repo_url");
     if (e3) throw e3;
     counts.cacheDeleted = gone.length;
+
+    // 4. Cached findings (no file contents) after 7 days.
+    const { data: findings, error: e4 } = await db()
+      .from("scan_cache_v2")
+      .delete()
+      .lt("created_at", cut.findings)
+      .select("sha");
+    if (e4) throw e4;
+    counts.cacheDeleted += findings.length;
   } catch (err) {
-    console.error(JSON.stringify({ event: "retention.failed", error: err instanceof Error ? err.message : String(err), ...counts }));
+    log.error("retention.failed", { error: errorText(err), ...counts });
     return Response.json({ ok: false, ...counts }, { status: 500 });
   }
 
-  console.log(JSON.stringify({ event: "retention.done", ...counts }));
+  log.info("retention.done", counts);
   return Response.json({ ok: true, ...counts });
 }

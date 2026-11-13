@@ -4,10 +4,11 @@
 
 import type { ErrorKey } from "./api";
 import { overBudget } from "./budget";
-import { fetchCompare, fetchRepoData, GitHubError, type RawRepoData } from "./github";
+import { fetchCompare, fetchRepoData, fetchSources, GitHubError, parseRepoUrl, type RawRepoData } from "./github";
 import { recheckFixes, type Iteration } from "./recheck";
 import { mergeUsage, newUsage, type Usage } from "./model";
 import { ScanError, demoSignal, scanRepo } from "./scan";
+import { cacheKey, scanWithCache } from "./scan-cache";
 import { noEmit, type Emit } from "./scan-progress";
 import { applyScan, type Scan, type SessionState } from "./session";
 import { errorText, log } from "./log";
@@ -23,6 +24,13 @@ import {
   putCachedScan,
   releaseScan,
 } from "./session-store";
+
+/** A scan that ends before any model call: nothing was spent on it. */
+class ScanStop extends Error {
+  constructor(public key: ErrorKey) {
+    super(key);
+  }
+}
 
 export type ScanOutcome =
   | { kind: "done"; session: SessionState }
@@ -43,39 +51,54 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
   let usage: Usage = newUsage();
   try {
     const previous = previousId ? await loadOwnReview(previousId, owner) : null;
-    let scan: Scan | null = previous ? null : await getCachedScan(repoUrl, latestSha);
-    const cached = scan !== null;
-    if (scan) {
-      emit({ type: "cached" });
+    const ref = parseRepoUrl(repoUrl);
+    if (!ref) return await fail(id, "invalidUrl", usage);
+    // A re-review is never cached: its questions follow up on the round before.
+    const key = previous ? null : cacheKey(ref.owner, ref.repo, latestSha);
+    const result = await scanWithCache<Usage>({
+      key,
+      get: async (k) => {
+        const hit = await getCachedScan(k);
+        if (hit) emit({ type: "cached" });
+        return hit;
+      },
+      put: putCachedScan,
+      refetch: (paths) =>
+        fetchSources(ref, latestSha, paths, (path, phase, ok) =>
+          emit(phase === "start" ? { type: "reading", path } : { type: "read", path, ok }),
+        ),
+      fresh: async () => {
+        // Retries after failed scans have already spent this session's share: stop paying.
+        if (overBudget(spent)) {
+          log.error("scan.over_budget", { id, repo: repoUrl, ...spent });
+          throw new ScanStop("judgeFailed");
+        }
+        const fetchStarted = Date.now();
+        const raw = await fetchRepoData(repoUrl);
+        await addStepTiming(id, "scan.github", Date.now() - fetchStarted);
+        emit({ type: "repo", files: raw.headFilePaths.length });
+        if (!raw.readmeFull.trim()) throw new ScanStop("emptyReadme");
+        const scanStarted = Date.now();
+        const [fresh, fixes] = await Promise.all([
+          scanRepo(raw, { emit, demoUrl, previous: previous ? { fixes: previous.fixes } : null }),
+          previous ? checkFixes(raw, previous, emit) : Promise.resolve(null),
+        ]);
+        await addStepTiming(id, "scan.total", Date.now() - scanStarted);
+        if (!fixes) return { ...fresh, key: previous ? null : cacheKey(ref.owner, ref.repo, raw.latestSha) };
+        return {
+          scan: { ...fresh.scan, signals: { ...fresh.scan.signals, iteration: fixes.iteration } },
+          usage: mergeUsage(fresh.usage, fixes.usage),
+          key: null,
+        };
+      },
+    });
+    let scan: Scan = result.scan;
+    const cached = result.source === "cache";
+    if (result.usage) usage = result.usage;
+    if (cached) {
       // The cache holds the repo's own demo link; a team's link is checked fresh.
       const demo = demoUrl ? await demoSignal(demoUrl, true) : (scan.autoDemo ?? scan.signals.demo);
       scan = { ...scan, signals: { ...scan.signals, demo } };
-    } else {
-      // Retries after failed scans have already spent this session's share: stop paying.
-      if (overBudget(spent)) {
-        log.error("scan.over_budget", { id, repo: repoUrl, ...spent });
-        await releaseScan(id);
-        return { kind: "failed", error: "judgeFailed" };
-      }
-      const fetchStarted = Date.now();
-      const raw = await fetchRepoData(repoUrl);
-      await addStepTiming(id, "scan.github", Date.now() - fetchStarted);
-      emit({ type: "repo", files: raw.headFilePaths.length });
-      if (!raw.readmeFull.trim()) return await fail(id, "emptyReadme", usage);
-      const scanStarted = Date.now();
-      const [result, fixes] = await Promise.all([
-        scanRepo(raw, { emit, demoUrl, previous: previous ? { fixes: previous.fixes } : null }),
-        previous ? checkFixes(raw, previous, emit) : Promise.resolve(null),
-      ]);
-      scan = result.scan;
-      usage = result.usage;
-      await addStepTiming(id, "scan.total", Date.now() - scanStarted);
-      if (fixes) {
-        usage = mergeUsage(usage, fixes.usage);
-        scan = { ...scan, signals: { ...scan.signals, iteration: fixes.iteration } };
-      } else {
-        await putCachedScan(repoUrl, raw.latestSha, scan);
-      }
     }
 
     const r = await mutate(id, owner, (s) => applyScan(s, scan));
@@ -91,6 +114,13 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
     if (r.ok) return { kind: "done", session: r.session };
     return r.session ? { kind: "stale", session: r.session } : { kind: "notFound" };
   } catch (err) {
+    if (err instanceof ScanStop) {
+      if (err.key === "judgeFailed") {
+        await releaseScan(id);
+        return { kind: "failed", error: err.key };
+      }
+      return await fail(id, err.key, usage);
+    }
     if (err instanceof ScanError) usage = err.usage;
     const swamped = err instanceof ScanError && err.swamped;
     const key: ErrorKey = err instanceof GitHubError ? err.code : swamped ? "swamped" : "judgeFailed";

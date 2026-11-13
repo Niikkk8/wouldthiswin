@@ -5,13 +5,15 @@
 //   review links point at them.
 // - File contents the scan read (`sources`): only until the review is written (applyPanel
 //   clears them), and at most 1 day for a session that never got that far.
-// - The scan cache (which holds file contents too): 24 hours.
+// - The scan cache: findings only, no file contents, kept 7 days. The legacy cache table,
+//   which did hold file contents, still goes after 24 hours.
 
 import type { Answer, Panel } from "./session";
 
 export const ANSWERS_DAYS = 30;
 export const SOURCES_DAYS = 1;
 export const CACHE_HOURS = 24;
+export const CACHE_DAYS = 7;
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -20,6 +22,7 @@ export function cutoffs(now: number) {
     answers: new Date(now - ANSWERS_DAYS * DAY).toISOString(),
     sources: new Date(now - SOURCES_DAYS * DAY).toISOString(),
     cache: new Date(now - CACHE_HOURS * 60 * 60 * 1000).toISOString(),
+    findings: new Date(now - CACHE_DAYS * DAY).toISOString(),
   };
 }
 
