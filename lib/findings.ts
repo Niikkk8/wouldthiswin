@@ -46,11 +46,24 @@ function claimSeverity(c: Claim): Severity {
 
 function claimFinding(c: Claim, i: number): Finding {
   const id = `claim-${i + 1}`;
-  const fileEvidence: Evidence[] = c.file
-    ? [{ kind: "file", path: c.file, ...(c.line ? { startLine: c.line, endLine: c.line } : {}) }]
-    : [];
-  const searched: Evidence[] = c.searched.map((path) => ({ kind: "file", path }));
+  const cited: Evidence[] = (c.citations ?? []).map((x) => ({ kind: "file", path: x.path, startLine: x.start, endLine: x.end }));
+  const fileEvidence: Evidence[] = cited.length
+    ? cited
+    : c.file
+      ? [{ kind: "file", path: c.file, ...(c.line ? { startLine: c.line, endLine: c.line } : {}) }]
+      : [];
+  const searched: Evidence[] = cited.length ? cited : c.searched.map((path) => ({ kind: "file", path }));
   const base = { id, check: "claim", title: c.claim, detail: c.evidence, visibility: "public" as const };
+  if (c.verdict === "partial") {
+    return {
+      ...base,
+      outcome: "fail",
+      severity: c.weight === "core" ? "major" : "minor",
+      evidence: fileEvidence.length ? fileEvidence : [{ kind: "check", detail: c.evidence }],
+      fix: fill(F.fix.partial, { claim: c.claim }),
+      effort: "2h",
+    };
+  }
   switch (c.status) {
     case "backed":
       return { ...base, outcome: "pass", severity: null, evidence: fileEvidence, fix: null, effort: null };

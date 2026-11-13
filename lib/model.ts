@@ -32,8 +32,19 @@ export function mergeUsage(a: Usage, b: Usage): Usage {
 
 export const usdOf = (u: Usage) => u.calls.reduce((n, c) => n + c.usd, 0);
 
+/** What a response bills: the fields shared by Messages and beta Messages responses. */
+export type Billed = {
+  stop_reason: string | null;
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_input_tokens?: number | null;
+    cache_creation_input_tokens?: number | null;
+  };
+};
+
 /** Adds one response to `usage` and logs it. Test doubles may leave out the cache fields. */
-export function recordCall(usage: Usage, step: string, model: string, res: Anthropic.Message, ms: number): CallRecord {
+export function recordCall(usage: Usage, step: string, model: string, res: Billed, ms: number): CallRecord {
   const u = res.usage;
   const cacheRead = u.cache_read_input_tokens ?? 0;
   const cacheWrite = u.cache_creation_input_tokens ?? 0;
@@ -55,7 +66,8 @@ export function recordCall(usage: Usage, step: string, model: string, res: Anthr
 }
 
 const clients = new Map<number, Anthropic>();
-function client(timeoutMs: number): Anthropic {
+/** One shared client per timeout. maxRetries is 0: withRetry owns retries. */
+export function client(timeoutMs: number): Anthropic {
   let c = clients.get(timeoutMs);
   if (!c) {
     c = new Anthropic({ timeout: timeoutMs, maxRetries: 0 });

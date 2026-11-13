@@ -22,6 +22,7 @@ import {
   getCachedScan,
   loadOwnReview,
   loadSession,
+  loadSubmission,
   mutate,
   putCachedScan,
   releaseScan,
@@ -58,7 +59,9 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
     // A re-review is never cached: its questions follow up on the round before. Nor is an
     // event's scan: the event's note shapes its questions.
     const eventContext = judgeContextFor(session.eventSlug);
-    const cacheable = !previous && !eventContext;
+    // Claims from a Devpost page or pasted text aren't in the repo, so neither is the cache key.
+    const submission = await loadSubmission(id);
+    const cacheable = !previous && !eventContext && !submission.devpostUrl && !submission.text;
     const key = cacheable ? cacheKey(ref.owner, ref.repo, latestSha) : null;
     const result = await scanWithCache<Usage>({
       key,
@@ -85,7 +88,7 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
         if (!raw.readmeFull.trim()) throw new ScanStop("emptyReadme");
         const scanStarted = Date.now();
         const [fresh, fixes] = await Promise.all([
-          scanRepo(raw, { emit, demoUrl, previous: previous ? { fixes: previous.fixes } : null, eventContext }),
+          scanRepo(raw, { emit, demoUrl, previous: previous ? { fixes: previous.fixes } : null, eventContext, submission }),
           previous ? checkFixes(raw, previous, emit) : Promise.resolve(null),
         ]);
         await addStepTiming(id, "scan.total", Date.now() - scanStarted);

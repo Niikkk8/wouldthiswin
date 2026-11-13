@@ -13,7 +13,7 @@ import { eventBlock, judgeContextFor, rubricFor } from "./events";
 import { ModelCriterion, fallbackCriteria, sheetOf, validateCriteria, type Rubric } from "./rubric";
 import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
 import { MODEL } from "./scan";
-import { normalizePath } from "./scan-validate";
+import { normalizePath } from "./text-match";
 import {
   JUDGES,
   type Judge,

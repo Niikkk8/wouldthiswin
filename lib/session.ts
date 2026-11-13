@@ -12,6 +12,8 @@ import {
   type QuestionKind,
 } from "./deadline";
 import { displayTree } from "./file-tree";
+import type { ClaimCategory } from "./evidence/extract";
+import type { SourceKind } from "./evidence/sources";
 import type { Iteration } from "./recheck";
 import { reviewOf, type Review } from "./review";
 import { rubricFor } from "./events";
@@ -67,6 +69,14 @@ export type Claim = {
   quote?: string | null;
   /** The line `quote` is on, at the scanned commit. */
   line?: number | null;
+  /** The verification agent's verdict (lib/evidence/verify.ts). Older rows have none. */
+  verdict?: "supported" | "partial" | "unsupported" | "cant_verify";
+  category?: ClaimCategory;
+  /** Where the claim was made, and the words that made it. */
+  source?: SourceKind;
+  span?: string;
+  /** Lines at the scanned commit that show it, as the agent read them. */
+  citations?: { path: string; start: number; end: number }[];
 };
 
 /** What the scan measured in code, beside the claims. */

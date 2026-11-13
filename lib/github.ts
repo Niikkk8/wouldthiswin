@@ -393,3 +393,19 @@ export async function fetchCompare(
     throw toGitHubError(err);
   }
 }
+
+/**
+ * One file's text at a commit, for the verification agent. Null for anything missing,
+ * binary, minified or generated: those are never shown to the model.
+ */
+export async function readFileAt(ref: RepoRef, sha: string, path: string, token: string | undefined = process.env.GITHUB_TOKEN): Promise<string | null> {
+  if (!isReadablePath(path)) return null;
+  try {
+    const res = await orNull(client(token).repos.getContent({ owner: ref.owner, repo: ref.repo, path, ref: sha, mediaType: { format: "raw" } }));
+    const data: unknown = res?.data;
+    if (typeof data !== "string") return null;
+    return readableText(data) === null ? null : data;
+  } catch {
+    return null;
+  }
+}

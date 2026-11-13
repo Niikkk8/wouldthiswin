@@ -79,3 +79,15 @@ describe("evidence links", () => {
     assert.equal(evidenceHref({ kind: "check", detail: "x" }, "t/a", sha), null);
   });
 });
+
+describe("agent-checked claims", () => {
+  test("a partly-there claim cites the agent's line ranges and has its own fix", () => {
+    const [f] = findingsOf({
+      claims: [claim({ status: "unclear", verdict: "partial", citations: [{ path: "src/predict.ts", start: 2, end: 4 }] })],
+      signals: null,
+    });
+    assert.equal(f.severity, "major");
+    assert.deepEqual(f.evidence, [{ kind: "file", path: "src/predict.ts", startLine: 2, endLine: 4 }]);
+    assert.match(f.fix ?? "", /stand-ins/);
+  });
+});

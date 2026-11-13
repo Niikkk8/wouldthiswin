@@ -140,8 +140,17 @@ export const copy = {
     notConfirmed: "Couldn't confirm this from the files read.",
     cutOff: "{path} was too long to read to the end, so this couldn't be ruled out.",
     cantVerify: "{claim}: couldn't verify",
+    partlyLabel: "{claim}: partly there",
+    notInCodeLabel: "{claim}: not in the code",
     mockedIn: "Runs on mock or hardcoded data in {path}.",
     mockedLabel: "{claim}: runs on mock data",
+  },
+  // The claim verification agent's own words, when code overrides its answer.
+  evidence: {
+    notChecked: "Couldn't check this one in the time the panel had.",
+    noLines: "Couldn't point to the lines that show it.",
+    checked: "Checked against the code.",
+    answerNow: "Budget exhausted. Answer now with your verdicts; anything you couldn't check is cant_verify.",
   },
   // Findings: what each one says, and the one-line fix. Evidence, never motives.
   findings: {
@@ -155,6 +164,7 @@ export const copy = {
       mocked: "Swap the stand-in data in {path} for the real source, or say in the README that it's demo data.",
       unbacked: 'Build {missing}, or cut "{claim}" from the README until it exists.',
       unclear: "Name the file that does this in the README, so a judge can find it.",
+      partial: 'Finish "{claim}", or say in the README which parts are real and which are stand-ins.',
       demoDead: "Redeploy the demo, or replace the link with one that loads.",
       demoNone: "Deploy a demo, or link a two-minute video in the README.",
     },

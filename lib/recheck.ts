@@ -12,7 +12,7 @@ import type { FixStatus } from "./odds";
 import { log } from "./log";
 import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
 import { MODEL } from "./scan";
-import { normalizePath, quotedIn } from "./scan-validate";
+import { normalizePath, quotedIn } from "./text-match";
 import { isReadablePath } from "./sources";
 import type { PreviousRound } from "./rejudge";
 import type { Claim } from "./session";
