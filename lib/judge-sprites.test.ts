@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { test } from "node:test";
+import { test } from "vitest";
 import { FRAMES, HEAD_CROP, REACTION_FRAME, SPRITE_SIZE, frameIndex, reactionForDelta, sheetPath } from "./judge-sprites";
 import { JUDGES } from "./session";
 

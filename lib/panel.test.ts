@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, test } from "node:test";
+import { describe, test } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import { anchorComment, buildPanelPrompt, runPanel, validatePanel } from "./panel";
 import { newSession, type Claim, type SessionState } from "./session";

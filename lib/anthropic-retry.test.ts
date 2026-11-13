@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import Anthropic from "@anthropic-ai/sdk";
 import { BACKOFF_MS, MAX_RETRIES, SwampedError, withRetry } from "./anthropic-retry";
 import { SESSION_BUDGET, overBudget } from "./budget";

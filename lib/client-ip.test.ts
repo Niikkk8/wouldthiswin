@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, test } from "node:test";
+import { describe, test } from "vitest";
 import { UNKNOWN_IP, clientIp, limitKey } from "./client-ip";
 
 const req = (headers: Record<string, string>) => new Request("https://wouldthiswin.com/api/sessions", { headers });

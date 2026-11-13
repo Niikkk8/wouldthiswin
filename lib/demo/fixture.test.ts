@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { currentOdds, START_ODDS } from "../odds";
 import { reviewOf } from "../review";
 import { toView } from "../session";

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { cutoffs, forgetAnswers } from "./retention";
 import type { Panel } from "./session";
 
