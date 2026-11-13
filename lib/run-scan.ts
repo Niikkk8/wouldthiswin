@@ -6,6 +6,7 @@ import type { ErrorKey } from "./api";
 import { overBudget } from "./budget";
 import { fetchCompare, fetchRepoData, fetchSources, GitHubError, parseRepoUrl, type RawRepoData } from "./github";
 import { recheckFixes, type Iteration } from "./recheck";
+import { snapshotOf } from "./rejudge";
 import { mergeUsage, newUsage, type Usage } from "./model";
 import { ScanError, demoSignal, scanRepo } from "./scan";
 import { cacheKey, scanWithCache } from "./scan-cache";
@@ -84,9 +85,10 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
           previous ? checkFixes(raw, previous, emit) : Promise.resolve(null),
         ]);
         await addStepTiming(id, "scan.total", Date.now() - scanStarted);
-        if (!fixes) return { ...fresh, key: previous ? null : cacheKey(ref.owner, ref.repo, raw.latestSha) };
+        if (!fixes || !previous) return { ...fresh, key: previous ? null : cacheKey(ref.owner, ref.repo, raw.latestSha) };
+        const iteration = { ...fixes.iteration, previous: snapshotOf(previous.loaded.session) };
         return {
-          scan: { ...fresh.scan, signals: { ...fresh.scan.signals, iteration: fixes.iteration } },
+          scan: { ...fresh.scan, signals: { ...fresh.scan.signals, iteration } },
           usage: mergeUsage(fresh.usage, fixes.usage),
           key: null,
         };

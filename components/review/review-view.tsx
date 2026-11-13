@@ -9,6 +9,7 @@ import { copy, fill } from "@/lib/copy";
 import { summaryLine, type CheckStatus, type Review } from "@/lib/review";
 import type { ReviewStatus } from "@/lib/session";
 import { fixItems } from "@/lib/fix-list";
+import { rejudgeDelta } from "@/lib/rejudge";
 import { FixList } from "./fix-list";
 import { JudgingSheet } from "./judging-sheet";
 import { ICON, Lines, Rise, StatusPill, Still, projectName } from "./review-parts";
@@ -117,7 +118,7 @@ export function ReviewView({
         <div className="grid min-w-0 gap-12 lg:col-start-1 lg:row-start-1">
           {r.iteration && (
             <Rise delay={0.3}>
-              <SinceLast it={r.iteration} />
+              <SinceLast it={r.iteration} delta={rejudgeDelta(r)} />
             </Rise>
           )}
           <Rise delay={0.34}>

@@ -14,6 +14,7 @@ import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model
 import { MODEL } from "./scan";
 import { normalizePath, quotedIn } from "./scan-validate";
 import { isReadablePath } from "./sources";
+import type { PreviousRound } from "./rejudge";
 import type { Claim } from "./session";
 
 const MAX_TOKENS = 3000;
@@ -43,6 +44,8 @@ export type Iteration = {
   commits: number;
   filesChanged: number;
   fixes: FixCheck[];
+  /** The round before, as it stood: for the "34% → 61%" comparison (lib/rejudge.ts). */
+  previous?: PreviousRound;
 };
 
 export type PreviousReview = {

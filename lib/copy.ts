@@ -169,6 +169,13 @@ export const copy = {
     issueFooter: "Found by Would This Win? {url}",
     panelNotes: "The panel also suggests",
   },
+  rejudge: {
+    oddsLabel: "Chance to win went from {from}% to {to}%.",
+    fixItems: "Last round's fix list",
+    resolved: "Resolved",
+    open: "Still open",
+    moved: "Scores that moved",
+  },
   // A re-review: the panel checks last round's fixes against what the team pushed since.
   iteration: {
     noChange: "Nothing in the diff does this yet.",
@@ -185,9 +192,9 @@ export const copy = {
     summary: "{commits} commit{cs}, {files} file{fs} changed. Last round: {odds}%.",
     previous: "See the last review",
     again: {
-      heading: "Fixed something? Get a re-review.",
+      heading: "Fixed something? Get re-judged.",
       body: "Push your fixes to GitHub, then ask the panel to look again. They check each fix against what you pushed, and acting on their feedback is worth up to 12 points. It counts as one of your sessions today.",
-      button: "Ask for a re-review",
+      button: "Re-judge",
       busy: "Finding the panel…",
     },
   },

@@ -6,6 +6,8 @@ import { cn } from "cn";
 import { copy, fill } from "@/lib/copy";
 import type { FixStatus } from "@/lib/odds";
 import type { Iteration } from "@/lib/recheck";
+import type { RejudgeDelta } from "@/lib/rejudge";
+import { RejudgeSummary } from "./rejudge-delta";
 import { reviewPath } from "@/lib/site";
 import { ICON } from "./review-parts";
 
@@ -18,7 +20,7 @@ const FIX: Record<FixStatus, { Icon: typeof CircleCheck; color: string }> = {
 const plural = (n: number) => (n === 1 ? "" : "s");
 
 /** A re-review's headline: what the panel asked for last round, and what the diff shows. */
-export function SinceLast({ it }: { it: Iteration }) {
+export function SinceLast({ it, delta }: { it: Iteration; delta: RejudgeDelta | null }) {
   const c = copy.iteration;
   return (
     <section aria-labelledby="since" className="rounded-panel border border-border bg-surface">
@@ -34,6 +36,7 @@ export function SinceLast({ it }: { it: Iteration }) {
           {c.previous}
         </Link>
       </header>
+      {delta && <RejudgeSummary delta={delta} />}
       <p className="label-mono border-b border-border px-5 py-3 tabular-nums">
         {fill(c.summary, {
           commits: it.commits,

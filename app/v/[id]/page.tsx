@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { OddsDelta } from "@/components/review/rejudge-delta";
 import { projectName } from "@/components/review/review-parts";
 import { ShareLinks } from "@/components/share/share-links";
 import { VerdictSummary } from "@/components/share/verdict-summary";
@@ -49,7 +50,10 @@ async function Verdict({ params }: { params: PageProps<"/v/[id]">["params"] }) {
     <div className="flex min-h-dvh flex-col">
       <SiteHeader repo={review.repo} />
       <main id="main" tabIndex={-1} className="page-x flex-1 pb-16 lg:pb-20">
-        <VerdictSummary review={review} />
+        <VerdictSummary
+          review={review}
+          delta={review.iteration && <OddsDelta from={review.iteration.previousOdds} to={review.odds} className="mt-2 text-[17px] lg:justify-end" />}
+        />
         <ShareLinks review={review} className="mt-12" />
         <div className="mt-16 flex flex-col gap-6 border-t border-border pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[20px] leading-snug font-bold">{copy.review.yours}</p>
