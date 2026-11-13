@@ -14,6 +14,7 @@ import {
 import { displayTree } from "./file-tree";
 import type { Iteration } from "./recheck";
 import { reviewOf, type Review } from "./review";
+import { DEFAULT_RUBRIC, aggregate, rubricDelta, type Rubric, type ScoredCriterion } from "./rubric";
 import type { Source } from "./sources";
 import {
   type ClaimStatus,
@@ -63,6 +64,8 @@ export type Claim = {
   searched: string[];
   /** Backed and mocked claims: a line (at most 120 characters) found verbatim in `file`. */
   quote?: string | null;
+  /** The line `quote` is on, at the scanned commit. */
+  line?: number | null;
 };
 
 /** What the scan measured in code, beside the claims. */
@@ -73,6 +76,8 @@ export type ScanSignals = {
   bulkFirstCommit: boolean;
   /** A re-review: what the panel found checking last round's fixes against the diff. */
   iteration?: Iteration;
+  /** The commit the scan read. Evidence links point at files at exactly this commit. */
+  commit?: string;
 };
 
 export type Question = {
@@ -123,6 +128,8 @@ export type Panel = {
   oneLiner: string;
   fixes: string[];
   reviews: Record<Judge, JudgeReview>;
+  /** The rubric, scored. Panels written before rubrics existed have none. */
+  criteria?: ScoredCriterion[];
 };
 
 export type SessionState = {
@@ -367,12 +374,20 @@ export function settleAnswer(
   return ok({ ...s, answers, events: [...s.events, event] });
 }
 
-/** Stores the deliberation, once, during act 3. */
-export function applyPanel(s: SessionState, panel: Panel): Result {
+/**
+ * Stores the deliberation, once, during act 3, and with it the rubric's one odds event
+ * (lib/rubric.ts rubricDelta): the weighted score, mapped into a bounded move.
+ */
+export function applyPanel(s: SessionState, panel: Panel, rubric: Rubric = DEFAULT_RUBRIC): Result {
   if (s.act !== "deliberation") return fail("wrongAct");
   if (s.panel !== null) return fail("alreadyDeliberated");
+  const events = [...s.events];
+  if (panel.criteria?.length) {
+    const agg = aggregate(panel.criteria, rubric);
+    events.push(makeEvent(events, { act: 3, kind: "rubric", rawDelta: rubricDelta(agg), reason: fill(copy.odds.rubric, { score: agg }) }));
+  }
   // The file contents were only needed to write the review; comments keep their own excerpts.
-  return ok({ ...s, panel, sources: [] });
+  return ok({ ...s, panel, events, sources: [] });
 }
 
 export type Verdict = {
@@ -459,6 +474,6 @@ export function toView(s: SessionState, now: number): SessionView {
     lifelineAvailable: s.act === "grilling" && !lifelineUsed(s),
     panel: at >= ACTS.indexOf("deliberation") ? s.panel : null,
     verdict: at >= ACTS.indexOf("verdict") ? verdictOf(s) : null,
-    review: at >= ACTS.indexOf("verdict") ? reviewOf(s) : null,
+    review: at >= ACTS.indexOf("verdict") ? reviewOf(s, "owner") : null,
   };
 }

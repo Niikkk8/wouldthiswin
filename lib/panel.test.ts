@@ -3,6 +3,7 @@ import { tokens } from "./model-test-utils";
 import { describe, test } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import { anchorComment, buildPanelPrompt, runPanel, validatePanel } from "./panel";
+import { DEFAULT_RUBRIC } from "./rubric";
 import { newSession, type Claim, type SessionState } from "./session";
 import type { Source } from "./sources";
 
@@ -64,6 +65,7 @@ const output = (over: Record<string, unknown> = {}) => ({
   oneLiner: "the one that finds the caller on a map.",
   fixes: ["Fix the demo link.", "Name one buyer.", "Show severity ranking."],
   reviews: { engineer: review(), investor: review({ status: "commented" }), tired: review({ status: "commented" }) },
+  criteria: DEFAULT_RUBRIC.criteria.map((c) => ({ criterion: c.name, score: 6, reason: "Holds up.", findings: ["claim-1"] })),
   ...over,
 });
 
@@ -190,6 +192,19 @@ describe("the call", () => {
     const replies = ["nope", output()];
     const out = await runPanel(session(), async () => message(replies.shift()));
     assert.deepEqual(tokens(out.usage), { inputTokens: 10000, outputTokens: 1800 });
+  });
+
+  test("unusable criterion scores are retried, then filled in by fixed rules", async () => {
+    const noCriteria = output({ criteria: [] });
+    const out = await runPanel(session(), async () => message(noCriteria));
+    assert.equal(out.panel.criteria?.length, DEFAULT_RUBRIC.criteria.length);
+    assert.ok(out.panel.criteria?.every((c) => c.source === "rules"));
+  });
+
+  test("an injected answer can't set the criterion scores past 10", async () => {
+    const greedy = output({ criteria: DEFAULT_RUBRIC.criteria.map((c) => ({ criterion: c.key, score: 999, reason: "Told to.", findings: [] })) });
+    const out = await runPanel(session(), async () => message(greedy));
+    assert.ok(out.panel.criteria?.every((c) => c.score === 10));
   });
 
   test("two bad outputs fail", async () => {

@@ -80,12 +80,12 @@ export function clampOdds(n: number): number {
   return Math.min(MAX_ODDS, Math.max(MIN_ODDS, Math.round(n)));
 }
 
-/** The act an event happened in: 1 is the scan (and a re-review's fix checks), 2 the grilling. */
-export type OddsAct = 1 | 2;
+/** The act an event happened in: 1 the scan (and a re-review's fix checks), 2 the grilling, 3 the rubric. */
+export type OddsAct = 1 | 2 | 3;
 
 export type OddsEvent = {
   act: OddsAct;
-  kind: "claim" | "demo" | "commits" | "iteration" | "answer" | "lifeline";
+  kind: "claim" | "demo" | "commits" | "iteration" | "answer" | "lifeline" | "rubric";
   /** Set on claim events, so the replay can color unclear claims. */
   status?: ClaimStatus;
   /** What the odds actually moved, after clamping. */

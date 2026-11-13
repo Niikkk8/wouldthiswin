@@ -6,7 +6,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import { SwampedError } from "./anthropic-retry";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import { copy } from "./copy";
+import { findingsOf } from "./findings";
 import { anyCoreMissing, currentOdds, tierFor } from "./odds";
+import { DEFAULT_RUBRIC, ModelCriterion, fallbackCriteria, sheetOf, validateCriteria, type Rubric } from "./rubric";
 import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
 import { MODEL } from "./scan";
 import { normalizePath } from "./scan-validate";
@@ -38,6 +41,7 @@ export const PanelOutput = z.object({
   oneLiner: z.string(),
   fixes: z.array(z.string()),
   reviews: z.object({ engineer: ModelReview, investor: ModelReview, tired: ModelReview }),
+  criteria: z.array(ModelCriterion),
 });
 
 const SYSTEM = `You are a hackathon judging panel of three, deliberating after the questions, then writing a pull-request style review of the project.
@@ -58,9 +62,19 @@ Write:
 - reviews: one per judge.
   - status: "approved", "changes_requested" or "commented". Each judge decides from their own angle.
   - file and excerpt: a file from the <untrusted_file> tags, and 1 to 6 consecutive lines copied character for character from it, that your comment is about. Copy exactly, including indentation.
-  - comment: the review comment on that excerpt, in that judge's voice, under 30 words.`;
+  - comment: the review comment on that excerpt, in that judge's voice, under 30 words.
+- criteria: one entry per rubric criterion listed in the message, by its key.
+  - score: an integer from 0 to 10 for this project on that criterion alone. 5 is an ordinary hackathon entry.
+  - reason: one plain sentence under 25 words saying why, from the findings and answers. Describe the evidence, never the people.
+  - findings: the ids of up to 4 findings the score rests on, copied exactly from the findings list. Empty if none apply.`;
 
 const esc = (s: string) => s.replace(/<\/?\s*untrusted_\w*[^>]*>/gi, "[tag removed]");
+
+/** The findings, by id, in evidence words: what the criteria may cite. */
+function findingLines(s: SessionState): string {
+  const lines = findingsOf(s).map((f) => `- ${f.id} [${f.outcome}]: ${esc(f.title)}. ${esc(f.detail)}`);
+  return lines.join("\n") || "(none)";
+}
 
 const FINDING = {
   backed: "found in the code",
@@ -71,7 +85,7 @@ const FINDING = {
 
 const DEMO = { loads: "a live demo loads", video: "a demo video plays", dead: "the demo link is dead", none: "no demo link given" };
 
-export function buildPanelPrompt(s: SessionState): { system: string; user: string } {
+export function buildPanelPrompt(s: SessionState, rubric: Rubric = DEFAULT_RUBRIC): { system: string; user: string } {
   const odds = currentOdds(s.events);
   const claims = (s.claims ?? [])
     .map((c) => `- ${c.weight}: ${esc(c.claim)}. ${FINDING[c.status]}: ${esc(c.evidence)}${c.file ? ` (${c.file})` : ""}`)
@@ -105,6 +119,8 @@ export function buildPanelPrompt(s: SessionState): { system: string; user: strin
     ...(iteration ? [iteration] : []),
     `The questions and answers:\n\n${qa}`,
     files.length ? `Files the scan read:\n\n${files.join("\n\n")}` : "No files could be read, so set every review's file and excerpt to null.",
+    `Findings (cite these ids in criteria):\n${findingLines(s)}`,
+    `Rubric:\n${rubric.criteria.map((c) => `- ${c.key} (${c.name}, weight ${c.weight}): ${esc(c.description)}`).join("\n")}`,
     "Deliberate, then write the review.",
   ].join("\n\n");
   return { system: SYSTEM, user };
@@ -152,7 +168,13 @@ export type PanelCheck = { ok: true; panel: Panel; dropped: number } | { ok: fal
  * - A comment must quote a read file verbatim, or it's dropped (the status stays).
  * - If any core claim is missing from the code, the Engineer requests changes.
  */
-export function validatePanel(output: unknown, s: SessionState): PanelCheck {
+export function validatePanel(
+  output: unknown,
+  s: SessionState,
+  rubric: Rubric = DEFAULT_RUBRIC,
+  /** On the last attempt, unusable criterion scores fall back to fixed rules instead of failing. */
+  { fallback = false }: { fallback?: boolean } = {},
+): PanelCheck {
   const parsed = PanelOutput.safeParse(output);
   if (!parsed.success) return { ok: false, reason: "shape" };
   const p = parsed.data;
@@ -183,7 +205,12 @@ export function validatePanel(output: unknown, s: SessionState): PanelCheck {
     reviews[judge] = { status, comment };
   }
 
-  return { ok: true, panel: { chat, oneLiner, fixes, reviews }, dropped };
+  const ids = new Set(findingsOf(s).map((f) => f.id));
+  const scored = validateCriteria(p.criteria, rubric, ids);
+  if (!scored && !fallback) return { ok: false, reason: "criteria" };
+  const criteria = scored ?? fallbackCriteria(rubric, sheetOf(s), copy.review.rubric.fallback);
+
+  return { ok: true, panel: { chat, oneLiner, fixes, reviews, criteria }, dropped };
 }
 
 export class PanelError extends Error {
@@ -209,8 +236,9 @@ const defaultCall: Call = (system, user) =>
 export async function runPanel(
   s: SessionState,
   call: Call = defaultCall,
+  rubric: Rubric = DEFAULT_RUBRIC,
 ): Promise<{ panel: Panel; usage: Usage; dropped: number }> {
-  const { system, user } = buildPanelPrompt(s);
+  const { system, user } = buildPanelPrompt(s, rubric);
   const usage = newUsage();
   let lastError = "unknown";
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -232,7 +260,7 @@ export async function runPanel(
       lastError = `invalid JSON (stop_reason=${res.stop_reason})`;
       continue;
     }
-    const checked = validatePanel(json, s);
+    const checked = validatePanel(json, s, rubric, { fallback: attempt === 2 });
     if (checked.ok) return { panel: checked.panel, usage, dropped: checked.dropped };
     lastError = checked.reason;
   }

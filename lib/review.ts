@@ -4,7 +4,8 @@
 import { copy, fill } from "./copy";
 import { START_ODDS, anyCoreMissing, currentOdds, readyToWin, tierFor, type Tier } from "./odds";
 import type { Iteration } from "./recheck";
-import { sheetOf, type Criterion } from "./rubric";
+import { findingsOf, type Finding } from "./findings";
+import { DEFAULT_RUBRIC, aggregate, rubricDelta, sheetOf, type Criterion, type Rubric, type RubricCriterion, type ScoredCriterion } from "./rubric";
 import type { Judge, ReviewComment, ReviewStatus, SessionState } from "./session";
 
 export type CheckStatus = "passed" | "failed" | "warning";
@@ -31,7 +32,34 @@ export type Review = {
   sheet: Criterion[];
   /** A re-review: last round's fixes, checked against the diff. Null on a first review. */
   iteration: Iteration | null;
+  /** Everything found, with evidence. Only public findings ever reach a public review. */
+  findings: Finding[];
+  /** The scored rubric. Null for reviews written before rubrics existed. */
+  rubric: RubricView | null;
+  /** The commit the scan read: evidence links point here. */
+  commit: string | null;
 };
+
+export type RubricView = {
+  criteria: (RubricCriterion & ScoredCriterion)[];
+  /** The weighted score, 0 to 10. */
+  aggregate: number;
+  /** What it moved the odds by (lib/rubric.ts rubricDelta). */
+  delta: number;
+};
+
+/** Who's looking: the owner sees everything; anyone else sees public findings only. */
+export type Audience = "owner" | "public";
+
+function rubricView(criteria: ScoredCriterion[] | undefined, rubric: Rubric, visible: ReadonlySet<string>): RubricView | null {
+  if (!criteria?.length) return null;
+  const merged = rubric.criteria.flatMap((c) => {
+    const s = criteria.find((x) => x.key === c.key);
+    return s ? [{ ...c, ...s, findings: s.findings.filter((id) => visible.has(id)) }] : [];
+  });
+  const agg = aggregate(criteria, rubric);
+  return { criteria: merged, aggregate: agg, delta: rubricDelta(agg) };
+}
 
 /** Reviewers in the order they asked. */
 export const REVIEW_ORDER: readonly Judge[] = ["tired", "investor", "engineer"];
@@ -81,7 +109,7 @@ export function summaryLine(summary: Record<CheckStatus, number>): string {
 }
 
 /** The review, once the panel has deliberated. Null before that. */
-export function reviewOf(s: SessionState): Review | null {
+export function reviewOf(s: SessionState, audience: Audience = "public", rubric: Rubric = DEFAULT_RUBRIC): Review | null {
   const panel = s.panel;
   if (!panel || !panel.reviews) return null;
   const odds = currentOdds(s.events);
@@ -89,6 +117,8 @@ export function reviewOf(s: SessionState): Review | null {
   const summary = { passed: 0, failed: 0, warning: 0 };
   for (const c of checks) summary[c.status]++;
   const missing = anyCoreMissing(s.claims ?? []);
+  const all = findingsOf(s);
+  const findings = audience === "owner" ? all : all.filter((f) => f.visibility === "public");
   return {
     id: s.id,
     repo: s.repo,
@@ -111,5 +141,8 @@ export function reviewOf(s: SessionState): Review | null {
     spark: [START_ODDS, ...s.events.map((e) => e.after)],
     sheet: sheetOf(s),
     iteration: s.signals?.iteration ?? null,
+    findings,
+    rubric: rubricView(panel.criteria, rubric, new Set(findings.map((f) => f.id))),
+    commit: s.signals?.commit ?? null,
   };
 }

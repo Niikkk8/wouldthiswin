@@ -1,23 +1,19 @@
 "use client";
 
-import { Circle, CircleAlert, CircleCheck, CircleDot, CircleX, GitPullRequest, MessageSquare } from "lucide-react";
-import Link from "next/link";
-import { motion } from "motion/react";
-import { createContext, useContext, useId, useState } from "react";
+import { CircleAlert, CircleCheck, CircleX, MessageSquare } from "lucide-react";
+import { useId, useState } from "react";
 import { cn } from "cn";
 import { Avatar } from "@/components/session/deliberation-act";
 import { Checkbox } from "@/components/ui/checkbox";
 import { copy, fill } from "@/lib/copy";
-import { EASE } from "@/lib/motion";
 import { summaryLine, type CheckStatus, type Review } from "@/lib/review";
-import type { FixStatus } from "@/lib/odds";
-import type { Iteration } from "@/lib/recheck";
-import type { Criterion } from "@/lib/rubric";
 import type { ReviewStatus } from "@/lib/session";
-import { reviewPath } from "@/lib/site";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { JudgingSheet } from "./judging-sheet";
+import { ICON, Lines, Rise, StatusPill, Still, projectName } from "./review-parts";
+import { RubricBreakdown } from "./rubric-breakdown";
+import { SinceLast } from "./since-last";
 
-const ICON = 1.75;
+export { StatusPill };
 
 const CHECK: Record<CheckStatus, { Icon: typeof CircleCheck; color: string }> = {
   passed: { Icon: CircleCheck, color: "text-gain" },
@@ -30,62 +26,6 @@ const REVIEWER: Record<ReviewStatus, { Icon: typeof CircleCheck; color: string }
   changesRequested: { Icon: CircleX, color: "text-loss" },
   commented: { Icon: MessageSquare, color: "text-text-muted" },
 };
-
-const projectName = (repo: string) => repo.split("/").pop() ?? repo;
-
-/** A review shown as a still: no entrance, so its text is visible in the server HTML. */
-const Still = createContext(false);
-
-/** Fades and rises once; under reduced motion, a plain 200ms crossfade. */
-function Rise({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const reduce = useReducedMotion();
-  const still = useContext(Still);
-  if (still) return <div className={className}>{children}</div>;
-  return (
-    <motion.div
-      className={className}
-      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: reduce ? 0.2 : 0.4, ease: EASE, delay: reduce ? 0 : delay }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-export function StatusPill({ ready, className }: { ready: boolean; className?: string }) {
-  const Icon = ready ? GitPullRequest : CircleX;
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[13px] font-medium",
-        ready ? "bg-gain text-bg" : "bg-loss text-bg",
-        className,
-      )}
-    >
-      <Icon aria-hidden size={15} strokeWidth={ICON} />
-      {ready ? copy.review.ready : copy.review.changes}
-    </span>
-  );
-}
-
-function Lines({ start, excerpt }: { start: number; excerpt: string }) {
-  const lines = excerpt.split("\n");
-  return (
-    <pre className="overflow-x-auto bg-bg py-3 font-mono text-[13px] leading-[1.6]">
-      <code className="grid min-w-fit">
-        {lines.map((l, i) => (
-          <span key={i} className="grid grid-cols-[48px_1fr]">
-            <span aria-hidden className="pr-4 text-right text-text-subtle select-none">
-              {start + i}
-            </span>
-            <span className="pr-4 whitespace-pre text-text-muted">{l || " "}</span>
-          </span>
-        ))}
-      </code>
-    </pre>
-  );
-}
 
 function Fixes({ fixes }: { fixes: string[] }) {
   const [done, setDone] = useState<boolean[]>(() => fixes.map(() => false));
@@ -106,128 +46,6 @@ function Fixes({ fixes }: { fixes: string[] }) {
         </li>
       ))}
     </ul>
-  );
-}
-
-const FIX: Record<FixStatus, { Icon: typeof CircleCheck; color: string }> = {
-  addressed: { Icon: CircleCheck, color: "text-gain" },
-  partly: { Icon: CircleDot, color: "text-unclear" },
-  untouched: { Icon: Circle, color: "text-text-subtle" },
-};
-
-const plural = (n: number) => (n === 1 ? "" : "s");
-
-/** A re-review's headline: what the panel asked for last round, and what the diff shows. */
-function SinceLast({ it }: { it: Iteration }) {
-  const c = copy.iteration;
-  return (
-    <section aria-labelledby="since" className="rounded-panel border border-border bg-surface">
-      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-4">
-        <h2 id="since" className="flex items-baseline gap-3 text-[17px] font-bold">
-          {c.heading}
-          {it.round && <span className="font-mono text-[12px] font-medium text-gain uppercase">{fill(c.round, { n: it.round })}</span>}
-        </h2>
-        <Link
-          href={reviewPath(it.previousId)}
-          className="font-mono text-[13px] text-text-muted underline decoration-1 underline-offset-4 transition-colors hover:text-text"
-        >
-          {c.previous}
-        </Link>
-      </header>
-      <p className="label-mono border-b border-border px-5 py-3 tabular-nums">
-        {fill(c.summary, {
-          commits: it.commits,
-          cs: plural(it.commits),
-          files: it.filesChanged,
-          fs: plural(it.filesChanged),
-          odds: it.previousOdds,
-        })}
-      </p>
-      <ul>
-        {it.fixes.map((f, i) => {
-          const { Icon, color } = FIX[f.status];
-          return (
-            <li key={i} className="grid grid-cols-[20px_minmax(0,1fr)] gap-x-3 border-b border-border px-5 py-3.5 last:border-0">
-              <Icon aria-hidden size={18} strokeWidth={ICON} className={cn("mt-0.5", color)} />
-              <div className="min-w-0">
-                <p className="text-[16px] leading-snug font-semibold text-pretty">
-                  <span className={cn("mr-2 font-mono text-[12px] font-medium uppercase", color)}>{c.status[f.status]}</span>
-                  {f.fix}
-                </p>
-                <p className="mt-0.5 text-[14px] leading-snug text-text-subtle">{f.note}</p>
-                {f.file && f.quote && (
-                  <div className="mt-2 overflow-x-auto rounded-control bg-bg px-3 py-2 font-mono text-[12px] text-text-muted">
-                    <p className="text-text-subtle">{f.file}</p>
-                    <p className="whitespace-pre">
-                      <span aria-hidden className="text-gain">+ </span>
-                      {f.quote}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-const JUDGE_OF: Partial<Record<Criterion["key"], keyof typeof copy.judges>> = {
-  impact: "investor",
-  pitch: "tired",
-  defense: "engineer",
-};
-
-/** The judging sheet: 1 to 5 per criterion, each with the rule it came from. */
-function Sheet({ sheet }: { sheet: Criterion[] }) {
-  const s = copy.review.sheet;
-  return (
-    <section aria-labelledby="sheet" className="rounded-panel border border-border bg-surface">
-      <header className="border-b border-border px-5 py-4">
-        <h2 id="sheet" className="text-[17px] font-bold">
-          {s.heading}
-        </h2>
-        <p className="mt-1 text-[14px] leading-snug text-text-subtle text-pretty">{s.note}</p>
-      </header>
-      <ul>
-        {sheet.map((c) => {
-          const judge = JUDGE_OF[c.key];
-          const basis = fill(s.basis[c.basis], {
-            ...(c.values ?? {}),
-            ...(judge ? { judge: copy.judges[judge].name } : {}),
-          });
-          return (
-            <li
-              key={c.key}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-b border-border px-5 py-3.5 last:border-0"
-            >
-              <div className="min-w-0">
-                <p className="text-[16px] leading-snug font-semibold">{s.criteria[c.key]}</p>
-                <p className="mt-0.5 text-[14px] leading-snug text-text-subtle">{basis}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span aria-hidden className="flex gap-1">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <span
-                      key={i}
-                      className={cn(
-                        "h-2 w-4 rounded-full",
-                        i < c.score ? (c.score >= 4 ? "bg-gain" : c.score === 3 ? "bg-unclear" : "bg-loss") : "bg-border-strong",
-                      )}
-                    />
-                  ))}
-                </span>
-                <span className="w-8 text-right font-mono text-[14px] tabular-nums">
-                  <span className="sr-only">{fill(s.score, { n: c.score })}</span>
-                  <span aria-hidden>{c.score}/5</span>
-                </span>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }
 
@@ -327,10 +145,16 @@ export function ReviewView({ review, still = false }: { review: Review; still?: 
             </section>
           </Rise>
 
-          {r.sheet && (
+          {r.rubric ? (
             <Rise delay={0.37}>
-              <Sheet sheet={r.sheet} />
+              <RubricBreakdown rubric={r.rubric} findings={r.findings} repo={r.repo} commit={r.commit} />
             </Rise>
+          ) : (
+            r.sheet && (
+              <Rise delay={0.37}>
+                <JudgingSheet sheet={r.sheet} />
+              </Rise>
+            )
           )}
 
           <Rise delay={0.4}>

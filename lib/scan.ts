@@ -308,6 +308,7 @@ export async function scanRepo(
       signals: {
         demo: given ?? auto,
         bulkFirstCommit: firstCommitAddedOver70Pct,
+        commit: raw.latestSha,
       },
       files: raw.headFilePaths.slice(0, STORED_FILES),
       sources: model.sources,

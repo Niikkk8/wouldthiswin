@@ -50,3 +50,13 @@ test("the demo transport plays a whole session without touching the network", as
     globalThis.fetch = real;
   }
 });
+
+test("the sample review carries its scored rubric, and a public review never a private finding", () => {
+  const s = demoState("verdict");
+  const owner = reviewOf({ ...s, signals: { ...s.signals!, bulkFirstCommit: true } }, "owner")!;
+  const pub = reviewOf({ ...s, signals: { ...s.signals!, bulkFirstCommit: true } }, "public")!;
+  assert.equal(owner.rubric?.criteria.length, 5);
+  assert.equal(owner.rubric?.delta, 0);
+  assert.ok(owner.findings.some((f) => f.visibility === "private"));
+  assert.ok(pub.findings.every((f) => f.visibility === "public"));
+});

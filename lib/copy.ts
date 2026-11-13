@@ -135,6 +135,22 @@ export const copy = {
     mockedIn: "Runs on mock or hardcoded data in {path}.",
     mockedLabel: "{claim}: runs on mock data",
   },
+  // Findings: what each one says, and the one-line fix. Evidence, never motives.
+  findings: {
+    demoChecked: "No demo link in the README, the repo's website field or the form.",
+    demoLoads: "The demo link answered.",
+    demoVideo: "The demo video is public and plays.",
+    demoDead: "The demo link didn't answer.",
+    bulkCommit: "Most of the code arrived in one commit. Judges sometimes ask about that, so be ready to explain your process.",
+    bulkCommitCheck: "The first commit added over 70% of today's files.",
+    fix: {
+      mocked: "Swap the stand-in data in {path} for the real source, or say in the README that it's demo data.",
+      unbacked: 'Build {missing}, or cut "{claim}" from the README until it exists.',
+      unclear: "Name the file that does this in the README, so a judge can find it.",
+      demoDead: "Redeploy the demo, or replace the link with one that loads.",
+      demoNone: "Deploy a demo, or link a two-minute video in the README.",
+    },
+  },
   // A re-review: the panel checks last round's fixes against what the team pushed since.
   iteration: {
     noChange: "Nothing in the diff does this yet.",
@@ -173,6 +189,7 @@ export const copy = {
     bulkFirstCommit: "Most of the code arrived in one commit.",
     late: "Answered after the buzzer",
     lifeline: "Took 30 more seconds",
+    rubric: "Judging sheet: {score} out of 10",
   },
   acts: {
     scan: {
@@ -376,6 +393,17 @@ export const copy = {
         notAsked: "Not asked.",
         fixes: "Of {total} fixes the panel asked for: {done} done, {started} started.",
       },
+    },
+    rubric: {
+      heading: "Judging sheet",
+      note: "Each criterion scored 0 to 10 by the panel, from the findings. Code checks every score and does the weighting.",
+      weight: "{n}%",
+      weightLabel: "{n}% of the score",
+      score: "{n} out of 10",
+      aggregate: "{n} out of 10, weighted",
+      why: "Why",
+      noEvidence: "No single finding; from the answers.",
+      fallback: "Scored by fixed rules: the panel's own scores didn't hold up this time.",
     },
     yours: "Would yours win?",
     yoursCta: "Face the panel",

@@ -65,6 +65,18 @@ export function quotedIn(text: string, quote: string): boolean {
   return q.length > 0 && squash(text).includes(q);
 }
 
+/**
+ * The 1-based line a quote sits on, matched the way quotedIn matches (any run of whitespace
+ * equals any other). Null when the quote spans lines or can't be placed.
+ */
+export function lineOf(text: string, quote: string): number | null {
+  const squash = (s: string) => s.replace(/\s+/g, " ").trim();
+  const q = squash(quote);
+  if (!q) return null;
+  const i = text.split(/\r?\n/).findIndex((l) => squash(l).includes(q));
+  return i >= 0 ? i + 1 : null;
+}
+
 export type Candidate = { claim: string; weight: ClaimWeight; candidates: string[] };
 
 export type ClaimsCheck =
@@ -206,6 +218,7 @@ export function validateVerify(
         missing: null,
         searched: [],
         quote,
+        line: lineOf(text, quote),
       };
     }
 
@@ -223,7 +236,7 @@ export function validateVerify(
       // The model's own evidence says "partly" but its status says "backed": take the weaker one.
       if (/^partly\b/i.test(modelEvidence)) {
         downgraded++;
-        return { ...unclear(modelEvidence, file), quote };
+        return { ...unclear(modelEvidence, file), quote, line: lineOf(text, quote) };
       }
       return {
         claim: c.claim,
@@ -235,6 +248,7 @@ export function validateVerify(
         missing: null,
         searched: [],
         quote,
+        line: lineOf(text, quote),
       };
     }
 

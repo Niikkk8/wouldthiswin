@@ -41,6 +41,7 @@ export const DEMO_SCAN: Scan = {
       missing: null,
       searched: [],
       quote: "export async function joinQueue(clinicId: string, name: string) {",
+      line: 3,
     },
     {
       claim: "SMS alerts when your turn is close",
@@ -141,6 +142,14 @@ export const DEMO_PANEL: Panel = {
     { judge: "tired", text: "they explained the stack when i asked what it is. classic." },
   ],
   oneLiner: "the one that put the waiting room on a QR code",
+  // Weighted to 5.1 of 10: a middling sheet, so the rubric leaves the odds at 37.
+  criteria: [
+    { key: "technical", score: 4, reason: "Joining the queue is real; the SMS alert and offline mode aren't in the code yet.", findings: ["claim-1", "claim-2"], source: "panel" },
+    { key: "demo", score: 7, reason: "The demo loads and the QR join works on it.", findings: ["demo"], source: "panel" },
+    { key: "impact", score: 5, reason: "Clinics paying per location is a real buyer, but there's no pilot yet.", findings: [], source: "panel" },
+    { key: "pitch", score: 4, reason: "Asked what it is, they described the stack instead of the waiting room.", findings: [], source: "panel" },
+    { key: "defense", score: 6, reason: "They owned the missing SMS and said what they'd wire next.", findings: ["claim-2"], source: "panel" },
+  ],
   fixes: [
     "Wire Twilio into onTurnClose in server/notify.ts and demo a real text.",
     "Replace the flat six minutes in estimateWait with the clinic's real pace.",
