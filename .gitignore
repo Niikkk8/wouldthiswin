@@ -70,3 +70,7 @@ next-env.d.ts
 /video/audio/voice/takes/*.wav
 /video/.claude/skills/
 /video/.agents/
+
+# agent scratch and local tooling
+.agent/
+.claude/
