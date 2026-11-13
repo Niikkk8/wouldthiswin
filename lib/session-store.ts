@@ -477,6 +477,25 @@ export async function loadPublicReview(id: string): Promise<Review | null> {
   });
 }
 
+/**
+ * A repo's latest shareable verdict, for its README badge: the newest finished session on that
+ * repo whose owner made it shareable. Null when there's none.
+ */
+export async function loadLatestShareable(repo: string): Promise<{ id: string; odds: number } | null> {
+  const { data, error } = await db()
+    .from("sessions")
+    .select("id, events")
+    .eq("repo", repo)
+    .eq("shareable", true)
+    .in("act", ["verdict", "share"])
+    .not("panel", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string; events: Row["events"] }>();
+  if (error) throw error;
+  return data ? { id: data.id, odds: currentOdds(data.events) } : null;
+}
+
 /** True if this browser started the session. */
 export async function isOwner(id: string): Promise<boolean> {
   const owner = await ownerHash();

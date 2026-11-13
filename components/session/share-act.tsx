@@ -18,8 +18,6 @@ import type { SessionView } from "@/lib/session";
 import { logShare } from "@/lib/share-events";
 import {
   SITE_URL,
-  badgeMarkdown,
-  badgePath,
   captionFor,
   imageFileName,
   imagePath,
@@ -28,6 +26,7 @@ import {
   shareText,
 } from "@/lib/site";
 import { useDesktop } from "@/lib/use-desktop";
+import { BadgeSnippet } from "@/components/share/badge-snippet";
 import { ShareLinks } from "@/components/share/share-links";
 import { VisibilityPanel } from "@/components/share/visibility-panel";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
@@ -271,10 +270,7 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
               {shared && (
                 <>
                   <Field label={S.link} note={S.linkNote} value={reviewUrl(r.id)} />
-                  <Field label={S.badge} note={S.badgeNote} value={badgeMarkdown(r.id)}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={badgePath(r.id)} alt={`would this win: ${r.odds}% ${copy.tiers[r.tier]}`} height={20} className="mt-3 h-5 w-auto" />
-                  </Field>
+                  <BadgeSnippet repo={r.repo} id={r.id} />
                 </>
               )}
             </>

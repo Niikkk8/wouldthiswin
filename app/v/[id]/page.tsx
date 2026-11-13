@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { OddsDelta } from "@/components/review/rejudge-delta";
 import { projectName } from "@/components/review/review-parts";
+import { BadgeSnippet } from "@/components/share/badge-snippet";
 import { ShareLinks } from "@/components/share/share-links";
 import { VerdictSummary } from "@/components/share/verdict-summary";
 import { SiteFooter } from "@/components/site-footer";
@@ -55,6 +56,7 @@ async function Verdict({ params }: { params: PageProps<"/v/[id]">["params"] }) {
           delta={review.iteration && <OddsDelta from={review.iteration.previousOdds} to={review.odds} className="mt-2 text-[17px] lg:justify-end" />}
         />
         <ShareLinks review={review} className="mt-12" />
+        <BadgeSnippet repo={review.repo} id={review.id} className="mt-12 max-w-[720px]" />
         <div className="mt-16 flex flex-col gap-6 border-t border-border pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[20px] leading-snug font-bold">{copy.review.yours}</p>
           <Link href="/" className={buttonVariants({ className: "w-full sm:w-auto" })}>
