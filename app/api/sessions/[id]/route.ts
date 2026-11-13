@@ -16,6 +16,7 @@ import { runSessionScan } from "@/lib/run-scan";
 import type { Emit } from "@/lib/scan-progress";
 import { scoreAnswer } from "@/lib/answer-score";
 import { PanelError, runPanel } from "@/lib/panel";
+import { errorText, log } from "@/lib/log";
 import {
   addUsage,
   claimPanel,
@@ -83,28 +84,20 @@ async function deliberate(id: string, owner: string | null): Promise<Deliberatio
   if (s.act !== "deliberation" || s.panel !== null) return { kind: "done", session: s };
   // Failed deliberations can be retried; past the session's budget they stop costing.
   if (overBudget(loaded.spent)) {
-    console.error(JSON.stringify({ event: "panel.over_budget", id, ...loaded.spent }));
+    log.error("panel.over_budget", { id, ...loaded.spent });
     return { kind: "failed", session: s, error: "judgeFailed" };
   }
   if (!(await claimPanel(id))) return { kind: "pending", session: s };
   try {
     const out = await runPanel(s);
     await addUsage(id, out.usage);
-    console.log(
-      JSON.stringify({
-        event: "panel.done",
-        id,
-        dropped: out.dropped,
-        input_tokens: out.usage.inputTokens,
-        output_tokens: out.usage.outputTokens,
-      }),
-    );
+    log.info("panel.done", { id, dropped: out.dropped, input_tokens: out.usage.inputTokens, output_tokens: out.usage.outputTokens });
     const r = await mutate(id, owner, (cur) => applyPanel(cur, out.panel));
     if (r.ok) return { kind: "done", session: r.session };
     return r.session ? { kind: "done", session: r.session } : { kind: "notFound" };
   } catch (err) {
     if (err instanceof PanelError) await addUsage(id, err.usage);
-    console.error(JSON.stringify({ event: "panel.failed", id, error: err instanceof Error ? err.message : String(err) }));
+    log.error("panel.failed", { id, error: errorText(err) });
     await releasePanel(id);
     return { kind: "failed", session: s, error: err instanceof PanelError && err.swamped ? "swamped" : "judgeFailed" };
   }
@@ -150,7 +143,7 @@ function streamScan(id: string, owner: string | null): Response {
       try {
         res = await scanResponse(id, owner, (p) => write({ type: "progress", event: p }));
       } catch (err) {
-        console.error(JSON.stringify({ event: "session.action.error", id, action: "scan", error: String(err) }));
+        log.error("session.action.error", { id, action: "scan", error: String(err) });
         res = fail("judgeFailed");
       }
       write({ type: "result", status: res.status, body: await res.json() });
@@ -217,14 +210,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
 
     return r.ok ? ok(r.session) : failMutation(r);
   } catch (err) {
-    console.error(
-      JSON.stringify({
-        event: "session.action.error",
-        id,
-        action: body.action,
-        error: err instanceof Error ? err.message : JSON.stringify(err),
-      }),
-    );
+    log.error("session.action.error", { id, action: body.action, error: err instanceof Error ? err.message : JSON.stringify(err) });
     return fail("judgeFailed");
   }
 }

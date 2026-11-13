@@ -5,7 +5,7 @@
 // Plus the two signals measured in code (demo link, first commit). The model never sets odds.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { SwampedError, withRetry } from "./anthropic-retry";
+import { SwampedError } from "./anthropic-retry";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { fetchSources, type RawRepoData } from "./github";
 import { parseDemoLink } from "./demo-link";
@@ -20,17 +20,18 @@ import {
 } from "./scan-validate";
 import type { Scan, ScanSignals } from "./session";
 import { computeSignals, findDemoUrl, npmDeps, pyDeps } from "./signals";
+import { log } from "./log";
+import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
+import { HAIKU } from "./pricing";
 import { noEmit, type Emit } from "./scan-progress";
 import { pickFiles, type Source } from "./sources";
 
-export const MODEL = "claude-haiku-5-5";
+export const MODEL = HAIKU;
 const MAX_TOKENS_A = 4000;
 const MAX_TOKENS_B = 8000; // adaptive thinking at low effort plus six verdicts and three questions
 const PROMPT_FILES = 250;
 const STORED_FILES = 3000;
 const README_CHARS = 6000;
-
-export type Usage = { inputTokens: number; outputTokens: number };
 
 export class ScanError extends Error {
   constructor(
@@ -169,23 +170,19 @@ export type Call = (
   step: "claims" | "verify",
 ) => Promise<Anthropic.Message>;
 
-let anthropic: Anthropic | null = null;
-const client = () => (anthropic ??= new Anthropic({ timeout: 40_000, maxRetries: 0 }));
 const claimsFormat = zodOutputFormat(ClaimsOutput);
 const verifyFormat = zodOutputFormat(VerifyOutput);
 
 const defaultCall: Call = (system, user, step) =>
-  withRetry(
-    () =>
-      client().messages.create({
-        model: MODEL,
-        max_tokens: step === "claims" ? MAX_TOKENS_A : MAX_TOKENS_B,
-        output_config: { effort: "low", format: step === "claims" ? claimsFormat : verifyFormat },
-        system,
-        messages: [{ role: "user", content: user }],
-      }),
-    `scan.${step}`,
-  );
+  createMessage({
+    model: MODEL,
+    step: `scan.${step}`,
+    system,
+    user,
+    maxTokens: step === "claims" ? MAX_TOKENS_A : MAX_TOKENS_B,
+    format: step === "claims" ? claimsFormat : verifyFormat,
+    timeoutMs: 40_000,
+  });
 
 /** One call, plus one retry if the output fails `check`. Tokens from every attempt count. */
 async function callChecked<T>(
@@ -193,36 +190,21 @@ async function callChecked<T>(
   prompt: { system: string; user: string },
   call: Call,
   usage: Usage,
-  repo: string,
   check: (json: unknown) => { ok: true; value: T } | { ok: false; reason: string },
 ): Promise<T> {
   let lastError = "unknown";
   for (let attempt = 1; attempt <= 2; attempt++) {
     let res: Anthropic.Message;
+    const started = Date.now();
     try {
       res = await call(prompt.system, prompt.user, step);
     } catch (err) {
       const msg = err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : String(err);
       throw new ScanError(`anthropic call failed (${step}): ${msg}`, usage, err instanceof SwampedError);
     }
-    usage.inputTokens += res.usage.input_tokens;
-    usage.outputTokens += res.usage.output_tokens;
-    console.log(
-      JSON.stringify({
-        event: "scan.call",
-        step,
-        repo,
-        attempt,
-        stop_reason: res.stop_reason,
-        input_tokens: res.usage.input_tokens,
-        output_tokens: res.usage.output_tokens,
-      }),
-    );
+    recordCall(usage, `scan.${step}`, MODEL, res, Date.now() - started);
     if (res.stop_reason === "refusal") throw new ScanError("model refused", usage);
-    const text = res.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
+    const text = textOf(res);
     let json: unknown;
     try {
       json = JSON.parse(text);
@@ -263,10 +245,10 @@ export async function runScanModel(
       fetchSources(raw.ref, raw.latestSha, paths, (path, phase, ok) =>
         emit(phase === "start" ? { type: "reading", path } : { type: "read", path, ok }),
       ));
-  const usage: Usage = { inputTokens: 0, outputTokens: 0 };
+  const usage = newUsage();
   const repo = raw.ref.url;
 
-  const a = await callChecked("claims", buildClaimsPrompt(raw), call, usage, repo, (json) => {
+  const a = await callChecked("claims", buildClaimsPrompt(raw), call, usage, (json) => {
     const r = validateClaims(json, raw.headFilePaths);
     return r.ok ? { ok: true, value: r } : r;
   });
@@ -278,12 +260,12 @@ export async function runScanModel(
     sources = await fetch(pickFiles(a.claims.map((c) => c.candidates)));
   } catch (err) {
     // Reading nothing is safe: no claim can then come back "unbacked".
-    console.warn(JSON.stringify({ event: "scan.sources.failed", repo, error: String(err) }));
+    log.warn("scan.sources.failed", { repo, error: String(err) });
     sources = [];
   }
 
   emit({ type: "checking", claims: a.claims.length });
-  const b = await callChecked("verify", buildVerifyPrompt(raw, a.claims, sources, deps.previous ?? null), call, usage, repo, (json) => {
+  const b = await callChecked("verify", buildVerifyPrompt(raw, a.claims, sources, deps.previous ?? null), call, usage, (json) => {
     const r = validateVerify(json, a.claims, sources);
     return r.ok ? { ok: true, value: r } : r;
   });
@@ -313,15 +295,12 @@ export async function scanRepo(
     opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
   ]);
   const { firstCommitAddedOver70Pct } = computeSignals(raw, null);
-  console.log(
-    JSON.stringify({
-      event: "scan.validated",
-      repo: raw.ref.url,
-      read: model.sources.length,
-      dropped: model.dropped,
-      downgraded: model.downgraded,
-    }),
-  );
+  log.info("scan.validated", {
+    repo: raw.ref.url,
+    read: model.sources.length,
+    dropped: model.dropped,
+    downgraded: model.downgraded,
+  });
   return {
     scan: {
       ...model.scan,

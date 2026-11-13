@@ -6,11 +6,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
-import { withRetry } from "./anthropic-retry";
 import { copy, fill } from "./copy";
 import type { Compare } from "./github";
 import type { FixStatus } from "./odds";
-import { MODEL, type Usage } from "./scan";
+import { log } from "./log";
+import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
+import { MODEL } from "./scan";
 import { normalizePath, quotedIn } from "./scan-validate";
 import { isReadablePath } from "./sources";
 import type { Claim } from "./session";
@@ -187,22 +188,10 @@ export function validateRecheck(output: unknown, diff: Compare, previous: Previo
 
 export type RecheckCall = (system: string, user: string) => Promise<Anthropic.Message>;
 
-let anthropic: Anthropic | null = null;
-const client = () => (anthropic ??= new Anthropic({ timeout: 30_000, maxRetries: 0 }));
 const outputFormat = zodOutputFormat(RecheckOutput);
 
 const defaultCall: RecheckCall = (system, user) =>
-  withRetry(
-    () =>
-      client().messages.create({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        output_config: { effort: "low", format: outputFormat },
-        system,
-        messages: [{ role: "user", content: user }],
-      }),
-    "recheck",
-  );
+  createMessage({ model: MODEL, step: "recheck", system, user, maxTokens: MAX_TOKENS, format: outputFormat, timeoutMs: 30_000 });
 
 /**
  * Checks last round's fixes against the diff. One retry on bad output. If the model can't
@@ -214,7 +203,7 @@ export async function recheckFixes(
   previous: PreviousReview,
   call: RecheckCall = defaultCall,
 ): Promise<{ iteration: Iteration; usage: Usage }> {
-  const usage: Usage = { inputTokens: 0, outputTokens: 0 };
+  const usage = newUsage();
   const base = {
     previousId: previous.id,
     previousOdds: previous.odds,
@@ -230,29 +219,17 @@ export async function recheckFixes(
   const { system, user } = buildRecheckPrompt(diff, previous);
   for (let attempt = 1; attempt <= 2; attempt++) {
     let res: Anthropic.Message;
+    const started = Date.now();
     try {
       res = await call(system, user);
     } catch (err) {
       const msg = err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : String(err);
-      console.error(JSON.stringify({ event: "recheck.error", attempt, error: msg }));
+      log.error("recheck.error", { attempt, error: msg });
       break;
     }
-    usage.inputTokens += res.usage.input_tokens;
-    usage.outputTokens += res.usage.output_tokens;
-    console.log(
-      JSON.stringify({
-        event: "recheck.call",
-        attempt,
-        stop_reason: res.stop_reason,
-        input_tokens: res.usage.input_tokens,
-        output_tokens: res.usage.output_tokens,
-      }),
-    );
+    recordCall(usage, "recheck", MODEL, res, Date.now() - started);
     if (res.stop_reason === "refusal") break;
-    const text = res.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
+    const text = textOf(res);
     let json: unknown;
     try {
       json = JSON.parse(text);

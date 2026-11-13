@@ -1,8 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export const IP_LIMIT_PER_24H = 3;
-
 let supabase: SupabaseClient | null = null;
 
 /** Server-only client using the service role key. Never import from client components. */
@@ -13,12 +11,6 @@ export function db(): SupabaseClient {
   if (!url || !key) throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set");
   supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   return supabase;
-}
-
-/** Sessions per UTC day, across everyone. */
-export function dailyCap(): number {
-  const n = Number.parseInt(process.env.DAILY_CAP ?? "", 10);
-  return Number.isFinite(n) && n >= 0 ? n : 50;
 }
 
 export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");

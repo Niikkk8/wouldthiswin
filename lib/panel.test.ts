@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { tokens } from "./model-test-utils";
 import { describe, test } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import { anchorComment, buildPanelPrompt, runPanel, validatePanel } from "./panel";
@@ -188,7 +189,7 @@ describe("the call", () => {
   test("bad output is retried once, tokens of both count", async () => {
     const replies = ["nope", output()];
     const out = await runPanel(session(), async () => message(replies.shift()));
-    assert.deepEqual(out.usage, { inputTokens: 10000, outputTokens: 1800 });
+    assert.deepEqual(tokens(out.usage), { inputTokens: 10000, outputTokens: 1800 });
   });
 
   test("two bad outputs fail", async () => {

@@ -45,7 +45,7 @@ export const copy = {
         "The panel remembers one sentence. Make sure it's yours.",
       ],
       play: "Play the full sample session",
-      playNote: "All four acts, sample data. Doesn't count toward your 3 a day.",
+      playNote: "All four acts, sample data. Doesn't count toward your sessions today.",
     },
     walkAway: {
       heading: "What you walk away with",
@@ -69,7 +69,7 @@ export const copy = {
       },
       cost: {
         q: "What does it cost?",
-        a: "Nothing. Three sessions a day each, so the judges stay awake for everyone.",
+        a: "Nothing. A few sessions a day each, so the judges stay awake for everyone.",
       },
     },
     final: "Your repo is next.",
@@ -147,7 +147,7 @@ export const copy = {
     previous: "See the last review",
     again: {
       heading: "Fixed something? Get a re-review.",
-      body: "Push your fixes to GitHub, then ask the panel to look again. They check each fix against what you pushed, and acting on their feedback is worth up to 12 points. It counts as one of your 3 sessions today.",
+      body: "Push your fixes to GitHub, then ask the panel to look again. They check each fix against what you pushed, and acting on their feedback is worth up to 12 points. It counts as one of your sessions today.",
       button: "Ask for a re-review",
       busy: "Finding the panel…",
     },
@@ -374,8 +374,9 @@ export const copy = {
     swamped: "The panel's swamped. Try again in a minute.",
     githubAuth: "We can't get into GitHub right now. That's on us, not your repo. Try again in a few minutes.",
     rateLimited:
-      "You've faced the panel 3 times today. The verdict isn't changing. Come back tomorrow.",
+      "You've used today's sessions. The verdict isn't changing. Come back tomorrow.",
     dailyCap: "The judges are asleep. Come back tomorrow.",
+    spendCap: "The judges are asleep. Come back tomorrow.",
     stale: "The panel has moved on. Picking up where you are.",
     alreadyAnswered: "You already answered that one. Judges don't take do-overs.",
     nothingNew: "Nothing new on GitHub since the last review. Push your fixes, then ask again.",
@@ -429,7 +430,7 @@ export const copy = {
           "Your three answers, the judges' reactions and scores, and the judges' chat in act 3.",
           "The review: status, checks, one-liner, fixes and review comments.",
           "A demo link, if you gave one.",
-          "A hashed, salted version of your IP address, to stop anyone running more than 3 sessions a day. Never the address itself.",
+          "A hashed, salted version of your IP address, to cap how many sessions anyone runs in a day. Never the address itself.",
         ],
       },
       {
@@ -465,6 +466,19 @@ export const copy = {
       },
     ],
     updated: "Last updated {date}.",
+  },
+  // A cap was hit when a session tried to start. Never an error page: the Tired Judge says so.
+  asleep: {
+    title: "The judges are asleep.",
+    line: {
+      rateLimited: "that's all your sessions for today. go home. i'm going home.",
+      dailyCap: "everyone came tonight. we're done. the coffee's gone.",
+      spendCap: "everyone came tonight. we're done. the coffee's gone.",
+    },
+    reset: "They wake up at {time} your time, in {left}.",
+    left: { hm: "{h}h {m}m", m: "{m}m", soon: "under a minute" },
+    shareLast: "Share your last review",
+    guides: "Read the guides while you wait",
   },
   serverError: {
     message: "The panel walked out mid-session. That one's on us.",

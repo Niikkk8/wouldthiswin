@@ -4,8 +4,10 @@ import { GitPullRequestArrow } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "cn";
+import { JudgesAsleep } from "@/components/judges-asleep";
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
+import { startSession, type AsleepInfo } from "@/lib/start-session";
 
 /**
  * After the review, the owner can push fixes and ask the panel to look again: the panel
@@ -17,29 +19,20 @@ export function ReReview({ id, repo, className }: { id: string; repo: string; cl
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [asleep, setAsleep] = useState<AsleepInfo | null>(null);
 
   async function ask() {
     if (pending) return;
     setPending(true);
     setError(null);
-    try {
-      const res = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ repoUrl: `https://github.com/${repo}`, previousId: id }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.id) {
-        setError(body.message ?? copy.errors.judgeFailed);
-        setPending(false);
-        return;
-      }
-      router.push(`/s/${body.id}`);
-    } catch {
-      setError(copy.errors.network);
-      setPending(false);
-    }
+    const r = await startSession({ repoUrl: `https://github.com/${repo}`, previousId: id });
+    if (r.kind === "started") return router.push(`/s/${r.id}`);
+    setPending(false);
+    if (r.kind === "asleep") setAsleep(r.asleep);
+    else setError(r.message);
   }
+
+  if (asleep) return <JudgesAsleep info={asleep} className={className} />;
 
   return (
     <section

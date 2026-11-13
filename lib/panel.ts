@@ -3,11 +3,12 @@
 // Code checks all of it: a comment must quote a file the scan actually read, verbatim.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { SwampedError, withRetry } from "./anthropic-retry";
+import { SwampedError } from "./anthropic-retry";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { anyCoreMissing, currentOdds, tierFor } from "./odds";
-import { MODEL, type Usage } from "./scan";
+import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
+import { MODEL } from "./scan";
 import { normalizePath } from "./scan-validate";
 import {
   JUDGES,
@@ -199,22 +200,10 @@ export class PanelError extends Error {
 
 type Call = (system: string, user: string) => Promise<Anthropic.Message>;
 
-let anthropic: Anthropic | null = null;
-const client = () => (anthropic ??= new Anthropic({ timeout: 40_000, maxRetries: 0 }));
 const outputFormat = zodOutputFormat(PanelOutput);
 
 const defaultCall: Call = (system, user) =>
-  withRetry(
-    () =>
-      client().messages.create({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        output_config: { effort: "low", format: outputFormat },
-        system,
-        messages: [{ role: "user", content: user }],
-      }),
-    "panel",
-  );
+  createMessage({ model: MODEL, step: "panel", system, user, maxTokens: MAX_TOKENS, format: outputFormat, timeoutMs: 40_000 });
 
 /** One call, one retry on bad output. */
 export async function runPanel(
@@ -222,33 +211,20 @@ export async function runPanel(
   call: Call = defaultCall,
 ): Promise<{ panel: Panel; usage: Usage; dropped: number }> {
   const { system, user } = buildPanelPrompt(s);
-  const usage: Usage = { inputTokens: 0, outputTokens: 0 };
+  const usage = newUsage();
   let lastError = "unknown";
   for (let attempt = 1; attempt <= 2; attempt++) {
     let res: Anthropic.Message;
+    const started = Date.now();
     try {
       res = await call(system, user);
     } catch (err) {
       const msg = err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : String(err);
       throw new PanelError(`anthropic call failed: ${msg}`, usage, err instanceof SwampedError);
     }
-    usage.inputTokens += res.usage.input_tokens;
-    usage.outputTokens += res.usage.output_tokens;
-    console.log(
-      JSON.stringify({
-        event: "panel.call",
-        id: s.id,
-        attempt,
-        stop_reason: res.stop_reason,
-        input_tokens: res.usage.input_tokens,
-        output_tokens: res.usage.output_tokens,
-      }),
-    );
+    recordCall(usage, "panel", MODEL, res, Date.now() - started);
     if (res.stop_reason === "refusal") throw new PanelError("model refused", usage);
-    const text = res.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
+    const text = textOf(res);
     let json: unknown;
     try {
       json = JSON.parse(text);

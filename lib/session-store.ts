@@ -4,7 +4,10 @@
 import type { Spent } from "./budget";
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
-import { ID_RE, IP_LIMIT_PER_24H, dailyCap, db, sha256 } from "./db";
+import { ID_RE, db, sha256 } from "./db";
+import { limitsFromEnv, type LimitStatus } from "./limits";
+import { log } from "./log";
+import type { Usage } from "./model";
 import { currentOdds } from "./odds";
 import { reviewOf, type Review } from "./review";
 import {
@@ -16,8 +19,6 @@ import {
   type SessionView,
   type Scan,
 } from "./session";
-
-export type LimitStatus = "ok" | "rateLimited" | "dailyCap";
 
 const OWNER_COOKIE = "wtw_owner";
 
@@ -182,7 +183,22 @@ export async function mutate(
   return { ok: true, session: r.session };
 }
 
-/** Checks the per-IP limit and the daily cap, and inserts the session under a lock. */
+const LIMIT_STATUSES: readonly LimitStatus[] = ["ok", "rateLimited", "dailyCap", "spendCap"];
+
+function capArgs(ipHash: string) {
+  const l = limitsFromEnv();
+  return { p_ip_hash: ipHash, p_user_limit: l.perUser, p_day_limit: l.perDay, p_spend_limit: l.spendUsd };
+}
+
+function asLimitStatus(data: unknown): LimitStatus {
+  if (LIMIT_STATUSES.includes(data as LimitStatus)) return data as LimitStatus;
+  throw new Error(`reserve_session_v2 returned ${JSON.stringify(data)}`);
+}
+
+/**
+ * Checks the caps (lib/limits.ts) and inserts the session under one lock. This is the only
+ * place limits are checked: a session that started is never stopped by them.
+ */
 export async function reserveSession(row: {
   id: string;
   repoUrl: string;
@@ -190,32 +206,44 @@ export async function reserveSession(row: {
   latestSha: string;
   owner: string;
   ipHash: string;
+  eventSlug?: string | null;
 }): Promise<LimitStatus> {
   const s = newSession(row.id, row.repo);
-  const { data, error } = await db().rpc("reserve_session", {
-    p_ip_hash: row.ipHash,
-    p_ip_limit: IP_LIMIT_PER_24H,
-    p_daily_cap: dailyCap(),
+  const { data, error } = await db().rpc("reserve_session_v2", {
+    ...capArgs(row.ipHash),
     p_id: row.id,
     p_repo_url: row.repoUrl,
     p_repo: row.repo,
     p_latest_sha: row.latestSha,
     p_owner_hash: row.owner,
     p_act: s.act,
+    p_event_slug: row.eventSlug ?? null,
   });
   if (error) throw error;
-  return data as LimitStatus;
+  return asLimitStatus(data);
 }
 
-/** A read-only limit check, before spending GitHub calls. */
+/** A read-only cap check, before spending GitHub calls. */
 export async function checkLimits(ipHash: string): Promise<LimitStatus> {
-  const { data, error } = await db().rpc("reserve_session", {
-    p_ip_hash: ipHash,
-    p_ip_limit: IP_LIMIT_PER_24H,
-    p_daily_cap: dailyCap(),
-  });
+  const { data, error } = await db().rpc("reserve_session_v2", capArgs(ipHash));
   if (error) throw error;
-  return data as LimitStatus;
+  return asLimitStatus(data);
+}
+
+/** This browser's most recent finished review, for the "judges are asleep" screen. */
+export async function lastReviewOf(owner: string | null): Promise<{ id: string; repo: string } | null> {
+  if (!owner) return null;
+  const { data, error } = await db()
+    .from("sessions")
+    .select("id, repo")
+    .eq("owner_hash", owner)
+    .in("act", ["verdict", "share"])
+    .not("panel", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string; repo: string }>();
+  if (error) throw error;
+  return data;
 }
 
 /** Stores the demo link the team gave. Written right after the session is reserved. */
@@ -261,14 +289,38 @@ export async function deleteSession(id: string): Promise<void> {
   if (error) console.error(JSON.stringify({ event: "session.delete", id, error: error.message }));
 }
 
-export async function addUsage(id: string, usage: { inputTokens: number; outputTokens: number }) {
-  if (!usage.inputTokens && !usage.outputTokens) return;
-  const { error } = await db().rpc("add_session_usage", {
-    p_id: id,
-    p_input: usage.inputTokens,
-    p_output: usage.outputTokens,
-  });
-  if (error) console.error(JSON.stringify({ event: "session.usage", id, error: error.message }));
+/**
+ * Records what a step spent: the session's running token totals (its budget) and one
+ * `session_usage` row per model call (the spend limit and the stats). A failed write is
+ * logged, never thrown: accounting must not break a session.
+ */
+export async function addUsage(id: string, usage: Usage) {
+  if (!usage.calls.length) return;
+  const [totals, rows] = await Promise.all([
+    db().rpc("add_session_usage", { p_id: id, p_input: usage.inputTokens, p_output: usage.outputTokens }),
+    db()
+      .from("session_usage")
+      .insert(
+        usage.calls.map((c) => ({
+          session_id: id,
+          step: c.step,
+          model: c.model,
+          input_tokens: c.inputTokens,
+          output_tokens: c.outputTokens,
+          cache_read_tokens: c.cacheReadTokens,
+          cache_write_tokens: c.cacheWriteTokens,
+          usd: c.usd,
+          duration_ms: c.ms,
+        })),
+      ),
+  ]);
+  for (const r of [totals, rows]) if (r.error) log.error("session.usage", { id, error: r.error.message });
+}
+
+/** How long a step without a model call took (fetching the repo, checking the demo). */
+export async function addStepTiming(id: string, step: string, ms: number) {
+  const { error } = await db().from("session_usage").insert({ session_id: id, step, duration_ms: Math.round(ms) });
+  if (error) log.error("session.step", { id, step, error: error.message });
 }
 
 const CACHE_HOURS = 24;

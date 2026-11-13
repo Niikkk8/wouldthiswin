@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { tokens } from "./model-test-utils";
 import { describe, test } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { RawRepoData } from "./github";
@@ -144,7 +145,8 @@ describe("scan calls", () => {
     const r = await runScanModel(repo(), { call: model([claimsA()], [fooled]), fetch: fetchFrom(FILES).fetch });
     assert.equal(r.downgraded, 2);
     assert.ok(r.scan.claims.every((c) => c.status === "unclear"));
-    assert.deepEqual(r.usage, { inputTokens: 2000, outputTokens: 400 });
+    assert.deepEqual(tokens(r.usage), { inputTokens: 2000, outputTokens: 400 });
+    assert.equal(r.usage.calls.length, 2);
   });
 
   test("a real quote is kept, and a not-found finding names the files read", async () => {
@@ -189,7 +191,8 @@ describe("scan calls", () => {
       call: model(["not json", claimsA()], ["{}", { verdicts: [], questions }]),
       fetch: fetchFrom(FILES).fetch,
     });
-    assert.deepEqual(r.usage, { inputTokens: 4000, outputTokens: 800 });
+    assert.deepEqual(tokens(r.usage), { inputTokens: 4000, outputTokens: 800 });
+    assert.deepEqual(r.usage.calls.map((c) => c.step), ["scan.claims", "scan.claims", "scan.verify", "scan.verify"]);
   });
 
   test("two bad outputs from call B fail the scan", async () => {

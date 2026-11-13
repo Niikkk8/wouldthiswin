@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { JudgesAsleep } from "@/components/judges-asleep";
 import { copy } from "@/lib/copy";
 import { parseDemoLink } from "@/lib/demo-link";
 import { parseRepoUrl } from "@/lib/repo-url";
+import { startSession, type AsleepInfo } from "@/lib/start-session";
 import { ChevronRight } from "lucide-react";
 import { cn } from "cn";
 
@@ -20,7 +22,7 @@ const SHOW_VERSUS = false;
 export const REPO_FOCUS = "repo";
 
 /** The repo field. `id` keeps the field ids unique when the page has the form twice. */
-export function RepoForm({ id = "repo", className }: { id?: string; className?: string }) {
+export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; eventSlug?: string; className?: string }) {
   const ids = { repo: id, note: `${id}-note`, demo: `${id}-demo`, demoNote: `${id}-demo-note` };
   const router = useRouter();
   const [repo, setRepo] = useState("");
@@ -29,6 +31,7 @@ export function RepoForm({ id = "repo", className }: { id?: string; className?: 
   const [demo, setDemo] = useState("");
   const [demoInvalid, setDemoInvalid] = useState(false);
   const [pending, setPending] = useState(false);
+  const [asleep, setAsleep] = useState<AsleepInfo | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -65,24 +68,14 @@ export function RepoForm({ id = "repo", className }: { id?: string; className?: 
       return;
     }
     setPending(true);
-    try {
-      const res = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ repoUrl: repo, ...(demoUrl ? { demoUrl } : {}) }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.id) {
-        toast.error(body.message ?? copy.errors.judgeFailed);
-        setPending(false);
-        return;
-      }
-      router.push(`/s/${body.id}`);
-    } catch {
-      toast.error(copy.errors.network);
-      setPending(false);
-    }
+    const r = await startSession({ repoUrl: repo, ...(demoUrl ? { demoUrl } : {}), ...(eventSlug ? { eventSlug } : {}) });
+    if (r.kind === "started") return router.push(`/s/${r.id}`);
+    setPending(false);
+    if (r.kind === "asleep") setAsleep(r.asleep);
+    else toast.error(r.message);
   }
+
+  if (asleep) return <JudgesAsleep info={asleep} className={className} />;
 
   return (
     <form onSubmit={start} className={cn("max-w-[676px]", className)} noValidate>

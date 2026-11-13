@@ -3,12 +3,13 @@
 // code clamps the score and has the last word on anything that tries to steer it.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { withRetry } from "./anthropic-retry";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { copy } from "./copy";
 import { ANSWER_MAX, ANSWER_MIN, clampAnswerScore } from "./odds";
-import { MODEL, type Usage } from "./scan";
+import { log } from "./log";
+import { createMessage, newUsage, recordCall, textOf, type Usage } from "./model";
+import { MODEL } from "./scan";
 import type { Claim, Judge } from "./session";
 
 const MAX_TOKENS = 1500; // low-effort thinking plus a two-field JSON object
@@ -150,22 +151,10 @@ export type Scored = { score: number; reason: string; usage: Usage; source: "mod
 
 type Call = (system: string, user: string) => Promise<Anthropic.Message>;
 
-let anthropic: Anthropic | null = null;
-const client = () => (anthropic ??= new Anthropic({ timeout: 15_000, maxRetries: 0 }));
 const outputFormat = zodOutputFormat(AnswerOutput);
 
 const defaultCall: Call = (system, user) =>
-  withRetry(
-    () =>
-      client().messages.create({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        output_config: { effort: "low", format: outputFormat },
-        system,
-        messages: [{ role: "user", content: user }],
-      }),
-    "answer",
-  );
+  createMessage({ model: MODEL, step: "answer", system, user, maxTokens: MAX_TOKENS, format: outputFormat, timeoutMs: 15_000 });
 
 /**
  * Scores one answer: one call, one retry on bad output. If the model can't be reached or
@@ -173,37 +162,24 @@ const defaultCall: Call = (system, user) =>
  */
 export async function scoreAnswer(input: AnswerInput, call: Call = defaultCall): Promise<Scored> {
   const { system, user } = buildAnswerPrompt(input);
-  const usage: Usage = { inputTokens: 0, outputTokens: 0 };
+  const usage = newUsage();
   const injected = looksLikeInjection(input.answer);
   let result: { score: number; reason: string } | null = null;
   let scoreOnly: number | null = null;
 
   for (let attempt = 1; attempt <= 2 && !result; attempt++) {
     let res: Anthropic.Message;
+    const started = Date.now();
     try {
       res = await call(system, user);
     } catch (err) {
       const msg = err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : String(err);
-      console.error(JSON.stringify({ event: "answer.error", attempt, error: msg }));
+      log.error("answer.error", { attempt, error: msg });
       break;
     }
-    usage.inputTokens += res.usage.input_tokens;
-    usage.outputTokens += res.usage.output_tokens;
-    console.log(
-      JSON.stringify({
-        event: "answer.call",
-        judge: input.judge,
-        attempt,
-        stop_reason: res.stop_reason,
-        input_tokens: res.usage.input_tokens,
-        output_tokens: res.usage.output_tokens,
-      }),
-    );
+    recordCall(usage, "answer", MODEL, res, Date.now() - started);
     if (res.stop_reason === "refusal") break;
-    const text = res.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
+    const text = textOf(res);
     let parsed: z.infer<typeof AnswerOutput>;
     try {
       parsed = AnswerOutput.parse(JSON.parse(text));

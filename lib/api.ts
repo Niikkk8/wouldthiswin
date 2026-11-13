@@ -12,6 +12,7 @@ const STATUS: Record<ErrorKey, number> = {
   emptyReadme: 422,
   rateLimited: 429,
   dailyCap: 429,
+  spendCap: 429,
   githubDown: 503,
   judgeFailed: 502,
   swamped: 503,

@@ -3,9 +3,12 @@ import { badRequest, clientIp, fail, limitKey } from "@/lib/api";
 import { ID_RE, hashIp, newId } from "@/lib/db";
 import { fetchLatestSha, GitHubError, parseRepoUrl } from "@/lib/github";
 import { parseDemoLink } from "@/lib/demo-link";
+import { nextReset, type LimitStatus } from "@/lib/limits";
+import { log } from "@/lib/log";
 import {
   checkLimits,
   ensureOwner,
+  lastReviewOf,
   loadOwnReview,
   ownerHash,
   reserveSession,
@@ -19,6 +22,15 @@ const Body = z.object({
   /** A re-review: the finished review, by this browser, of the same repo, that this one follows. */
   previousId: z.string().regex(ID_RE).optional(),
 });
+
+/**
+ * A cap was hit: the client shows "the judges are asleep" with a countdown to the reset and
+ * a way to share this browser's last review, never an error page.
+ */
+async function asleep(status: Exclude<LimitStatus, "ok">): Promise<Response> {
+  const lastReview = await lastReviewOf(await ownerHash()).catch(() => null);
+  return fail(status, undefined, { asleep: { resetAt: nextReset(new Date()).toISOString(), lastReview } });
+}
 
 /**
  * Starts a session: checks the repo exists and the limits. The scan runs from act 1.
@@ -42,7 +54,7 @@ export async function POST(req: Request) {
   try {
     ipHash = hashIp(limitKey(clientIp(req)));
   } catch (err) {
-    console.error(JSON.stringify({ event: "session.config", error: String(err) }));
+    log.error("session.config", { error: String(err) });
     return fail("judgeFailed");
   }
 
@@ -52,7 +64,7 @@ export async function POST(req: Request) {
     if (previous && previous.loaded.repoUrl !== ref.url) return fail("notReviewed");
 
     const pre = await checkLimits(ipHash);
-    if (pre !== "ok") return fail(pre);
+    if (pre !== "ok") return await asleep(pre);
 
     const latestSha = await fetchLatestSha(ref);
     if (previous && previous.loaded.latestSha === latestSha) return fail("nothingNew");
@@ -60,28 +72,22 @@ export async function POST(req: Request) {
     const id = newId();
     const repo = `${ref.owner}/${ref.repo}`;
     const reserved = await reserveSession({ id, repoUrl: ref.url, repo, latestSha, owner, ipHash });
-    if (reserved !== "ok") return fail(reserved);
+    if (reserved !== "ok") return await asleep(reserved);
     // A re-review keeps the demo link the team gave last round, unless they gave a new one.
     const demoUrl = demo?.url ?? previous?.loaded.demoUrl ?? null;
     if (demoUrl) await setDemoUrl(id, demoUrl);
     if (previous) await setPreviousId(id, body.previousId!);
 
-    console.log(JSON.stringify({ event: "session.start", id, repo: ref.url, ...(previous ? { previousId: body.previousId } : {}) }));
+    log.info("session.start", { id, repo: ref.url, ...(previous ? { previousId: body.previousId } : {}) });
     return Response.json({ id });
   } catch (err) {
     if (err instanceof GitHubError) {
       if (err.code === "githubDown") {
-        console.error(JSON.stringify({ event: "github.error", repo: ref.url, error: err.message }));
+        log.error("github.error", { repo: ref.url, error: err.message });
       }
       return fail(err.code);
     }
-    console.error(
-      JSON.stringify({
-        event: "session.error",
-        repo: ref.url,
-        error: err instanceof Error ? err.message : JSON.stringify(err),
-      }),
-    );
+    log.error("session.error", { repo: ref.url, error: err instanceof Error ? err.message : JSON.stringify(err) });
     return fail("judgeFailed");
   }
 }

@@ -6,10 +6,13 @@ import type { ErrorKey } from "./api";
 import { overBudget } from "./budget";
 import { fetchCompare, fetchRepoData, GitHubError, type RawRepoData } from "./github";
 import { recheckFixes, type Iteration } from "./recheck";
-import { ScanError, demoSignal, scanRepo, type Usage } from "./scan";
+import { mergeUsage, newUsage, type Usage } from "./model";
+import { ScanError, demoSignal, scanRepo } from "./scan";
 import { noEmit, type Emit } from "./scan-progress";
 import { applyScan, type Scan, type SessionState } from "./session";
+import { errorText, log } from "./log";
 import {
+  addStepTiming,
   addUsage,
   claimScan,
   deleteSession,
@@ -37,7 +40,7 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
   // Another request (a second tab, a refresh) is already scanning: the client waits and asks again.
   if (!(await claimScan(id))) return { kind: "pending", session };
 
-  let usage: Usage = { inputTokens: 0, outputTokens: 0 };
+  let usage: Usage = newUsage();
   try {
     const previous = previousId ? await loadOwnReview(previousId, owner) : null;
     let scan: Scan | null = previous ? null : await getCachedScan(repoUrl, latestSha);
@@ -50,21 +53,25 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
     } else {
       // Retries after failed scans have already spent this session's share: stop paying.
       if (overBudget(spent)) {
-        console.error(JSON.stringify({ event: "scan.over_budget", id, repo: repoUrl, ...spent }));
+        log.error("scan.over_budget", { id, repo: repoUrl, ...spent });
         await releaseScan(id);
         return { kind: "failed", error: "judgeFailed" };
       }
+      const fetchStarted = Date.now();
       const raw = await fetchRepoData(repoUrl);
+      await addStepTiming(id, "scan.github", Date.now() - fetchStarted);
       emit({ type: "repo", files: raw.headFilePaths.length });
       if (!raw.readmeFull.trim()) return await fail(id, "emptyReadme", usage);
+      const scanStarted = Date.now();
       const [result, fixes] = await Promise.all([
         scanRepo(raw, { emit, demoUrl, previous: previous ? { fixes: previous.fixes } : null }),
         previous ? checkFixes(raw, previous, emit) : Promise.resolve(null),
       ]);
       scan = result.scan;
       usage = result.usage;
+      await addStepTiming(id, "scan.total", Date.now() - scanStarted);
       if (fixes) {
-        usage = { inputTokens: usage.inputTokens + fixes.usage.inputTokens, outputTokens: usage.outputTokens + fixes.usage.outputTokens };
+        usage = mergeUsage(usage, fixes.usage);
         scan = { ...scan, signals: { ...scan.signals, iteration: fixes.iteration } };
       } else {
         await putCachedScan(repoUrl, raw.latestSha, scan);
@@ -73,33 +80,27 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
 
     const r = await mutate(id, owner, (s) => applyScan(s, scan));
     await addUsage(id, usage);
-    console.log(
-      JSON.stringify({
-        event: "scan.done",
-        id,
-        repo: repoUrl,
-        cached,
-        claims: scan.claims.length,
-        input_tokens: usage.inputTokens,
-        output_tokens: usage.outputTokens,
-      }),
-    );
+    log.info("scan.done", {
+      id,
+      repo: repoUrl,
+      cached,
+      claims: scan.claims.length,
+      input_tokens: usage.inputTokens,
+      output_tokens: usage.outputTokens,
+    });
     if (r.ok) return { kind: "done", session: r.session };
     return r.session ? { kind: "stale", session: r.session } : { kind: "notFound" };
   } catch (err) {
     if (err instanceof ScanError) usage = err.usage;
     const swamped = err instanceof ScanError && err.swamped;
     const key: ErrorKey = err instanceof GitHubError ? err.code : swamped ? "swamped" : "judgeFailed";
-    console.error(
-      JSON.stringify({
-        event: "scan.failed",
-        id,
-        repo: repoUrl,
-        error: err instanceof Error ? err.message : String(err),
-        input_tokens: usage.inputTokens,
-        output_tokens: usage.outputTokens,
-      }),
-    );
+    log.error("scan.failed", {
+      id,
+      repo: repoUrl,
+      error: errorText(err),
+      input_tokens: usage.inputTokens,
+      output_tokens: usage.outputTokens,
+    });
     // Anthropic being busy isn't the visitor's fault: the session never counts, even if the
     // first call went through before the second was turned away.
     if (swamped) {
@@ -131,7 +132,7 @@ async function checkFixes(
     emit({ type: "fixes", commits: diff.commits.length });
     return await recheckFixes(diff, review);
   } catch (err) {
-    console.error(JSON.stringify({ event: "recheck.compare_failed", repo: raw.ref.url, error: String(err) }));
+    log.error("recheck.compare_failed", { repo: raw.ref.url, error: String(err) });
     return recheckFixes({ commits: [], files: [], linear: false }, review, () => Promise.reject(new Error("no diff")));
   }
 }
@@ -141,7 +142,7 @@ async function checkFixes(
  * One that spent tokens keeps it (it counts) and records the tokens.
  */
 async function fail(id: string, error: ErrorKey, usage: Usage): Promise<ScanOutcome> {
-  if (usage.inputTokens || usage.outputTokens) {
+  if (usage.calls.length) {
     await addUsage(id, usage);
     await releaseScan(id);
   } else {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { tokens } from "./model-test-utils";
 import { describe, test } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import {
@@ -129,7 +130,7 @@ describe("scoring", () => {
   test("returns the model's score and reason, with tokens", async () => {
     const m = model({ why: "w", score: 9, reaction: "Twilio in lib/sms.ts. Fine." });
     const out = await scoreAnswer(input("Twilio, in lib/sms.ts."), m.call);
-    assert.deepEqual(out, {
+    assert.deepEqual({ ...out, usage: tokens(out.usage) }, {
       score: 9,
       reason: "Twilio in lib/sms.ts. Fine.",
       usage: { inputTokens: 300, outputTokens: 40 },
@@ -148,7 +149,7 @@ describe("scoring", () => {
     const out = await scoreAnswer(input("a"), m.call);
     assert.equal(m.sent.length, 2);
     assert.equal(out.score, 5);
-    assert.deepEqual(out.usage, { inputTokens: 600, outputTokens: 80 });
+    assert.deepEqual(tokens(out.usage), { inputTokens: 600, outputTokens: 80 });
   });
 
   test("two failures score 0 instead of stalling the room", async () => {
