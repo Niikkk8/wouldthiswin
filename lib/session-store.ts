@@ -267,13 +267,14 @@ export async function lastReviewOf(owner: string | null): Promise<{ id: string; 
 }
 
 /** What the team added beyond the repo: a Devpost page and pasted submission text. Untrusted. */
-export type Submission = { devpostUrl: string | null; text: string | null; start?: string | null; end?: string | null };
+export type Submission = { devpostUrl: string | null; text: string | null; start?: string | null; end?: string | null; tracks?: string[] };
 
 const SubmissionShape = z.object({
   devpostUrl: z.string().nullable(),
   text: z.string().nullable(),
   start: z.string().datetime({ offset: true }).nullable().optional(),
   end: z.string().datetime({ offset: true }).nullable().optional(),
+  tracks: z.array(z.string()).optional(),
 });
 
 export async function setSubmission(id: string, submission: Submission): Promise<void> {

@@ -15,10 +15,22 @@ const noop = () => () => {};
  * stays up). Decided in the browser against the real clock, so a cached page never lets a
  * late entry in; the server checks again when the session starts.
  */
-export function EventEntry({ slug, name, startsAt, endsAt }: { slug: string; name: string; startsAt: string; endsAt: string | null }) {
+export function EventEntry({
+  slug,
+  name,
+  startsAt,
+  endsAt,
+  tracks,
+}: {
+  slug: string;
+  name: string;
+  startsAt: string;
+  endsAt: string | null;
+  tracks: readonly string[];
+}) {
   const status = useSyncExternalStore(noop, () => eventStatus({ startsAt, endsAt }, Date.now()), () => null);
   if (status === null) return <div className="min-h-[140px]" aria-hidden />;
-  if (status === "open") return <RepoForm eventSlug={slug} className="mt-2" />;
+  if (status === "open") return <RepoForm eventSlug={slug} tracks={tracks} className="mt-2" />;
   return (
     <div className="max-w-[676px] rounded-panel border border-border bg-surface p-5">
       <p className="text-[17px] leading-snug font-semibold">{fill(status === "closed" ? E.closed : E.upcoming, { name })}</p>

@@ -34,6 +34,8 @@ const Body = z.object({
   /** The event window, if the team gave one: for the private timeline signals. */
   windowStart: z.string().datetime({ offset: true }).optional(),
   windowEnd: z.string().datetime({ offset: true }).optional(),
+  /** Sponsor tracks the team is entering, from the event's own list. */
+  tracks: z.array(z.string().max(80)).max(10).optional(),
 });
 
 /**
@@ -99,8 +101,11 @@ export async function POST(req: Request) {
     const demoUrl = demo?.url ?? previous?.loaded.demoUrl ?? null;
     if (demoUrl) await setDemoUrl(id, demoUrl);
     if (previous) await setPreviousId(id, body.previousId!);
-    if (devpostUrl || submissionText || body.windowStart || body.windowEnd) {
-      await setSubmission(id, { devpostUrl, text: submissionText, start: body.windowStart ?? null, end: body.windowEnd ?? null });
+    // Only tracks the event actually lists are kept.
+    const known = new Set(event?.sponsorSignatures.map((s) => s.track) ?? []);
+    const tracks = (body.tracks ?? []).filter((t) => known.has(t));
+    if (devpostUrl || submissionText || body.windowStart || body.windowEnd || tracks.length) {
+      await setSubmission(id, { devpostUrl, text: submissionText, start: body.windowStart ?? null, end: body.windowEnd ?? null, tracks });
     }
     const prefs = await loadPrefs(owner);
     if (prefs.extendedTime) await setSettings(id, prefs);

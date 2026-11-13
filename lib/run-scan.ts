@@ -102,6 +102,7 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
             eventContext,
             submission,
             window: windowFor(session.eventSlug, submission),
+            sponsors: eventBySlug(session.eventSlug)?.sponsorSignatures ?? [],
           }),
           previous ? checkFixes(raw, previous, emit) : Promise.resolve(null),
         ]);

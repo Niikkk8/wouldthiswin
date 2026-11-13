@@ -97,6 +97,8 @@ export const copy = {
       start: "Hackathon started",
       end: "Submissions close",
       windowNote: "Optional. Only you see what the commit times say about it.",
+      tracks: "Sponsor tracks you're entering",
+      tracksNote: "The judges check each one is used in the code, not just installed.",
     },
     versus: "Or challenge a friend: same panel, two repos",
     versusSoon: "Coming soon",
@@ -242,6 +244,18 @@ export const copy = {
       overstatedDetail: "The claim reads as {claimed}; the code shows {found}. The Engineer will ask about it.",
       noAiCode: "No AI imports or calls in the files checked.",
       fix: "Describe it as what it is ({found}), or point to the code that does more.",
+    },
+    sponsors: {
+      used: "{track}: used in the code",
+      installed: "{track}: installed, never called",
+      notFound: "{track}: not in the code",
+      detail: {
+        used: "The app imports or calls {sponsor}.",
+        installed: "{sponsor} is in the dependencies, but no app code imports or calls it.",
+        not_found: "Nothing in the code read uses {sponsor}.",
+      },
+      searched: "Looked for {sponsor}'s packages, imports and API hosts in the code.",
+      fix: "Call {sponsor} for real in the core flow, or drop the track.",
     },
     timeline: {
       before: "{n} commit{s} from before the start",

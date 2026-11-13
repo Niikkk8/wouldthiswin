@@ -71,7 +71,13 @@ async function Event({ params }: { params: PageProps<"/e/[slug]">["params"] }) {
         </a>
         <p className="mt-8 max-w-[620px] text-[19px] leading-[1.45] text-text-muted">{E.lede}</p>
         <div className="mt-8">
-          <EventEntry slug={event.slug} name={event.name} startsAt={event.startsAt} endsAt={event.endsAt} />
+          <EventEntry
+            slug={event.slug}
+            name={event.name}
+            startsAt={event.startsAt}
+            endsAt={event.endsAt}
+            tracks={event.sponsorSignatures.map((s) => s.track)}
+          />
         </div>
         <JudgedOn event={event} />
       </main>

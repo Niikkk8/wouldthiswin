@@ -15,6 +15,8 @@ import { verifyClaims, type Verdict } from "./evidence/verify";
 import { collectSnapshot } from "./checks/collect";
 import { aiDepth, aiDepthFindings, usesPretrained, type AiDepth } from "./checks/ai-depth";
 import { checkDemos, demoCandidates } from "./checks/demo";
+import { sponsorFindings, trackReports } from "./checks/sponsors";
+import type { SponsorSignature } from "./events/types";
 import { readmeChecklist } from "./checks/readme";
 import { timelineFindings, type EventWindow } from "./checks/timeline";
 import { fetchPage } from "./demo-check";
@@ -50,7 +52,7 @@ export class ScanError extends Error {
 export type PreviousRound = { fixes: readonly string[] };
 
 /** What the team added beyond the repo. */
-export type SubmissionInput = { devpostUrl: string | null; text: string | null; start?: string | null; end?: string | null };
+export type SubmissionInput = { devpostUrl: string | null; text: string | null; start?: string | null; end?: string | null; tracks?: string[] };
 
 /** The steps of the scan, swappable in tests. */
 export type ScanDeps = {
@@ -141,7 +143,12 @@ export async function demoSignal(url: string | null, provided: boolean): Promise
 /** The deterministic checks over a snapshot of the repo. A failure leaves no findings, never a guess. */
 type CheckResult = { findings: Finding[]; depth: AiDepth; pretrained: boolean };
 
-async function deterministicChecks(raw: RawRepoData, devpost: Devpost | null, window: EventWindow | null): Promise<CheckResult> {
+async function deterministicChecks(
+  raw: RawRepoData,
+  devpost: Devpost | null,
+  window: EventWindow | null,
+  sponsors: { signatures: readonly SponsorSignature[]; entered: readonly string[] },
+): Promise<CheckResult> {
   try {
     const demos = demoCandidates({ readme: raw.readmeFull, homepage: raw.meta.homepage, devpostLinks: devpost?.links ?? [] });
     const [snap, demo] = await Promise.all([
@@ -152,7 +159,8 @@ async function deterministicChecks(raw: RawRepoData, devpost: Devpost | null, wi
       checkDemos(demos, (u) => fetchPage(u), raw.ref.repo),
     ]);
     const timeline = timelineFindings(raw.commits, window, readmeChecklist(raw.readmeFull).team);
-    return { findings: [...runChecks(snap), ...demo, ...timeline], depth: aiDepth(snap), pretrained: usesPretrained(snap) };
+    const tracks = sponsorFindings(trackReports(snap, sponsors.signatures), sponsors.entered);
+    return { findings: [...runChecks(snap), ...demo, ...timeline, ...tracks], depth: aiDepth(snap), pretrained: usesPretrained(snap) };
   } catch (err) {
     log.warn("scan.checks.failed", { repo: raw.ref.url, error: String(err) });
     return { findings: [], depth: { level: "none", evidence: [] }, pretrained: false };
@@ -174,6 +182,8 @@ export async function scanRepo(
     submission?: SubmissionInput | null;
     /** The event's window (from its preset or the team), for the timeline signals. */
     window?: EventWindow | null;
+    /** The event's sponsor tracks, checked against the ones the team entered. */
+    sponsors?: readonly SponsorSignature[];
   } = {},
 ): Promise<{ scan: Scan; usage: Usage }> {
   const devpost = opts.submission?.devpostUrl ? await fetchDevpost(opts.submission.devpostUrl).catch(() => null) : null;
@@ -181,7 +191,7 @@ export async function scanRepo(
     runScanModel(raw, { ...opts, devpost }),
     demoSignal(findDemoUrl(raw), false),
     opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
-    deterministicChecks(raw, devpost, opts.window ?? null),
+    deterministicChecks(raw, devpost, opts.window ?? null, { signatures: opts.sponsors ?? [], entered: opts.submission?.tracks ?? [] }),
   ]);
   const { firstCommitAddedOver70Pct } = computeSignals(raw, null);
   log.info("scan.validated", { repo: raw.ref.url, claims: model.claims.length, read: model.sources.length });

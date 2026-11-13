@@ -26,6 +26,7 @@ export type StartRequest = {
   submissionText?: string;
   windowStart?: string;
   windowEnd?: string;
+  tracks?: string[];
 };
 
 export type StartResult =

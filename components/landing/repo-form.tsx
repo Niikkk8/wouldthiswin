@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { JudgesAsleep } from "@/components/judges-asleep";
 import { AccessibilityPrefs } from "./accessibility-prefs";
 import { SubmissionFields, type SubmissionValue } from "./submission-fields";
+import { TrackPicker } from "./track-picker";
 import { copy } from "@/lib/copy";
 import { parseDemoLink } from "@/lib/demo-link";
 import { parseRepoUrl } from "@/lib/repo-url";
@@ -25,7 +26,18 @@ const SHOW_VERSUS = false;
 export const REPO_FOCUS = "repo";
 
 /** The repo field. `id` keeps the field ids unique when the page has the form twice. */
-export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; eventSlug?: string; className?: string }) {
+export function RepoForm({
+  id = "repo",
+  eventSlug,
+  tracks = [],
+  className,
+}: {
+  id?: string;
+  eventSlug?: string;
+  /** An event's sponsor tracks, to pick from. */
+  tracks?: readonly string[];
+  className?: string;
+}) {
   const ids = { repo: id, note: `${id}-note`, demo: `${id}-demo`, demoNote: `${id}-demo-note` };
   const router = useRouter();
   const [repo, setRepo] = useState("");
@@ -37,6 +49,7 @@ export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; e
   const [asleep, setAsleep] = useState<AsleepInfo | null>(null);
   const [submission, setSubmission] = useState<SubmissionValue>({ devpost: "", text: "", start: "", end: "" });
   const [devpostInvalid, setDevpostInvalid] = useState(false);
+  const [entered, setEntered] = useState<string[]>([]);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -88,6 +101,7 @@ export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; e
       // datetime-local is the visitor's own time; the server gets an exact instant.
       ...(submission.start ? { windowStart: new Date(submission.start).toISOString() } : {}),
       ...(submission.end ? { windowEnd: new Date(submission.end).toISOString() } : {}),
+      ...(entered.length ? { tracks: entered } : {}),
     });
     if (r.kind === "started") return router.push(`/s/${r.id}`);
     setPending(false);
@@ -171,6 +185,7 @@ export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; e
           setDevpostInvalid(false);
         }}
       />
+      {tracks.length > 0 && <TrackPicker id={id} tracks={tracks} value={entered} onChange={setEntered} />}
       <AccessibilityPrefs id={id} />
       {SHOW_VERSUS && (
       <Tooltip>

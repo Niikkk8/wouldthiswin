@@ -1,5 +1,5 @@
--- Claim sources beyond the README (F10) and the tracks a team is entering (F16).
--- Both are the team's own untrusted input, stored for the scan and never shown publicly.
+-- What the team adds beyond the repo: claim sources (a Devpost page, pasted submission text),
+-- the event window and the sponsor tracks it's entering. Untrusted input, stored for the scan
+-- and never shown publicly.
 
 alter table public.sessions add column if not exists submission jsonb;
-alter table public.sessions add column if not exists tracks jsonb;
