@@ -22,6 +22,8 @@ export type StartRequest = {
   demoUrl?: string;
   previousId?: string;
   eventSlug?: string;
+  devpostUrl?: string;
+  submissionText?: string;
 };
 
 export type StartResult =

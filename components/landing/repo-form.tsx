@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { JudgesAsleep } from "@/components/judges-asleep";
 import { AccessibilityPrefs } from "./accessibility-prefs";
+import { SubmissionFields, type SubmissionValue } from "./submission-fields";
 import { copy } from "@/lib/copy";
 import { parseDemoLink } from "@/lib/demo-link";
 import { parseRepoUrl } from "@/lib/repo-url";
+import { parseDevpostUrl } from "@/lib/evidence/devpost-url";
 import { startSession, type AsleepInfo } from "@/lib/start-session";
 import { ChevronRight } from "lucide-react";
 import { cn } from "cn";
@@ -33,6 +35,8 @@ export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; e
   const [demoInvalid, setDemoInvalid] = useState(false);
   const [pending, setPending] = useState(false);
   const [asleep, setAsleep] = useState<AsleepInfo | null>(null);
+  const [submission, setSubmission] = useState<SubmissionValue>({ devpost: "", text: "" });
+  const [devpostInvalid, setDevpostInvalid] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -68,8 +72,20 @@ export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; e
       toast.error(copy.errors.invalidDemo);
       return;
     }
+    const devpost = submission.devpost.trim();
+    if (devpost && !parseDevpostUrl(devpost)) {
+      setDevpostInvalid(true);
+      toast.error(copy.errors.invalidDevpost);
+      return;
+    }
     setPending(true);
-    const r = await startSession({ repoUrl: repo, ...(demoUrl ? { demoUrl } : {}), ...(eventSlug ? { eventSlug } : {}) });
+    const r = await startSession({
+      repoUrl: repo,
+      ...(demoUrl ? { demoUrl } : {}),
+      ...(eventSlug ? { eventSlug } : {}),
+      ...(devpost ? { devpostUrl: devpost } : {}),
+      ...(submission.text.trim() ? { submissionText: submission.text } : {}),
+    });
     if (r.kind === "started") return router.push(`/s/${r.id}`);
     setPending(false);
     if (r.kind === "asleep") setAsleep(r.asleep);
@@ -143,6 +159,15 @@ export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; e
           </p>
         </div>
       </details>
+      <SubmissionFields
+        id={id}
+        value={submission}
+        devpostInvalid={devpostInvalid}
+        onChange={(v) => {
+          setSubmission(v);
+          setDevpostInvalid(false);
+        }}
+      />
       <AccessibilityPrefs id={id} />
       {SHOW_VERSUS && (
       <Tooltip>

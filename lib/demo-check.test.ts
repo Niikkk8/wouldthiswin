@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "vitest";
-import { cookieHeader, keepCookies, type Jar } from "./demo-check";
+import { cookieHeader, fetchPage, keepCookies, type Jar } from "./demo-check";
 
 describe("cookies across the redirect chain", () => {
   test("a host-only cookie goes back to the host that set it, and nowhere else", () => {
@@ -24,5 +24,20 @@ describe("cookies across the redirect chain", () => {
     keepCookies(jar, ["a=1"], "x.com");
     keepCookies(jar, ["a=2", "b=3"], "x.com");
     assert.equal(cookieHeader(jar, "x.com"), "a=2; b=3");
+  });
+});
+
+describe("fetchPage", () => {
+  test("refuses private addresses, localhost and other protocols before any request", async () => {
+    assert.equal((await fetchPage("http://127.0.0.1/")).reason, "blockedAddress");
+    assert.equal((await fetchPage("http://localhost:3000/")).reason, "blockedAddress");
+    assert.equal((await fetchPage("http://[::1]/")).reason, "blockedAddress");
+    assert.equal((await fetchPage("http://169.254.169.254/latest/meta-data")).reason, "blockedAddress");
+    assert.equal((await fetchPage("file:///etc/passwd")).reason, "badProtocol");
+    assert.equal((await fetchPage("not a url")).reason, "invalidUrl");
+  });
+
+  test("an allow-list blocks every other host", async () => {
+    assert.equal((await fetchPage("https://example.com/", { allowHosts: ["devpost.com"] })).reason, "blockedAddress");
   });
 });

@@ -266,6 +266,24 @@ export async function lastReviewOf(owner: string | null): Promise<{ id: string; 
   return data;
 }
 
+/** What the team added beyond the repo: a Devpost page and pasted submission text. Untrusted. */
+export type Submission = { devpostUrl: string | null; text: string | null };
+
+const SubmissionShape = z.object({ devpostUrl: z.string().nullable(), text: z.string().nullable() });
+
+export async function setSubmission(id: string, submission: Submission): Promise<void> {
+  const { error } = await db().from("sessions").update({ submission }).eq("id", id);
+  if (error) throw error;
+}
+
+/** The submission a session was started with. Anything malformed reads as nothing. */
+export async function loadSubmission(id: string): Promise<Submission> {
+  const { data, error } = await db().from("sessions").select("submission").eq("id", id).maybeSingle<{ submission: unknown }>();
+  if (error) throw error;
+  const parsed = SubmissionShape.safeParse(data?.submission);
+  return parsed.success ? parsed.data : { devpostUrl: null, text: null };
+}
+
 /** Stores the demo link the team gave. Written right after the session is reserved. */
 /** Copies the person's settings onto a session they just started. The clock reads them from here. */
 export async function setSettings(id: string, settings: SessionSettings): Promise<void> {

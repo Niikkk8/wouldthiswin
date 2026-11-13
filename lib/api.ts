@@ -27,6 +27,7 @@ const STATUS: Record<ErrorKey, number> = {
   voiceUnavailable: 503,
   voiceEmpty: 422,
   eventClosed: 409,
+  invalidDevpost: 400,
 };
 
 /** An error response. Pass the session when there is one, so the client can resync to it. */

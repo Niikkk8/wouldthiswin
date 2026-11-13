@@ -312,3 +312,163 @@ export async function checkDemo(input: string): Promise<DemoCheck> {
 
   return done({ loads: false, status: null, finalUrl: url.href, reason: "tooManyRedirects" });
 }
+
+export type Page = {
+  ok: boolean;
+  status: number | null;
+  finalUrl: string | null;
+  contentType: string | null;
+  /** The body as text, cut at `maxBytes`. Empty for non-text responses. */
+  body: string;
+  truncated: boolean;
+  reason: DemoCheck["reason"];
+};
+
+export type PageOptions = {
+  timeoutMs?: number;
+  maxRedirects?: number;
+  maxBytes?: number;
+  /** When set, only these hosts (and their subdomains) may be fetched, on every hop. */
+  allowHosts?: readonly string[];
+};
+
+const PAGE_DEFAULTS = { timeoutMs: 5000, maxRedirects: 3, maxBytes: 512 * 1024 };
+
+const TEXTUAL = /^(text\/|application\/(json|xhtml\+xml|xml|ld\+json))/i;
+
+function hostAllowed(host: string, allow: readonly string[] | undefined): boolean {
+  if (!allow) return true;
+  const h = host.toLowerCase();
+  return allow.some((a) => h === a || h.endsWith(`.${a}`));
+}
+
+function readBody(res: http.IncomingMessage, maxBytes: number): Promise<{ body: string; truncated: boolean }> {
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let truncated = false;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      res.destroy();
+      resolve({ body: Buffer.concat(chunks).toString("utf8"), truncated });
+    };
+    res.on("data", (chunk: Buffer) => {
+      if (size + chunk.length > maxBytes) {
+        chunks.push(chunk.subarray(0, maxBytes - size));
+        truncated = true;
+        return finish();
+      }
+      size += chunk.length;
+      chunks.push(chunk);
+    });
+    res.on("end", finish);
+    res.on("error", finish);
+  });
+}
+
+function pageOnce(url: URL, signal: AbortSignal, maxBytes: number, cookie?: string) {
+  return new Promise<{ status: number; location: string | null; cookies: string[]; contentType: string | null; body: string; truncated: boolean }>(
+    (resolve, reject) => {
+      const mod = url.protocol === "https:" ? https : http;
+      const req = mod.request(
+        url,
+        {
+          method: "GET",
+          lookup: safeLookup,
+          signal,
+          headers: {
+            "user-agent": "Mozilla/5.0 (compatible; WouldThisWinCheck/1.0)",
+            accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+            ...(cookie ? { cookie } : {}),
+          },
+        },
+        (res) => {
+          const status = res.statusCode ?? 0;
+          const location = typeof res.headers.location === "string" ? res.headers.location : null;
+          const cookies = res.headers["set-cookie"] ?? [];
+          const contentType = typeof res.headers["content-type"] === "string" ? res.headers["content-type"] : null;
+          if (status >= 300 && status < 400) {
+            res.destroy();
+            return resolve({ status, location, cookies, contentType, body: "", truncated: false });
+          }
+          if (!contentType || !TEXTUAL.test(contentType)) {
+            res.destroy();
+            return resolve({ status, location, cookies, contentType, body: "", truncated: false });
+          }
+          readBody(res, maxBytes).then(({ body, truncated }) => resolve({ status, location, cookies, contentType, body, truncated }));
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    },
+  );
+}
+
+/**
+ * Fetches a public page's text through the same guards as checkDemo: GET only, addresses
+ * checked at DNS time on every hop, a timeout, a redirect limit and a size cap. The body is
+ * untrusted: callers parse it and never pass it on as instructions.
+ */
+export async function fetchPage(input: string, options: PageOptions = {}): Promise<Page> {
+  const o = { ...PAGE_DEFAULTS, ...options };
+  const fail = (reason: DemoCheck["reason"], status: number | null = null, finalUrl: string | null = null): Page => ({
+    ok: false,
+    status,
+    finalUrl,
+    contentType: null,
+    body: "",
+    truncated: false,
+    reason,
+  });
+  let url: URL;
+  try {
+    url = new URL(input.trim());
+  } catch {
+    return fail("invalidUrl");
+  }
+  const signal = AbortSignal.timeout(o.timeoutMs);
+  const jar: Jar = new Map();
+  for (let hop = 0; hop <= o.maxRedirects; hop++) {
+    const shape = checkUrlShape(url);
+    if (shape) return fail(shape, null, url.href);
+    if (!hostAllowed(url.hostname, o.allowHosts)) return fail("blockedAddress", null, url.href);
+    let res: Awaited<ReturnType<typeof pageOnce>>;
+    try {
+      const host = url.hostname.toLowerCase();
+      res = await pageOnce(url, signal, o.maxBytes, cookieHeader(jar, host));
+      keepCookies(jar, res.cookies, host);
+    } catch (err) {
+      const e = err as NodeJS.ErrnoException;
+      const reason: DemoCheck["reason"] =
+        e instanceof BlockedError || e?.code === "EBLOCKED"
+          ? "blockedAddress"
+          : signal.aborted || e?.name === "AbortError" || e?.name === "TimeoutError"
+            ? "timeout"
+            : e?.code === "ENOTFOUND" || e?.code === "EAI_AGAIN"
+              ? "dnsFailed"
+              : "networkError";
+      return fail(reason, null, url.href);
+    }
+    if (res.status >= 300 && res.status < 400 && res.location) {
+      try {
+        url = new URL(res.location, url);
+      } catch {
+        return fail("invalidUrl", res.status, url.href);
+      }
+      continue;
+    }
+    const ok = res.status >= 200 && res.status < 300;
+    return {
+      ok,
+      status: res.status,
+      finalUrl: url.href,
+      contentType: res.contentType,
+      body: res.body,
+      truncated: res.truncated,
+      reason: ok ? null : "httpError",
+    };
+  }
+  return fail("tooManyRedirects", null, url.href);
+}

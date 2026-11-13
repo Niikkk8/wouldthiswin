@@ -17,7 +17,9 @@ import {
   setDemoUrl,
   setPreviousId,
   setSettings,
+  setSubmission,
 } from "@/lib/session-store";
+import { MAX_SUBMISSION_CHARS, parseDevpostUrl } from "@/lib/evidence/sources";
 
 const Body = z.object({
   repoUrl: z.string().max(500),
@@ -26,6 +28,9 @@ const Body = z.object({
   previousId: z.string().regex(ID_RE).optional(),
   /** An event's session (/e/[slug]): judged on that event's rubric, while the event is open. */
   eventSlug: z.string().max(60).optional(),
+  /** Optional claim sources beyond the README: a Devpost project page and pasted submission text. */
+  devpostUrl: z.string().max(300).optional(),
+  submissionText: z.string().max(MAX_SUBMISSION_CHARS).optional(),
 });
 
 /**
@@ -63,6 +68,10 @@ export async function POST(req: Request) {
     return fail("judgeFailed");
   }
 
+  const devpostUrl = body.devpostUrl?.trim() ? parseDevpostUrl(body.devpostUrl) : null;
+  if (body.devpostUrl?.trim() && !devpostUrl) return fail("invalidDevpost");
+  const submissionText = body.submissionText?.trim() || null;
+
   const event = body.eventSlug ? eventBySlug(body.eventSlug) : null;
   if (body.eventSlug && (!event || eventStatus(event, Date.now()) !== "open")) return fail("eventClosed");
 
@@ -87,6 +96,7 @@ export async function POST(req: Request) {
     const demoUrl = demo?.url ?? previous?.loaded.demoUrl ?? null;
     if (demoUrl) await setDemoUrl(id, demoUrl);
     if (previous) await setPreviousId(id, body.previousId!);
+    if (devpostUrl || submissionText) await setSubmission(id, { devpostUrl, text: submissionText });
     const prefs = await loadPrefs(owner);
     if (prefs.extendedTime) await setSettings(id, prefs);
 

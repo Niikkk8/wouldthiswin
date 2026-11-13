@@ -87,6 +87,14 @@ export const copy = {
     demoLabel: "Demo link or video",
     demoPlaceholder: "your-app.vercel.app or a YouTube, Loom, Vimeo or Drive link",
     demoNote: "A live demo that loads is worth +8, a video that plays +4. A dead link costs 8.",
+    submission: {
+      toggle: "Add your Devpost page or submission text (optional)",
+      devpostLabel: "Devpost project page",
+      devpostPlaceholder: "devpost.com/software/your-project",
+      textLabel: "Submission text",
+      textPlaceholder: "Paste what you're submitting on Devfolio, Unstop or anywhere else.",
+      note: "The judges check these claims against your code too, not just the README.",
+    },
     versus: "Or challenge a friend: same panel, two repos",
     versusSoon: "Coming soon",
     board: {
@@ -502,6 +510,7 @@ export const copy = {
     voiceUnavailable: "Voice answers aren't working right now. Type yours instead.",
     voiceEmpty: "Didn't catch any words. Try again, or type it.",
     eventClosed: "This event isn't taking repos right now. Face the panel without it from the home page.",
+    invalidDevpost: "That Devpost link doesn't look right. Paste a project page, like devpost.com/software/your-project.",
   },
   demo: {
     header: "Sample session · {repo}",
