@@ -14,6 +14,8 @@ import { claimSources, fetchDevpost, type Devpost } from "./evidence/sources";
 import { verifyClaims, type Verdict } from "./evidence/verify";
 import { collectSnapshot } from "./checks/collect";
 import { checkDemos, demoCandidates } from "./checks/demo";
+import { readmeChecklist } from "./checks/readme";
+import { timelineFindings, type EventWindow } from "./checks/timeline";
 import { fetchPage } from "./demo-check";
 import { runChecks } from "./checks";
 import type { Finding } from "./findings";
@@ -47,7 +49,7 @@ export class ScanError extends Error {
 export type PreviousRound = { fixes: readonly string[] };
 
 /** What the team added beyond the repo. */
-export type SubmissionInput = { devpostUrl: string | null; text: string | null };
+export type SubmissionInput = { devpostUrl: string | null; text: string | null; start?: string | null; end?: string | null };
 
 /** The steps of the scan, swappable in tests. */
 export type ScanDeps = {
@@ -136,7 +138,7 @@ export async function demoSignal(url: string | null, provided: boolean): Promise
 }
 
 /** The deterministic checks over a snapshot of the repo. A failure leaves no findings, never a guess. */
-async function deterministicChecks(raw: RawRepoData, devpost: Devpost | null): Promise<Finding[]> {
+async function deterministicChecks(raw: RawRepoData, devpost: Devpost | null, window: EventWindow | null): Promise<Finding[]> {
   try {
     const demos = demoCandidates({ readme: raw.readmeFull, homepage: raw.meta.homepage, devpostLinks: devpost?.links ?? [] });
     const [snap, demo] = await Promise.all([
@@ -146,7 +148,8 @@ async function deterministicChecks(raw: RawRepoData, devpost: Devpost | null): P
       ),
       checkDemos(demos, (u) => fetchPage(u), raw.ref.repo),
     ]);
-    return [...runChecks(snap), ...demo];
+    const timeline = timelineFindings(raw.commits, window, readmeChecklist(raw.readmeFull).team);
+    return [...runChecks(snap), ...demo, ...timeline];
   } catch (err) {
     log.warn("scan.checks.failed", { repo: raw.ref.url, error: String(err) });
     return [];
@@ -166,6 +169,8 @@ export async function scanRepo(
     previous?: PreviousRound | null;
     eventContext?: string;
     submission?: SubmissionInput | null;
+    /** The event's window (from its preset or the team), for the timeline signals. */
+    window?: EventWindow | null;
   } = {},
 ): Promise<{ scan: Scan; usage: Usage }> {
   const devpost = opts.submission?.devpostUrl ? await fetchDevpost(opts.submission.devpostUrl).catch(() => null) : null;
@@ -173,7 +178,7 @@ export async function scanRepo(
     runScanModel(raw, { ...opts, devpost }),
     demoSignal(findDemoUrl(raw), false),
     opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
-    deterministicChecks(raw, devpost),
+    deterministicChecks(raw, devpost, opts.window ?? null),
   ]);
   const { firstCommitAddedOver70Pct } = computeSignals(raw, null);
   log.info("scan.validated", { repo: raw.ref.url, claims: model.claims.length, read: model.sources.length });

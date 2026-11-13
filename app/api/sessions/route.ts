@@ -31,6 +31,9 @@ const Body = z.object({
   /** Optional claim sources beyond the README: a Devpost project page and pasted submission text. */
   devpostUrl: z.string().max(300).optional(),
   submissionText: z.string().max(MAX_SUBMISSION_CHARS).optional(),
+  /** The event window, if the team gave one: for the private timeline signals. */
+  windowStart: z.string().datetime({ offset: true }).optional(),
+  windowEnd: z.string().datetime({ offset: true }).optional(),
 });
 
 /**
@@ -96,7 +99,9 @@ export async function POST(req: Request) {
     const demoUrl = demo?.url ?? previous?.loaded.demoUrl ?? null;
     if (demoUrl) await setDemoUrl(id, demoUrl);
     if (previous) await setPreviousId(id, body.previousId!);
-    if (devpostUrl || submissionText) await setSubmission(id, { devpostUrl, text: submissionText });
+    if (devpostUrl || submissionText || body.windowStart || body.windowEnd) {
+      await setSubmission(id, { devpostUrl, text: submissionText, start: body.windowStart ?? null, end: body.windowEnd ?? null });
+    }
     const prefs = await loadPrefs(owner);
     if (prefs.extendedTime) await setSettings(id, prefs);
 

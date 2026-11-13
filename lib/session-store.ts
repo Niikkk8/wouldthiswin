@@ -267,9 +267,14 @@ export async function lastReviewOf(owner: string | null): Promise<{ id: string; 
 }
 
 /** What the team added beyond the repo: a Devpost page and pasted submission text. Untrusted. */
-export type Submission = { devpostUrl: string | null; text: string | null };
+export type Submission = { devpostUrl: string | null; text: string | null; start?: string | null; end?: string | null };
 
-const SubmissionShape = z.object({ devpostUrl: z.string().nullable(), text: z.string().nullable() });
+const SubmissionShape = z.object({
+  devpostUrl: z.string().nullable(),
+  text: z.string().nullable(),
+  start: z.string().datetime({ offset: true }).nullable().optional(),
+  end: z.string().datetime({ offset: true }).nullable().optional(),
+});
 
 export async function setSubmission(id: string, submission: Submission): Promise<void> {
   const { error } = await db().from("sessions").update({ submission }).eq("id", id);
@@ -281,7 +286,7 @@ export async function loadSubmission(id: string): Promise<Submission> {
   const { data, error } = await db().from("sessions").select("submission").eq("id", id).maybeSingle<{ submission: unknown }>();
   if (error) throw error;
   const parsed = SubmissionShape.safeParse(data?.submission);
-  return parsed.success ? parsed.data : { devpostUrl: null, text: null };
+  return parsed.success ? parsed.data : { devpostUrl: null, text: null, start: null, end: null };
 }
 
 /** Stores the demo link the team gave. Written right after the session is reserved. */

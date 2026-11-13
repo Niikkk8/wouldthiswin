@@ -8,7 +8,7 @@ import { MAX_SUBMISSION_CHARS } from "@/lib/evidence/devpost-url";
 
 const S = copy.landing.submission;
 
-export type SubmissionValue = { devpost: string; text: string };
+export type SubmissionValue = { devpost: string; text: string; start: string; end: string };
 
 /** Optional claim sources beyond the README. A native disclosure, so it opens before hydration. */
 export function SubmissionFields({
@@ -62,6 +62,26 @@ export function SubmissionFields({
         </div>
         <p id={`${id}-sub-note`} className="text-[13px] text-text-subtle">
           {S.note}
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(["start", "end"] as const).map((k) => (
+            <div key={k}>
+              <Label htmlFor={`${id}-${k}`} className="text-[13px]">
+                {S[k]}
+              </Label>
+              <Input
+                id={`${id}-${k}`}
+                type="datetime-local"
+                value={value[k]}
+                onChange={(e) => onChange({ ...value, [k]: e.target.value })}
+                aria-describedby={`${id}-window-note`}
+                className="mt-2 h-12 text-[15px]"
+              />
+            </div>
+          ))}
+        </div>
+        <p id={`${id}-window-note`} className="text-[13px] text-text-subtle">
+          {S.windowNote}
         </p>
       </div>
     </details>

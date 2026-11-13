@@ -24,6 +24,8 @@ export type StartRequest = {
   eventSlug?: string;
   devpostUrl?: string;
   submissionText?: string;
+  windowStart?: string;
+  windowEnd?: string;
 };
 
 export type StartResult =

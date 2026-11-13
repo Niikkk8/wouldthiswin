@@ -35,7 +35,7 @@ export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; e
   const [demoInvalid, setDemoInvalid] = useState(false);
   const [pending, setPending] = useState(false);
   const [asleep, setAsleep] = useState<AsleepInfo | null>(null);
-  const [submission, setSubmission] = useState<SubmissionValue>({ devpost: "", text: "" });
+  const [submission, setSubmission] = useState<SubmissionValue>({ devpost: "", text: "", start: "", end: "" });
   const [devpostInvalid, setDevpostInvalid] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
@@ -85,6 +85,9 @@ export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; e
       ...(eventSlug ? { eventSlug } : {}),
       ...(devpost ? { devpostUrl: devpost } : {}),
       ...(submission.text.trim() ? { submissionText: submission.text } : {}),
+      // datetime-local is the visitor's own time; the server gets an exact instant.
+      ...(submission.start ? { windowStart: new Date(submission.start).toISOString() } : {}),
+      ...(submission.end ? { windowEnd: new Date(submission.end).toISOString() } : {}),
     });
     if (r.kind === "started") return router.push(`/s/${r.id}`);
     setPending(false);

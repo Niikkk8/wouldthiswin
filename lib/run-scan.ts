@@ -9,7 +9,7 @@ import { recheckFixes, type Iteration } from "./recheck";
 import { snapshotOf } from "./rejudge";
 import { mergeUsage, newUsage, type Usage } from "./model";
 import { ScanError, demoSignal, scanRepo } from "./scan";
-import { judgeContextFor } from "./events";
+import { eventBySlug, judgeContextFor } from "./events";
 import { cacheKey, scanWithCache } from "./scan-cache";
 import { noEmit, type Emit } from "./scan-progress";
 import { applyScan, type Scan, type SessionState } from "./session";
@@ -27,6 +27,13 @@ import {
   putCachedScan,
   releaseScan,
 } from "./session-store";
+
+/** The event window: the preset's when the session is for an event, else what the team gave. */
+function windowFor(slug: string | null, submission: { start?: string | null; end?: string | null }) {
+  const event = eventBySlug(slug);
+  if (event) return { start: event.startsAt, end: event.endsAt };
+  return submission.start || submission.end ? { start: submission.start ?? null, end: submission.end ?? null } : null;
+}
 
 /** A scan that ends before any model call: nothing was spent on it. */
 class ScanStop extends Error {
@@ -61,7 +68,7 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
     const eventContext = judgeContextFor(session.eventSlug);
     // Claims from a Devpost page or pasted text aren't in the repo, so neither is the cache key.
     const submission = await loadSubmission(id);
-    const cacheable = !previous && !eventContext && !submission.devpostUrl && !submission.text;
+    const cacheable = !previous && !eventContext && !submission.devpostUrl && !submission.text && !submission.start && !submission.end;
     const key = cacheable ? cacheKey(ref.owner, ref.repo, latestSha) : null;
     const result = await scanWithCache<Usage>({
       key,
@@ -88,7 +95,14 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
         if (!raw.readmeFull.trim()) throw new ScanStop("emptyReadme");
         const scanStarted = Date.now();
         const [fresh, fixes] = await Promise.all([
-          scanRepo(raw, { emit, demoUrl, previous: previous ? { fixes: previous.fixes } : null, eventContext, submission }),
+          scanRepo(raw, {
+            emit,
+            demoUrl,
+            previous: previous ? { fixes: previous.fixes } : null,
+            eventContext,
+            submission,
+            window: windowFor(session.eventSlug, submission),
+          }),
           previous ? checkFixes(raw, previous, emit) : Promise.resolve(null),
         ]);
         await addStepTiming(id, "scan.total", Date.now() - scanStarted);
