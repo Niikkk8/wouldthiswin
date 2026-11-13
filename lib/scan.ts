@@ -13,6 +13,7 @@ import type { RepoReader } from "./evidence/repo-tools";
 import { claimSources, fetchDevpost, type Devpost } from "./evidence/sources";
 import { verifyClaims, type Verdict } from "./evidence/verify";
 import { collectSnapshot } from "./checks/collect";
+import { aiDepth, aiDepthFindings, usesPretrained, type AiDepth } from "./checks/ai-depth";
 import { checkDemos, demoCandidates } from "./checks/demo";
 import { readmeChecklist } from "./checks/readme";
 import { timelineFindings, type EventWindow } from "./checks/timeline";
@@ -138,7 +139,9 @@ export async function demoSignal(url: string | null, provided: boolean): Promise
 }
 
 /** The deterministic checks over a snapshot of the repo. A failure leaves no findings, never a guess. */
-async function deterministicChecks(raw: RawRepoData, devpost: Devpost | null, window: EventWindow | null): Promise<Finding[]> {
+type CheckResult = { findings: Finding[]; depth: AiDepth; pretrained: boolean };
+
+async function deterministicChecks(raw: RawRepoData, devpost: Devpost | null, window: EventWindow | null): Promise<CheckResult> {
   try {
     const demos = demoCandidates({ readme: raw.readmeFull, homepage: raw.meta.homepage, devpostLinks: devpost?.links ?? [] });
     const [snap, demo] = await Promise.all([
@@ -149,10 +152,10 @@ async function deterministicChecks(raw: RawRepoData, devpost: Devpost | null, wi
       checkDemos(demos, (u) => fetchPage(u), raw.ref.repo),
     ]);
     const timeline = timelineFindings(raw.commits, window, readmeChecklist(raw.readmeFull).team);
-    return [...runChecks(snap), ...demo, ...timeline];
+    return { findings: [...runChecks(snap), ...demo, ...timeline], depth: aiDepth(snap), pretrained: usesPretrained(snap) };
   } catch (err) {
     log.warn("scan.checks.failed", { repo: raw.ref.url, error: String(err) });
-    return [];
+    return { findings: [], depth: { level: "none", evidence: [] }, pretrained: false };
   }
 }
 
@@ -186,7 +189,13 @@ export async function scanRepo(
     scan: {
       claims: model.claims,
       questions: model.questions,
-      signals: { demo: given ?? auto, bulkFirstCommit: firstCommitAddedOver70Pct, commit: raw.latestSha, checks },
+      signals: {
+        demo: given ?? auto,
+        bulkFirstCommit: firstCommitAddedOver70Pct,
+        commit: raw.latestSha,
+        // The AI-depth findings need the claims, so they come last.
+        checks: [...checks.findings, ...aiDepthFindings(checks.depth, model.claims, checks.pretrained)],
+      },
       files: raw.headFilePaths.slice(0, STORED_FILES),
       sources: model.sources,
       autoDemo: auto,
