@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, test } from "vitest";
-import { SILENCE_SCORE } from "./odds";
+import { LIFELINE_MS, SUBMIT_GRACE_MS, UPLOAD_GRACE_MS, WINDOW_MS, clockStart, deadlineOf } from "./deadline";
+import { LIFELINE_DELTA, SILENCE_SCORE } from "./odds";
 import {
-  ANSWER_GRACE_MS,
-  ANSWER_WINDOW_MS,
   type Claim,
   type Panel,
   type Result,
@@ -16,7 +15,10 @@ import {
   issueQuestion,
   newSession,
   settleAnswer,
+  startRecording,
   toView,
+  uploadRefusal,
+  pullLifeline,
   verdictOf,
 } from "./session";
 
@@ -189,10 +191,14 @@ describe("act order", () => {
   });
 });
 
+/** The first question's buzzer: a quick fact from the Tired Judge, issued at T0. */
+const buzzer = (extendedTime = false, lifeline = false) =>
+  deadlineOf({ text: questions[0].text, caught: null, kind: "fact", issuedAt: T0, lifeline }, { extendedTime });
+
 describe("answers", () => {
   test("a late answer is scored as silence", () => {
     let s = unwrap(issueQuestion(grilling(), 0, T0));
-    s = unwrap(acceptAnswer(s, 0, "A long, considered answer.", T0 + ANSWER_WINDOW_MS + ANSWER_GRACE_MS + 1));
+    s = unwrap(acceptAnswer(s, 0, "A long, considered answer.", buzzer() + SUBMIT_GRACE_MS + 1));
     assert.equal(s.answers[0].silent, true);
     assert.equal(s.answers[0].late, true);
     assert.equal(s.answers[0].text, "");
@@ -205,9 +211,46 @@ describe("answers", () => {
 
   test("an answer inside the grace period counts", () => {
     let s = unwrap(issueQuestion(grilling(), 0, T0));
-    s = unwrap(acceptAnswer(s, 0, "Just in time.", T0 + ANSWER_WINDOW_MS + ANSWER_GRACE_MS));
+    s = unwrap(acceptAnswer(s, 0, "Just in time.", buzzer() + SUBMIT_GRACE_MS));
     assert.equal(s.answers[0].silent, false);
     assert.equal(s.answers[0].text, "Just in time.");
+  });
+
+  test("extended time doubles the window, with no penalty", () => {
+    let s = unwrap(issueQuestion({ ...grilling(), settings: { extendedTime: true } }, 0, T0));
+    s = unwrap(acceptAnswer(s, 0, "Took my time.", buzzer() + 30_000));
+    assert.equal(s.answers[0].silent, false);
+    assert.equal(s.events.length, grilling().events.length);
+  });
+
+  test("a recording started before the buzzer earns the upload grace", () => {
+    let s = unwrap(issueQuestion(grilling(), 0, T0));
+    s = unwrap(startRecording(s, 0, buzzer() - 1_000));
+    s = unwrap(acceptAnswer(s, 0, "Said it out loud.", buzzer() + UPLOAD_GRACE_MS + SUBMIT_GRACE_MS));
+    assert.equal(s.answers[0].silent, false);
+  });
+
+  test("a recording can't start after the buzzer, and its first start time sticks", () => {
+    let s = unwrap(issueQuestion(grilling(), 0, T0));
+    assert.deepEqual(startRecording(s, 0, buzzer()), { ok: false, error: "tooLate" });
+    s = unwrap(startRecording(s, 0, T0 + 10_000));
+    s = unwrap(startRecording(s, 0, T0 + 20_000));
+    assert.equal(s.questions[0].recordingStartedAt, T0 + 10_000);
+  });
+
+  test("audio is accepted only for a recording that started before the buzzer, within 5 seconds", () => {
+    let s = unwrap(issueQuestion(grilling(), 0, T0));
+    assert.equal(uploadRefusal(s, 0, T0 + 1_000), "tooLate");
+    s = unwrap(startRecording(s, 0, buzzer() - 1_000));
+    assert.equal(uploadRefusal(s, 0, buzzer() + UPLOAD_GRACE_MS), null);
+    assert.equal(uploadRefusal(s, 0, buzzer() + UPLOAD_GRACE_MS + 1), "tooLate");
+    assert.equal(uploadRefusal(s, 1, T0), "badQuestion");
+  });
+
+  test("without a recording, a typed answer past the network grace is late", () => {
+    let s = unwrap(issueQuestion(grilling(), 0, T0));
+    s = unwrap(acceptAnswer(s, 0, "Typed.", buzzer() + UPLOAD_GRACE_MS));
+    assert.equal(s.answers[0].late, true);
   });
 
   test("an empty answer is silence", () => {
@@ -261,6 +304,36 @@ describe("answers", () => {
   });
 });
 
+describe("lifeline", () => {
+  test("adds 30 seconds and costs a fixed 2 points at once", () => {
+    let s = unwrap(issueQuestion(grilling(), 0, T0));
+    const before = s.events.at(-1)!.after;
+    s = unwrap(pullLifeline(s, 0, T0 + 5_000));
+    assert.equal(s.questions[0].lifeline, true);
+    assert.equal(s.events.at(-1)!.kind, "lifeline");
+    assert.equal(s.events.at(-1)!.delta, LIFELINE_DELTA);
+    assert.equal(s.events.at(-1)!.after, before - 2);
+    s = unwrap(acceptAnswer(s, 0, "With the extra time.", buzzer() + LIFELINE_MS));
+    assert.equal(s.answers[0].silent, false);
+  });
+
+  test("once per session", () => {
+    let s = unwrap(issueQuestion(grilling(), 0, T0));
+    s = unwrap(pullLifeline(s, 0, T0));
+    s = answer(s, 0, "a", T0 + 1_000);
+    s = unwrap(issueQuestion(s, 1, T0 + 2_000));
+    assert.deepEqual(pullLifeline(s, 1, T0 + 3_000), { ok: false, error: "lifelineUsed" });
+    assert.equal(toView(s, T0).lifelineAvailable, false);
+  });
+
+  test("not after the buzzer, and not on a question that isn't open", () => {
+    const s = unwrap(issueQuestion(grilling(), 0, T0));
+    assert.deepEqual(pullLifeline(s, 0, buzzer()), { ok: false, error: "tooLate" });
+    assert.deepEqual(pullLifeline(grilling(), 0, T0), { ok: false, error: "notIssued" });
+    assert.deepEqual(pullLifeline(s, 1, T0), { ok: false, error: "badQuestion" });
+  });
+});
+
 describe("verdict", () => {
   test("changes requested when a core claim is missing from the code", () => {
     let s = grilling();
@@ -307,9 +380,15 @@ describe("view", () => {
     let s = grilling();
     assert.equal(toView(s, T0).questions.length, 0);
     s = unwrap(issueQuestion(s, 0, T0));
-    const v = toView(s, T0 + 10_000);
+    const start = clockStart({ text: questions[0].text, caught: null, kind: "fact", issuedAt: T0 });
+    const reading = toView(s, T0);
+    assert.equal(reading.questions[0].readMs, start - T0);
+    assert.equal(reading.questions[0].remainingMs, WINDOW_MS.fact);
+    const v = toView(s, start + 10_000);
     assert.equal(v.questions.length, 1);
-    assert.equal(v.questions[0].remainingMs, 20_000);
+    assert.equal(v.questions[0].readMs, 0);
+    assert.equal(v.questions[0].remainingMs, 35_000);
+    assert.equal(v.questions[0].kind, "fact");
     assert.equal(v.questionCount, 3);
   });
 

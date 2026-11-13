@@ -10,10 +10,12 @@ import {
   ensureOwner,
   lastReviewOf,
   loadOwnReview,
+  loadPrefs,
   ownerHash,
   reserveSession,
   setDemoUrl,
   setPreviousId,
+  setSettings,
 } from "@/lib/session-store";
 
 const Body = z.object({
@@ -77,6 +79,8 @@ export async function POST(req: Request) {
     const demoUrl = demo?.url ?? previous?.loaded.demoUrl ?? null;
     if (demoUrl) await setDemoUrl(id, demoUrl);
     if (previous) await setPreviousId(id, body.previousId!);
+    const prefs = await loadPrefs(owner);
+    if (prefs.extendedTime) await setSettings(id, prefs);
 
     log.info("session.start", { id, repo: ref.url, ...(previous ? { previousId: body.previousId } : {}) });
     return Response.json({ id });

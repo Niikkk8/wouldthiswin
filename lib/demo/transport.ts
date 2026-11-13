@@ -9,7 +9,9 @@ import {
   applyPanel,
   applyScan,
   issueQuestion,
+  pullLifeline,
   settleAnswer,
+  startRecording,
   toView,
   type Result,
   type SessionState,
@@ -22,7 +24,9 @@ export type DemoAction =
   | { action: "advance"; from: SessionState["act"] }
   | { action: "show"; question: number }
   | { action: "answer"; question: number; text: string }
-  | { action: "deliberate" };
+  | { action: "deliberate" }
+  | { action: "lifeline"; question: number }
+  | { action: "recording"; question: number };
 
 export type TransportResult = { status: number; body: Record<string, unknown> };
 
@@ -84,6 +88,10 @@ export function demoTransport(
         const scored = DEMO_ANSWERS[a.question];
         return apply(settleAnswer(state, a.question, { score: scored.score, reason: scored.reason }));
       }
+      case "lifeline":
+        return apply(pullLifeline(state, a.question, Date.now()));
+      case "recording":
+        return apply(startRecording(state, a.question, Date.now()));
       case "deliberate":
         if (state.panel) return { status: 200, body: { view: view() } };
         await wait(timings.deliberateMs);

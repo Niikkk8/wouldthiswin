@@ -22,6 +22,10 @@ const STATUS: Record<ErrorKey, number> = {
   nothingNew: 409,
   notReviewed: 409,
   network: 503,
+  tooLate: 409,
+  lifelineUsed: 409,
+  voiceUnavailable: 503,
+  voiceEmpty: 422,
 };
 
 /** An error response. Pass the session when there is one, so the client can resync to it. */
@@ -43,6 +47,7 @@ export const badRequest = () => Response.json({ error: "badRequest" }, { status:
 export function failMutation(r: Extract<MutateResult, { ok: false }>) {
   if (r.error === "notFound") return fail("notFound");
   if (r.error === "alreadyAnswered") return fail("alreadyAnswered", r.session);
+  if (r.error === "tooLate" || r.error === "lifelineUsed") return fail(r.error, r.session);
   return fail("stale", r.session);
 }
 

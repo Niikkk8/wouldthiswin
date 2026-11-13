@@ -28,7 +28,7 @@ export const copy = {
     },
     meet: {
       heading: "Meet the panel",
-      lede: "Three judges, three angles. Each one asks one question, and you get 30 seconds.",
+      lede: "Three judges, three angles. Each one asks one question, and you get 45 to 90 seconds to answer it, typed or out loud.",
       playedBy: "played by",
       hint: "Hover or tap to hear the question",
       sample: "Sample question",
@@ -77,7 +77,12 @@ export const copy = {
     placeholder: "github.com/you/your-project",
     button: "Face the panel",
     starting: "Finding a panel",
-    underButton: "About 4 minutes. 3 questions, 30 seconds each. Free, no sign-up.",
+    underButton: "About 6 minutes. 3 questions, typed or spoken. Free, no sign-up.",
+    prefs: {
+      toggle: "Accessibility",
+      extended: "Extended time",
+      extendedNote: "Twice as long to answer every question. No penalty, and it never shows on your review.",
+    },
     demoToggle: "Add a demo link or video (optional)",
     demoLabel: "Demo link or video",
     demoPlaceholder: "your-app.vercel.app or a YouTube, Loom, Vimeo or Drive link",
@@ -167,6 +172,7 @@ export const copy = {
     demoDead: "Demo link is dead",
     bulkFirstCommit: "Most of the code arrived in one commit.",
     late: "Answered after the buzzer",
+    lifeline: "Took 30 more seconds",
   },
   acts: {
     scan: {
@@ -218,6 +224,25 @@ export const copy = {
     grilling: {
       answerLabel: "Your answer",
       hint: "Enter to answer. Silence counts as an answer too.",
+      read: "Clock starts in {n}",
+      voice: {
+        label: "Answer out loud",
+        idle: "Tap or hold to talk",
+        idleDesktop: "Hold space or click to talk",
+        recording: "Listening. Tap to stop",
+        holding: "Listening. Let go to stop",
+        uploading: "Writing down what you said",
+        denied: "No microphone access, so typing it is.",
+        unsupported: "This browser can't record audio, so typing it is.",
+        off: "Voice is off.",
+        turnOn: "Use voice",
+        seconds: "{s}s",
+      },
+      lifeline: {
+        button: "+30s",
+        label: "Take 30 more seconds. Costs 2 points.",
+        used: "fine. thirty more seconds. it's going on your record.",
+      },
       counter: "{n} of {max}",
       counterLabel: "{n} of {max} characters used",
       thinking: "{judge} is writing something down.",
@@ -382,6 +407,10 @@ export const copy = {
     nothingNew: "Nothing new on GitHub since the last review. Push your fixes, then ask again.",
     notReviewed: "Finish this session's review first, then ask for a re-review.",
     network: "Lost the connection to the room. Try again.",
+    tooLate: "The buzzer went before that got in.",
+    lifelineUsed: "You've already used your lifeline.",
+    voiceUnavailable: "Voice answers aren't working right now. Type yours instead.",
+    voiceEmpty: "Didn't catch any words. Try again, or type it.",
   },
   demo: {
     header: "Sample session · {repo}",
@@ -413,7 +442,7 @@ export const copy = {
     empty: "The first guides are on their way.",
     cta: {
       title: "Would yours win?",
-      body: "Paste your repo. Three judges check every claim, grill you for 30 seconds each, and give you your odds. Free, no sign-up.",
+      body: "Paste your repo. Three judges check every claim, grill you with a question each, and give you your odds. Free, no sign-up.",
       button: "Face the panel",
     },
   },

@@ -8,6 +8,7 @@ import { copy, fill } from "./copy";
 import type { ClaimWeight } from "./odds";
 import { JUDGES, QUESTION_COUNT, type Claim, type Judge, type Question } from "./session";
 import type { Source } from "./sources";
+import { QUESTION_KINDS } from "./deadline";
 
 export const MAX_CLAIMS = 6;
 export const MAX_CANDIDATES = 2;
@@ -32,7 +33,11 @@ const ModelVerdict = z.object({
   label: z.string(),
   missing: z.string().nullable(),
 });
-const ModelQuestion = z.object({ text: z.string(), caught: z.string().nullable() });
+const ModelQuestion = z.object({
+  text: z.string(),
+  caught: z.string().nullable(),
+  kind: z.enum(QUESTION_KINDS),
+});
 export const VerifyOutput = z.object({
   verdicts: z.array(ModelVerdict),
   questions: z.object({ engineer: ModelQuestion, investor: ModelQuestion, tired: ModelQuestion }),
@@ -251,6 +256,7 @@ export function validateVerify(
     questions.push({
       judge: judge as Judge,
       text,
+      kind: q.data.kind,
       // The highlight must be a phrase from the question itself, and only part of it:
       // highlighting the whole question highlights nothing.
       caught:

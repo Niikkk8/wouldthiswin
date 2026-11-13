@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { JudgesAsleep } from "@/components/judges-asleep";
+import { AccessibilityPrefs } from "./accessibility-prefs";
 import { copy } from "@/lib/copy";
 import { parseDemoLink } from "@/lib/demo-link";
 import { parseRepoUrl } from "@/lib/repo-url";
@@ -142,6 +143,7 @@ export function RepoForm({ id = "repo", eventSlug, className }: { id?: string; e
           </p>
         </div>
       </details>
+      <AccessibilityPrefs id={id} />
       {SHOW_VERSUS && (
       <Tooltip>
         <TooltipTrigger asChild>

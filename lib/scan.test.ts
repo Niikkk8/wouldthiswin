@@ -48,9 +48,9 @@ function repo(readme = INJECTION): RawRepoData {
 }
 
 const questions = {
-  engineer: { text: "Which file sends the SMS?", caught: null },
-  investor: { text: "Who pays?", caught: null },
-  tired: { text: "In one sentence. What is it?", caught: null },
+  engineer: { text: "Which file sends the SMS?", caught: null, kind: "fact" },
+  investor: { text: "Who pays?", caught: null, kind: "decision" },
+  tired: { text: "In one sentence. What is it?", caught: null, kind: "fact" },
 };
 
 const claimsA = () => ({
@@ -196,7 +196,7 @@ describe("scan calls", () => {
   });
 
   test("two bad outputs from call B fail the scan", async () => {
-    const tooLong = () => ({ verdicts: [], questions: { ...questions, tired: { text: "x".repeat(300), caught: null } } });
+    const tooLong = () => ({ verdicts: [], questions: { ...questions, tired: { text: "x".repeat(300), caught: null, kind: "fact" } } });
     await assert.rejects(
       runScanModel(repo(), { call: model([claimsA()], [tooLong(), tooLong()]), fetch: fetchFrom(FILES).fetch }),
       /invalid verify output after retry/,

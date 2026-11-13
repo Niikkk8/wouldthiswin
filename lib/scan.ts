@@ -79,6 +79,7 @@ Task 2, one question from each judge, built on the verdicts above, under 200 cha
 - investor: who is this for, specifically? Push for a named user ("a clinic receptionist", not "everyone") and who pays, specific to what this project does.
 - tired: blunt and short, end of a long day, tuned to this project. Usually some form of "In one sentence. What is it?"
 - caught: 2 to 6 words copied verbatim from that same question that point at the problem, or null. Never the whole question.
+- kind: how long a fair answer takes. "fact" for a one-line answer (a file, a name, one sentence), "decision" when they must explain why they chose something, "tradeoff" when they must defend a choice against its cost. The answer window follows from it (45, 75 or 90 seconds).
 
 Tone: direct and dry. Be blunt about the evidence, never about the people.`;
 

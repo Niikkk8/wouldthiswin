@@ -43,6 +43,9 @@ export function demoDelta(status: DemoStatus): number {
   return DEMO_DELTAS[status];
 }
 
+/** The grilling's one lifeline (30 more seconds) costs this, whatever the odds. */
+export const LIFELINE_DELTA = -2;
+
 /** The first commit added more than 70% of the files. */
 export const BULK_FIRST_COMMIT_DELTA = -10;
 
@@ -82,7 +85,7 @@ export type OddsAct = 1 | 2;
 
 export type OddsEvent = {
   act: OddsAct;
-  kind: "claim" | "demo" | "commits" | "iteration" | "answer";
+  kind: "claim" | "demo" | "commits" | "iteration" | "answer" | "lifeline";
   /** Set on claim events, so the replay can color unclear claims. */
   status?: ClaimStatus;
   /** What the odds actually moved, after clamping. */

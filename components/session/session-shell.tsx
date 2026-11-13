@@ -26,7 +26,9 @@ export type SessionAction =
   | { action: "advance"; from: ActName }
   | { action: "show"; question: number }
   | { action: "answer"; question: number; text: string }
-  | { action: "deliberate" };
+  | { action: "deliberate" }
+  | { action: "lifeline"; question: number }
+  | { action: "recording"; question: number };
 
 export type SendResult = {
   ok: boolean;

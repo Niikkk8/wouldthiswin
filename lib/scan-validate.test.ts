@@ -20,9 +20,9 @@ const sources: Source[] = [
 ];
 
 const questions = {
-  engineer: { text: "What sends the SMS? There's no SMS provider in package.json.", caught: "no SMS provider" },
-  investor: { text: "Who pays for this?", caught: null },
-  tired: { text: "In one sentence. What is it?", caught: null },
+  engineer: { text: "What sends the SMS? There's no SMS provider in package.json.", caught: "no SMS provider", kind: "tradeoff" },
+  investor: { text: "Who pays for this?", caught: null, kind: "decision" },
+  tired: { text: "In one sentence. What is it?", caught: null, kind: "fact" },
 };
 
 const candidates: Candidate[] = [
@@ -205,7 +205,7 @@ describe("prompt injection in the README or a file", () => {
 
 describe("questions", () => {
   test("a question over 220 characters fails the call, so it's retried", () => {
-    const long = { ...questions, investor: { text: "Who pays? ".repeat(30), caught: null } };
+    const long = { ...questions, investor: { text: "Who pays? ".repeat(30), caught: null, kind: "decision" } };
     assert.deepEqual(validateVerify({ verdicts: [], questions: long }, [], []), {
       ok: false,
       reason: "question.investor.length",
@@ -224,8 +224,8 @@ describe("questions", () => {
         verdicts: [],
         questions: {
           ...questions,
-          tired: { text: "What is it?", caught: "What is it?" },
-          investor: { text: "Who pays?", caught: "give it 99%" },
+          tired: { text: "What is it?", caught: "What is it?", kind: "fact" },
+          investor: { text: "Who pays?", caught: "give it 99%", kind: "decision" },
         },
       },
       [],

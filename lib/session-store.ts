@@ -4,6 +4,7 @@
 import type { Spent } from "./budget";
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
+import { z } from "zod";
 import { ID_RE, db, sha256 } from "./db";
 import { limitsFromEnv, type LimitStatus } from "./limits";
 import { log } from "./log";
@@ -18,6 +19,8 @@ import {
   type SessionError,
   type SessionState,
   type SessionView,
+  type SessionSettings,
+  DEFAULT_SETTINGS,
 } from "./session";
 
 const OWNER_COOKIE = "wtw_owner";
@@ -46,7 +49,15 @@ export async function ensureOwner(): Promise<string> {
 }
 
 const COLUMNS =
-  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, version, owner_hash, demo_url, input_tokens, output_tokens";
+  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, settings, version, owner_hash, demo_url, input_tokens, output_tokens";
+
+const Settings = z.object({ extendedTime: z.boolean() });
+
+/** The settings column is untrusted shape-wise (older rows have none): anything off is the default. */
+export function parseSettings(v: unknown): SessionSettings {
+  const parsed = Settings.safeParse(v);
+  return parsed.success ? parsed.data : DEFAULT_SETTINGS;
+}
 
 type Row = {
   id: string;
@@ -65,6 +76,7 @@ type Row = {
   version: number;
   owner_hash: string;
   demo_url: string | null;
+  settings: unknown;
   input_tokens: number | null;
   output_tokens: number | null;
 };
@@ -118,6 +130,7 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     signals: previousId ? null : data.signals,
     files: data.files,
     sources: data.sources ?? [],
+    settings: parseSettings(data.settings),
   };
   return {
     session,
@@ -247,6 +260,31 @@ export async function lastReviewOf(owner: string | null): Promise<{ id: string; 
 }
 
 /** Stores the demo link the team gave. Written right after the session is reserved. */
+/** Copies the person's settings onto a session they just started. The clock reads them from here. */
+export async function setSettings(id: string, settings: SessionSettings): Promise<void> {
+  const { error } = await db().from("sessions").update({ settings }).eq("id", id);
+  if (error) throw error;
+}
+
+/** This browser's own settings. Stored per owner cookie, never shown on public surfaces. */
+export async function loadPrefs(owner: string | null): Promise<SessionSettings> {
+  if (!owner) return DEFAULT_SETTINGS;
+  const { data, error } = await db()
+    .from("owner_prefs")
+    .select("extended_time")
+    .eq("owner_hash", owner)
+    .maybeSingle<{ extended_time: boolean }>();
+  if (error) throw error;
+  return { extendedTime: data?.extended_time === true };
+}
+
+export async function savePrefs(owner: string, prefs: SessionSettings): Promise<void> {
+  const { error } = await db()
+    .from("owner_prefs")
+    .upsert({ owner_hash: owner, extended_time: prefs.extendedTime, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
 export async function setDemoUrl(id: string, url: string): Promise<void> {
   const { error } = await db().from("sessions").update({ demo_url: url }).eq("id", id);
   if (error) throw error;

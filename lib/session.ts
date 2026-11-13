@@ -2,6 +2,15 @@
 // these, and saves the result. The client never runs them; it only mirrors SessionView.
 
 import { copy, fill } from "./copy";
+import {
+  acceptsLifeline,
+  acceptsRecordingStart,
+  acceptsSpoken,
+  acceptsUpload,
+  clockView,
+  type ClockSettings,
+  type QuestionKind,
+} from "./deadline";
 import { displayTree } from "./file-tree";
 import type { Iteration } from "./recheck";
 import { reviewOf, type Review } from "./review";
@@ -13,6 +22,7 @@ import {
   type OddsEvent,
   type Tier,
   BULK_FIRST_COMMIT_DELTA,
+  LIFELINE_DELTA,
   fixDelta,
   SILENCE_SCORE,
   START_ODDS,
@@ -33,9 +43,8 @@ export const JUDGES = ["engineer", "investor", "tired"] as const;
 export type Judge = (typeof JUDGES)[number];
 
 export const QUESTION_COUNT = 3;
-export const ANSWER_WINDOW_MS = 30_000;
-export const ANSWER_GRACE_MS = 3_000;
-export const MAX_ANSWER_LENGTH = 300;
+/** Long enough for 90 seconds of speech, transcribed. */
+export const MAX_ANSWER_LENGTH = 1000;
 
 export type Claim = {
   /** The claim as the README makes it, e.g. "SMS alerts when your turn is close". */
@@ -71,9 +80,24 @@ export type Question = {
   text: string;
   /** The phrase the judge caught, shown in red. Must appear in text. */
   caught: string | null;
+  /** Sets the answer window (lib/deadline.ts). Rows from before kinds existed default by judge. */
+  kind?: QuestionKind;
   /** Epoch ms when the question was first shown. The clock never resets. */
   issuedAt: number | null;
+  /** The session's one lifeline was pulled on this question: 30 more seconds. */
+  lifeline?: boolean;
+  /** Server time a voice recording started, if one did. Uploads are judged against it. */
+  recordingStartedAt?: number | null;
 };
+
+/** The window a question gets when the scan didn't say: the one-sentence question is a quick fact. */
+const DEFAULT_KIND: Record<Judge, QuestionKind> = { tired: "fact", investor: "decision", engineer: "tradeoff" };
+
+export const kindOf = (q: Pick<Question, "kind" | "judge">): QuestionKind => q.kind ?? DEFAULT_KIND[q.judge];
+
+/** Per-person settings, copied onto the session when it starts. Never shown on public surfaces. */
+export type SessionSettings = ClockSettings;
+export const DEFAULT_SETTINGS: SessionSettings = { extendedTime: false };
 
 export type Answer = {
   text: string;
@@ -115,6 +139,7 @@ export type SessionState = {
   files: string[];
   /** The files the scan fetched and read (truncated). Review comments may only quote these. */
   sources: Source[];
+  settings: SessionSettings;
 };
 
 export type SessionError =
@@ -124,6 +149,8 @@ export type SessionError =
   | "badScan"
   | "badQuestion"
   | "notIssued"
+  | "lifelineUsed"
+  | "tooLate"
   | "alreadyAnswered"
   | "alreadyScored"
   | "needsScore"
@@ -149,6 +176,7 @@ export function newSession(id: string, repo: string): SessionState {
     signals: null,
     files: [],
     sources: [],
+    settings: DEFAULT_SETTINGS,
   };
 }
 
@@ -238,20 +266,65 @@ export function issueQuestion(s: SessionState, index: number, now: number): Resu
   return ok({ ...s, questions });
 }
 
-export function isLate(issuedAt: number, now: number): boolean {
-  return now - issuedAt > ANSWER_WINDOW_MS + ANSWER_GRACE_MS;
+type OpenQuestion = Question & { issuedAt: number };
+
+/** The question on the clock: issued, not yet answered. */
+function openQuestion(s: SessionState, index: number): { ok: true; q: OpenQuestion } | { ok: false; error: SessionError } {
+  if (s.act !== "grilling") return { ok: false, error: "wrongAct" };
+  if (index < 0 || index >= s.questions.length) return { ok: false, error: "badQuestion" };
+  if (index < s.answers.length) return { ok: false, error: "alreadyAnswered" };
+  if (index > s.answers.length) return { ok: false, error: "badQuestion" };
+  const q = s.questions[index];
+  if (q.issuedAt === null) return { ok: false, error: "notIssued" };
+  return { ok: true, q: { ...q, issuedAt: q.issuedAt } };
+}
+
+const clockOf = (q: OpenQuestion) => ({ ...q, kind: kindOf(q) });
+
+/** Late by the server's clock (lib/deadline.ts), with the voice grace when a recording started in time. */
+function isLate(s: SessionState, q: OpenQuestion, now: number): boolean {
+  return !acceptsSpoken(clockOf(q), s.settings, q.recordingStartedAt ?? null, now);
+}
+
+/** Marks when a voice recording started, once, if the clock is still running. */
+export function startRecording(s: SessionState, index: number, now: number): Result {
+  const open = openQuestion(s, index);
+  if (!open.ok) return fail(open.error);
+  if (open.q.recordingStartedAt != null) return ok(s);
+  if (!acceptsRecordingStart(clockOf(open.q), s.settings, now)) return fail("tooLate");
+  const questions = s.questions.map((q, i) => (i === index ? { ...q, recordingStartedAt: now } : q));
+  return ok({ ...s, questions });
+}
+
+/** Whether a recording's audio may be transcribed now. Null when it may; the reason otherwise. */
+export function uploadRefusal(s: SessionState, index: number, now: number): SessionError | null {
+  const open = openQuestion(s, index);
+  if (!open.ok) return open.error;
+  return acceptsUpload(clockOf(open.q), s.settings, open.q.recordingStartedAt ?? null, now) ? null : "tooLate";
+}
+
+export const lifelineUsed = (s: Pick<SessionState, "questions">) => s.questions.some((q) => q.lifeline);
+
+/**
+ * The one lifeline: 30 more seconds on the open question, for a fixed cost in the odds. The
+ * cost is the same whatever the odds, and it lands at once, before the answer is scored.
+ */
+export function pullLifeline(s: SessionState, index: number, now: number): Result {
+  const open = openQuestion(s, index);
+  if (!open.ok) return fail(open.error);
+  if (lifelineUsed(s)) return fail("lifelineUsed");
+  if (!acceptsLifeline(clockOf(open.q), s.settings, now)) return fail("tooLate");
+  const questions = s.questions.map((q, i) => (i === index ? { ...q, lifeline: true } : q));
+  const event = makeEvent(s.events, { act: 2, kind: "lifeline", rawDelta: LIFELINE_DELTA, reason: copy.odds.lifeline });
+  return ok({ ...s, questions, events: [...s.events, event] });
 }
 
 /** Records an answer, once. Late or empty answers are recorded as silence. */
 export function acceptAnswer(s: SessionState, index: number, text: string, now: number): Result {
-  if (s.act !== "grilling") return fail("wrongAct");
-  if (index < 0 || index >= s.questions.length) return fail("badQuestion");
-  if (index < s.answers.length) return fail("alreadyAnswered");
-  if (index > s.answers.length) return fail("badQuestion");
-  const issuedAt = s.questions[index].issuedAt;
-  if (issuedAt === null) return fail("notIssued");
+  const open = openQuestion(s, index);
+  if (!open.ok) return fail(open.error);
 
-  const late = isLate(issuedAt, now);
+  const late = isLate(s, open.q, now);
   const trimmed = text.trim().slice(0, MAX_ANSWER_LENGTH);
   const silent = late || trimmed === "";
   const answer: Answer = {
@@ -320,8 +393,14 @@ export type QuestionView = {
   judge: Judge;
   text: string;
   caught: string | null;
-  /** Time left on the clock when this view was built. Null once answered. */
+  kind: QuestionKind;
+  /** Read grace left before the clock starts, when this view was built. Null once answered. */
+  readMs: number | null;
+  /** Time left on the clock when this view was built, read grace excluded. Null once answered. */
   remainingMs: number | null;
+  /** The whole window, lifeline included, for the progress bar. */
+  windowMs: number;
+  lifeline: boolean;
   answer: Omit<Answer, "receivedAt"> | null;
 };
 
@@ -337,6 +416,9 @@ export type SessionView = {
   tree: string[];
   questionCount: number;
   questions: QuestionView[];
+  /** The owner's own settings and lifeline. The public review never carries these. */
+  settings: SessionSettings;
+  lifelineAvailable: boolean;
   panel: Panel | null;
   verdict: Verdict | null;
   /** Act 4 onwards: the code review, built in code from the session. */
@@ -349,11 +431,16 @@ export function toView(s: SessionState, now: number): SessionView {
   for (const [i, q] of s.questions.entries()) {
     if (q.issuedAt === null) break;
     const a = s.answers[i];
+    const clock = clockView(clockOf({ ...q, issuedAt: q.issuedAt }), s.settings, now);
     questions.push({
       judge: q.judge,
       text: q.text,
       caught: q.caught,
-      remainingMs: a ? null : Math.max(0, q.issuedAt + ANSWER_WINDOW_MS - now),
+      kind: kindOf(q),
+      readMs: a ? null : clock.readMs,
+      remainingMs: a ? null : clock.remainingMs,
+      windowMs: clock.windowMs,
+      lifeline: q.lifeline === true,
       answer: a ? { text: a.text, silent: a.silent, late: a.late, score: a.score, reason: a.reason } : null,
     });
   }
@@ -368,6 +455,8 @@ export function toView(s: SessionState, now: number): SessionView {
     tree: s.claims ? displayTree(s.files, s.claims) : [],
     questionCount: s.questions.length,
     questions,
+    settings: s.settings,
+    lifelineAvailable: s.act === "grilling" && !lifelineUsed(s),
     panel: at >= ACTS.indexOf("deliberation") ? s.panel : null,
     verdict: at >= ACTS.indexOf("verdict") ? verdictOf(s) : null,
     review: at >= ACTS.indexOf("verdict") ? reviewOf(s) : null,
