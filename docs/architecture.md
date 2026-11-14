@@ -34,7 +34,7 @@ The client mirrors a `SessionView` the server builds; it never computes state (`
 
 ## Private findings stay private
 
-Secrets, env-file history, timeline and team signals, answers and transcripts are the owner's. `reviewOf(session, audience)` drops private findings for public audiences, the panel prompt never sees them (its words can end up public), and shareable verdicts and their cards are built only from the public review. A review is private until its owner turns on Make shareable; listing on the board and indexing need a second opt-in.
+Secrets, env-file history, timeline and team signals, answers and transcripts are the owner's. `reviewOf(session, audience)` drops private findings for public audiences, the panel prompt never sees them (its words can end up public), and shareable verdicts and their cards are built only from the public review. A review is private until its owner turns on Make shareable; listing on the board and indexing need a second opt-in. The board itself is a hall of fame (`lib/board.ts`): finished verdicts of Honorable mention or better, never the app owner's own repos, and nothing at all until `BOARD_MIN_ENTRIES` (default 5) qualify. Sessions from before the opt-in existed stay off it unless their owner opts in, because the privacy text at launch said nothing was listed.
 
 ## Untrusted input
 

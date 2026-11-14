@@ -734,16 +734,24 @@ export const copy = {
   board: {
     metaTitle: "The board: hackathon projects judged in public",
     metaDescription:
-      "Hackathon projects whose teams chose to list their verdict: the odds, the status and the line the judges will remember.",
+      "Hackathon projects whose teams listed a verdict of Honorable mention or better: the odds, the tier and the line the judges will remember.",
     eventTitle: "{name}: the board",
     eventDescription:
-      "Projects from {name} whose teams listed their verdict publicly, with their odds and status.",
+      "Projects from {name} whose teams listed a verdict of Honorable mention or better, with their odds and tier.",
     title: "The board",
-    lede: "Projects whose teams chose to list their verdict. Nothing private is ever shown here.",
+    lede: "The hall of fame: finished verdicts that made Honorable mention or better, listed by their teams. Nothing private is ever shown here.",
     loading: "Loading the board",
     sort: { recent: "Recent", top: "Top odds" },
     allEvents: "All",
-    empty: "Nobody has listed a verdict here yet. Yours could be first.",
+    empty:
+      "The board opens once {min} teams have listed a verdict of Honorable mention or better. Yours could be one of them.",
+    // The tier on each row. Participating never makes the board.
+    tier: {
+      winner: "Winner",
+      top3: "Top 3",
+      honorable: "Honorable mention",
+      participating: "Participating",
+    },
     howTo: 'To list yours, open the share screen of your review and tick "{listed}".',
     hide: "Hide",
   },

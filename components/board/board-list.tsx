@@ -2,12 +2,30 @@ import Link from "next/link";
 import { cn } from "cn";
 import { projectName } from "@/components/review/review-parts";
 import { copy, fill } from "@/lib/copy";
+import { boardMinEntries } from "@/lib/board";
 import { allEvents } from "@/lib/events";
 import { BOARD_SORTS, type BoardEntry, type BoardSort } from "@/lib/session-store";
 import { verdictPath } from "@/lib/site";
 import { HideButton } from "./hide-button";
 
 const B = copy.board;
+
+const TIER_TONE: Record<BoardEntry["tier"], string> = {
+  winner: "text-gain",
+  top3: "text-gain",
+  honorable: "text-text-muted",
+  // Never on the board; here so every tier has a tone.
+  participating: "text-text-subtle",
+};
+
+/** The verdict's date, the same on the server and in every browser: "Nov 12, 2026" in UTC. */
+const boardDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
 /** The board's controls: sort, and (on the main board) which event. Plain links, so it works without JavaScript. */
 function Controls({ base, sort, event }: { base: string; sort: BoardSort; event: string | null }) {
@@ -65,7 +83,9 @@ export function BoardList({
     <>
       <Controls base={base} sort={sort} event={event} />
       {entries.length === 0 ? (
-        <p className="mt-10 max-w-[560px] text-[17px] text-text-muted">{B.empty}</p>
+        <p className="mt-10 max-w-[560px] text-[17px] text-text-muted">
+          {fill(B.empty, { min: boardMinEntries() })}
+        </p>
       ) : (
         <ol className="mt-8 border-t border-border">
           {entries.map((e, i) => (
@@ -93,8 +113,9 @@ export function BoardList({
               </div>
               <div className="text-right">
                 <p className="font-mono text-[22px] font-bold tabular-nums">{e.odds}%</p>
-                <p className={cn("font-mono text-[12px]", e.ready ? "text-gain" : "text-loss")}>
-                  {e.ready ? copy.review.ready : copy.review.changes}
+                <p className={cn("font-mono text-[12px]", TIER_TONE[e.tier])}>{B.tier[e.tier]}</p>
+                <p className="font-mono text-[12px] text-text-subtle">
+                  <time dateTime={e.at}>{boardDate(e.at)}</time>
                 </p>
               </div>
             </li>

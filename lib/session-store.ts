@@ -1,6 +1,14 @@
 // Loads and saves sessions. Every write is conditional on the version it read, so two
 // requests racing on the same session can't both succeed (e.g. a double-submitted answer).
 
+import {
+  BOARD_SORTS,
+  boardMinEntries,
+  boardOf,
+  type BoardEntry,
+  type BoardRow,
+  type BoardSort,
+} from "./board";
 import type { Spent } from "./budget";
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
@@ -10,7 +18,7 @@ import { limitsFromEnv, type LimitStatus } from "./limits";
 import { log } from "./log";
 import type { Usage } from "./model";
 import { isCachedScan, type CacheKey, type CachedScan } from "./scan-cache";
-import { currentOdds, readyToWin } from "./odds";
+import { currentOdds } from "./odds";
 import { reviewOf, type Review } from "./review";
 import {
   newSession,
@@ -584,24 +592,11 @@ export async function loadLatestShareable(
   return data ? { id: data.id, odds: currentOdds(data.events) } : null;
 }
 
-export type BoardEntry = {
-  id: string;
-  repo: string;
-  odds: number;
-  ready: boolean;
-  oneLiner: string;
-  eventSlug: string | null;
-  at: string;
-  /** This browser listed it: it may hide it. Never the owner's hash itself. */
-  mine: boolean;
-};
-
-export const BOARD_SORTS = ["recent", "top"] as const;
-export type BoardSort = (typeof BOARD_SORTS)[number];
+export { BOARD_SORTS, type BoardEntry, type BoardSort };
 
 /**
- * The public board: verdicts their owners listed (shareable too) and nobody hid. Top sorts by
- * odds over the latest 300, so an old high score can't sit on top forever.
+ * The public board (lib/board.ts has the rules): listed, finished, Honorable mention or better.
+ * Top sorts by odds over the latest 300, so an old high score can't sit on top forever.
  */
 export async function boardEntries(opts: {
   eventSlug?: string | null;
@@ -610,7 +605,9 @@ export async function boardEntries(opts: {
 }): Promise<BoardEntry[]> {
   let q = db()
     .from("sessions")
-    .select("id, repo, events, claims, panel, event_slug, updated_at, owner_hash")
+    .select(
+      "id, repo, act, events, claims, panel, shareable, listed, hidden_at, updated_at, owner_hash",
+    )
     .eq("listed", true)
     .eq("shareable", true)
     .is("hidden_at", null)
@@ -618,30 +615,14 @@ export async function boardEntries(opts: {
     .order("updated_at", { ascending: false })
     .limit(300);
   if (opts.eventSlug) q = q.eq("event_slug", opts.eventSlug);
-  const { data, error } = await q.returns<
-    (Pick<Row, "id" | "repo" | "events" | "claims" | "panel" | "event_slug" | "owner_hash"> & {
-      updated_at: string;
-    })[]
-  >();
+  const { data, error } = await q.returns<BoardRow[]>();
   if (error) throw error;
-  const owner = await ownerHash();
-  const rows = data
-    .filter((r) => r.panel)
-    .map((r): BoardEntry => {
-      const odds = currentOdds(r.events);
-      return {
-        id: r.id,
-        repo: r.repo,
-        odds,
-        ready: readyToWin(odds, r.claims ?? []),
-        oneLiner: r.panel!.oneLiner,
-        eventSlug: r.event_slug,
-        at: r.updated_at,
-        mine: !!owner && r.owner_hash === owner,
-      };
-    });
-  if (opts.sort === "top") rows.sort((a, b) => b.odds - a.odds || b.at.localeCompare(a.at));
-  return rows.slice(0, opts.limit ?? 100);
+  return boardOf(data, {
+    sort: opts.sort,
+    viewer: await ownerHash(),
+    minEntries: boardMinEntries(),
+    limit: opts.limit,
+  });
 }
 
 /** An event's sessions, only the columns its anonymous stats read. */
