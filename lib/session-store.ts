@@ -618,12 +618,11 @@ export async function boardEntries(opts: {
     .order("updated_at", { ascending: false })
     .limit(300);
   if (opts.eventSlug) q = q.eq("event_slug", opts.eventSlug);
-  const { data, error } =
-    await q.returns<
-      (Pick<Row, "id" | "repo" | "events" | "claims" | "panel" | "event_slug" | "owner_hash"> & {
-        updated_at: string;
-      })[]
-    >();
+  const { data, error } = await q.returns<
+    (Pick<Row, "id" | "repo" | "events" | "claims" | "panel" | "event_slug" | "owner_hash"> & {
+      updated_at: string;
+    })[]
+  >();
   if (error) throw error;
   const owner = await ownerHash();
   const rows = data
