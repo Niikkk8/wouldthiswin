@@ -119,7 +119,7 @@ export function VoiceButton({
         else begin();
       }}
       className={cn(
-        "flex h-14 w-full touch-none items-center gap-3 rounded-control border px-4 text-left text-[15px] transition-[color,background-color,border-color,scale] duration-150 ease-out select-none [-webkit-touch-callout:none] active:scale-[0.98] disabled:opacity-60 lg:h-12 lg:w-auto",
+        "flex h-14 w-full touch-none items-center gap-3 rounded-control border px-4 text-left text-[15px] lg:shrink-0 lg:whitespace-nowrap transition-[color,background-color,border-color,scale] duration-150 ease-out select-none [-webkit-touch-callout:none] active:scale-[0.98] disabled:opacity-60 lg:h-12 lg:w-auto",
         on
           ? "border-loss bg-loss/10 text-text"
           : "border-border-strong text-text-muted hover:text-text",

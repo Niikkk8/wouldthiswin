@@ -194,10 +194,13 @@ export function ShareScreen({
   review: r,
   demo = false,
   phone = false,
+  drawCards = false,
 }: {
   review: Review;
   demo?: boolean;
   phone?: boolean;
+  /** Dev capture only: draw the cards in the page, since no stored review backs the image route. */
+  drawCards?: boolean;
 }) {
   const reduce = useReducedMotion();
   const desktop = useDesktop();
@@ -251,7 +254,7 @@ export function ShareScreen({
               <p className="label-mono">{S.formatNotes[format]}</p>
             )}
           </div>
-          <Preview review={r} format={format} sample={demo} />
+          <Preview review={r} format={format} sample={demo || drawCards} />
         </motion.section>
 
         <motion.div
@@ -354,11 +357,19 @@ export function ShareScreen({
 }
 
 /** After act 4. */
-export function ShareAct({ view, demo = false }: { view: SessionView; demo?: boolean }) {
+export function ShareAct({
+  view,
+  demo = false,
+  drawCards = false,
+}: {
+  view: SessionView;
+  demo?: boolean;
+  drawCards?: boolean;
+}) {
   if (!view.review) return null;
   return (
     <>
-      <ShareScreen review={view.review} demo={demo} />
+      <ShareScreen review={view.review} demo={demo} drawCards={drawCards} />
       {!demo && <ReReview id={view.review.id} repo={view.review.repo} className="mt-12" />}
     </>
   );

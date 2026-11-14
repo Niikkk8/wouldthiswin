@@ -51,26 +51,39 @@ next-env.d.ts
 # judge sprite previews (npm run judges)
 /.judge-previews
 
-# product video: renders, captures and raw footage stay local
+# product video: only source is committed (compositions, components, scripts, small brand
+# assets). Renders, captures, footage, models, environments and agent files stay local.
 /video/out/
+/video/footage/
+/video/capture/
 /video/node_modules/
 /video/.cache/
 /video/public/capture/
-/video/footage/
-/video/.venv/
 /video/public/sfx/
 /video/public/judges/
 /video/public/logo.png
 /video/public/reel/
-/video/*.log
-/video/.dev.log
+/video/public/reel-v3/
+/video/whisper*/
+/video/**/*.bin
+/video/.venv*/
 /video/.bin/
+/video/tools/
+/video/*.log
 /video/audio/build/
-/video/.venv-tts/
+/video/audio/voice/
+/video/audio/voice-samples/
 /video/**/__pycache__/
-/video/audio/voice/takes/*.wav
-/video/.claude/skills/
+/video/.claude/
 /video/.agents/
+/video/skills-lock.json
+/video/REVIEW.md
+/video/brand/fit_work/
+/video/brand/fit_iterations/
+/video/brand/motion_frames/
+/video/brand/*.png
+/video/brand/fit_metrics.json
+/video/brand/qa/
 
 # agent scratch and local tooling
 .agent/

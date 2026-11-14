@@ -14,7 +14,8 @@
     "sheet": "tsx scripts/sheet.ts",
     "render:v2": "tsx scripts/render_v2.ts",
     "review:v2": "tsx scripts/review_v2.ts",
-    "style-frames": "tsx scripts/style-frames.ts"
+    "style-frames": "tsx scripts/style-frames.ts",
+    "capture:v3": "tsx scripts/capture-v3.ts"
   },
   "dependencies": {
     "@remotion/bundler": "^4.0.541",

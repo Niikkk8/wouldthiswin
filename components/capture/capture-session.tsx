@@ -35,5 +35,7 @@ export function CaptureSession({ act }: { act: CaptureAct }) {
     return () => clearTimeout(t);
   }, [act]);
 
-  return <SessionShell initial={start.view} transport={start.transport} answers={TYPED} />;
+  return (
+    <SessionShell initial={start.view} transport={start.transport} answers={TYPED} drawCards />
+  );
 }

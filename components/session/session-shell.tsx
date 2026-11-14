@@ -138,6 +138,7 @@ export function SessionShell({
   transport = fetchTransport,
   demo = false,
   answers = demo ? DEMO_ANSWER_TEXTS : undefined,
+  drawCards = false,
 }: {
   initial: SessionView;
   transport?: Transport;
@@ -145,6 +146,8 @@ export function SessionShell({
   demo?: boolean;
   /** Answers typed in for the team, by question. A gap leaves that question to the person (or voice). */
   answers?: readonly (string | undefined)[];
+  /** Dev capture only: the share cards are drawn in the page from the fixture. */
+  drawCards?: boolean;
 }) {
   const reduce = useReducedMotion();
   const [{ view, pending }, dispatch] = useReducer(reducer, { view: initial, pending: false });
@@ -222,7 +225,7 @@ export function SessionShell({
       act = <VerdictAct view={view} onNext={advance("verdict")} pending={pending} demo={demo} />;
       break;
     case "share":
-      act = <ShareAct view={view} demo={demo} />;
+      act = <ShareAct view={view} demo={demo} drawCards={drawCards} />;
       break;
   }
 
