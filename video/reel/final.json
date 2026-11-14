@@ -24,55 +24,148 @@
     {
       "match": "they lose when",
       "visual": "broll",
+      "label": "The judges",
       "broll": {
         "clip": "phone-scan",
         "from": 1.5,
-        "target": [
-          18,
-          596,
-          1092,
-          812
-        ],
-        "fill": 0.96,
-        "fillH": 0.97
-      },
-      "label": "The judges"
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              0,
+              560,
+              1170,
+              930
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.45
+          },
+          {
+            "at": "70%",
+            "target": [
+              0,
+              600,
+              1170,
+              860
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 1.2
+          }
+        ]
+      }
     },
     {
       "match": "so i built",
       "visual": "broll",
+      "label": "Would this win?",
       "broll": {
         "clip": "phone-landing",
         "from": 0.1,
-        "target": "question",
-        "fill": 0.96,
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              20,
+              200,
+              1130,
+              900
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.45
+          },
+          {
+            "at": "80%",
+            "target": [
+              20,
+              220,
+              1130,
+              860
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 1.0
+          }
+        ],
         "rate": 0.7
-      },
-      "label": "Would this win?"
+      }
     },
     {
       "match": "paste your repo",
       "visual": "broll",
+      "label": "Paste your repo",
       "broll": {
         "clip": "phone-landing",
         "from": 1.25,
-        "target": "repo",
-        "fill": 0.98
-      },
-      "label": "Paste your repo"
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              20,
+              900,
+              1130,
+              900
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.45
+          }
+        ]
+      }
     },
     {
       "match": "three ai judges",
       "visual": "broll",
+      "label": "The scan",
       "hit": "finding",
-      "hitAt": 0.45,
+      "hitAt": 0.5,
       "broll": {
         "clip": "phone-scan",
         "from": 6.1,
-        "target": "claim",
-        "fill": 0.98
-      },
-      "label": "The scan"
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              20,
+              1380,
+              1130,
+              900
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.45
+          },
+          {
+            "at": "75%",
+            "target": [
+              80,
+              1500,
+              1050,
+              700
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.5,
+            "ease": "out"
+          }
+        ]
+      }
     },
     {
       "match": "and then they grill",
@@ -81,61 +174,124 @@
     {
       "match": "why did you build",
       "visual": "broll",
+      "label": "The engineer asks",
       "broll": {
         "clip": "phone-followup",
-        "from": 0.7,
-        "target": [
-          -40,
-          1128,
-          1250,
-          880
-        ],
-        "fill": 0.96,
-        "fillH": 0.97
-      },
-      "label": "The engineer asks"
+        "from": 1.0,
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              -40,
+              1128,
+              1250,
+              980
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.45
+          },
+          {
+            "at": "100%",
+            "target": [
+              -20,
+              1150,
+              1210,
+              940
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 1.1
+          }
+        ]
+      }
     },
     {
       "match": "who's going to pay",
       "visual": "broll",
+      "label": "The investor asks",
       "broll": {
         "clip": "phone-followup",
-        "from": 9.55,
-        "target": [
-          40,
-          1270,
-          1090,
-          768
-        ],
-        "fill": 0.96,
-        "fillH": 0.97
-      },
-      "label": "The investor asks"
+        "from": 9.6,
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              0,
+              760,
+              1170,
+              1060
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.45
+          },
+          {
+            "at": "100%",
+            "target": [
+              0,
+              790,
+              1170,
+              1020
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 1.6
+          }
+        ]
+      }
     },
     {
       "match": "give a vague answer",
       "visual": "broll",
+      "label": "Follow-up",
       "broll": {
         "clip": "phone-followup",
-        "from": 16.5,
-        "target": [
-          40,
-          1300,
-          1090,
-          768
-        ],
-        "fill": 0.96,
-        "fillH": 0.97
-      },
-      "label": "Follow-up"
+        "from": 16.6,
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              0,
+              840,
+              1170,
+              960
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.45
+          },
+          {
+            "at": "100%",
+            "target": [
+              0,
+              860,
+              1170,
+              930
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 1.7
+          }
+        ]
+      }
     },
     {
       "match": "give a bad one",
-      "visual": "face"
-    },
-    {
-      "match": "your odds drop",
       "visual": "broll",
+      "label": "Your odds",
       "hit": "drop",
       "dropOn": "drop",
       "dropAt": 7.47,
@@ -145,14 +301,14 @@
           {
             "at": 0,
             "target": [
-              40,
-              345,
-              1080,
-              150
+              0,
+              150,
+              1170,
+              920
             ],
-            "fill": 0.96,
-            "ay": 0.5,
-            "isolate": 30
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5
           },
           {
             "at": "drop",
@@ -162,44 +318,93 @@
               236,
               121
             ],
-            "fill": 0.62,
+            "fill": 0.6,
             "ay": 0.5,
+            "ax": 0.6,
             "isolate": 30,
             "move": 0.18,
-            "ease": "out",
-            "ax": 0.6
+            "ease": "out"
           }
         ]
-      },
-      "label": "Your odds"
+      }
     },
     {
       "match": "at the end",
       "visual": "broll",
+      "label": "Practice",
       "broll": {
         "clip": "phone-practice",
         "from": 3.2,
-        "target": [
-          0,
-          420,
-          1170,
-          880
-        ],
-        "fill": 0.96,
-        "fillH": 0.97
-      },
-      "label": "Practice"
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              0,
+              420,
+              1170,
+              920
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.45
+          },
+          {
+            "at": "85%",
+            "target": [
+              0,
+              1160,
+              1170,
+              920
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 1.6
+          }
+        ]
+      }
     },
     {
       "match": "and what to fix",
       "visual": "broll",
+      "label": "Fix list",
       "broll": {
         "clip": "phone-fixes",
-        "from": 3.4,
-        "target": "key",
-        "fill": 0.98
-      },
-      "label": "Fix list"
+        "from": 3.3,
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              0,
+              340,
+              1170,
+              920
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 0.45
+          },
+          {
+            "at": "95%",
+            "target": [
+              0,
+              640,
+              1170,
+              920
+            ],
+            "fill": 0.84,
+            "fillH": 0.84,
+            "ay": 0.5,
+            "isolate": 30,
+            "move": 1.3
+          }
+        ]
+      }
     },
     {
       "match": "it's free",

@@ -30,7 +30,8 @@ const FILLERS = new Set(["um", "uh", "erm", "er", "ah", "hmm", "mm", "uhm", "lik
 const PAUSE = 0.2;
 const KEEP_PAUSE = 0.08;
 
-type BeatCam = Omit<Cam, "at"> & { at: number | "drop" };
+/** A keyframe time: seconds into the beat, a percentage of the beat ("60%"), or "drop". */
+type BeatCam = Omit<Cam, "at"> & { at: number | string };
 type Beat = {
   match: string;
   visual: "face" | "broll" | "card";
@@ -171,8 +172,9 @@ starts.forEach(({ beat, at, word }, k) => {
       dropAt = w >= 0 ? fixed[w].start - at : dur / 2;
       from = Math.max(0, beat.dropAt - dropAt);
       ev.drops.push(at + dropAt);
-      cams = b.cams?.map((c) => ({ ...c, at: c.at === "drop" ? dropAt! : c.at }));
     }
+    const when = (at: number | string) => (at === "drop" ? (dropAt ?? dur / 2) : typeof at === "string" && at.endsWith("%") ? (dur * parseFloat(at)) / 100 : Number(at));
+    cams = b.cams?.map((c) => ({ ...c, at: when(c.at) }));
     // Keystrokes where the capture types (the repo field).
     const frames = meta(b.clip).frames;
     const rate = b.rate ?? 1;
@@ -180,7 +182,7 @@ starts.forEach(({ beat, at, word }, k) => {
       if (frames[f].typed > frames[f - 1].typed) ev.keys.push(at + (f / 30 - from) / rate);
     if (/asks|follow-up/i.test(beat.label ?? "")) ev.questions.push(at + 0.25);
     if (beat.label) ev.labels.push(at);
-    beats.push({ kind: "broll", start: at, dur, label: beat.label, dropAt, broll: { ...b, from, cams: cams ?? (b.cams as Cam[] | undefined), shake: dropAt === undefined ? undefined : [dropAt] } });
+    beats.push({ kind: "broll", start: at, dur, label: beat.label, dropAt, broll: { ...b, from, cams, shake: dropAt === undefined ? undefined : [dropAt] } });
   }
 });
 // Card entrances, exits and content swaps, for the sound.

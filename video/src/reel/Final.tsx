@@ -16,10 +16,10 @@ const FPS = 30;
 /** The card: the app's UI lives here, inside the safe area. */
 // Meta's Reels safe zone (top 14%, bottom 35%, 6% each side): everything readable lives in
 // y 280 to 1248. Below that the app's caption, name and music bar cover the frame.
-const CARD = { x: 72, y: 300, w: 936, h: 740 };
+const CARD = { x: 96, y: 300, w: 888, h: 780 };
 /** The UI's window inside the card: a header row for the label, real padding on every side. */
-const WINDOW = { x: 28, y: 92, w: 936 - 56, h: 740 - 92 - 28 };
-const CAPTION_TOP = 1078;
+const WINDOW = { x: 44, y: 100, w: 888 - 88, h: 780 - 100 - 44 };
+const CAPTION_TOP = 1112;
 const CAPTION_SIDES = { left: 96, right: 192 };
 
 export type FinalBeat = {
@@ -83,7 +83,7 @@ function FaceLayer({ plan, t, k }: { plan: FinalPlan; t: number; k: number }) {
 function Header({ label, index, count, t }: { label: string; index: number; count: number; t: number }) {
   const k = spring({ frame: Math.round(t * FPS) - 3, fps: FPS, config: { damping: 14, stiffness: 180, mass: 0.7 } });
   return (
-    <div style={{ position: "absolute", left: 30, right: 30, top: 26, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", opacity: k, transform: `translateY(${(1 - k) * -10}px)` }}>
+    <div style={{ position: "absolute", left: 44, right: 44, top: 30, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", opacity: k, transform: `translateY(${(1 - k) * -10}px)` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, fontFamily: F.mono, fontSize: 26, letterSpacing: "0.14em", textTransform: "uppercase", color: C.text }}>
         <span style={{ width: 12, height: 12, borderRadius: 999, background: C.loss, boxShadow: `0 0 18px ${C.loss}` }} />
         {label}
@@ -100,7 +100,7 @@ function CardContent({ beat, first, t }: { beat: FinalBeat; first: boolean; t: n
   const b = beat.broll!;
   const enter = first ? 1 : prog(t, 0, 0.32, easeOut);
   const leave = prog(t, beat.dur - 0.18, beat.dur + 0.02, easeIn);
-  const cams: Cam[] = b.cams ?? [{ at: 0, target: b.target!, fill: b.fill ?? 0.9, fillH: b.fillH, ay: 0.5, isolate: 26 }];
+  const cams: Cam[] = b.cams ?? [{ at: 0, target: b.target!, fill: b.fill ?? 0.84, fillH: b.fillH, ay: 0.5, isolate: 26 }];
   // A slow push-in on every shot, so nothing is ever a still.
   const drift = 1 + 0.04 * prog(t, 0, beat.dur, easeInOut);
   const drop = beat.dropAt;
@@ -108,7 +108,7 @@ function CardContent({ beat, first, t }: { beat: FinalBeat; first: boolean; t: n
   return (
     <AbsoluteFill style={{ opacity: enter * (1 - leave), transform: `translateY(${(1 - enter) * 26 - leave * 18}px)` }}>
       <div style={{ position: "absolute", inset: 0, transform: `scale(${drift})`, transformOrigin: "50% 50%", filter: "brightness(0.97) saturate(0.96)" }}>
-        <Footage clip={b.clip} from={b.from} rate={b.rate} cams={cams.map((c) => ({ ...c, fill: Math.min(c.fill ?? 0.9, 0.9) }))} shakeAt={b.shake} box={{ w: WINDOW.w, h: WINDOW.h }} />
+        <Footage clip={b.clip} from={b.from} rate={b.rate} cams={cams.map((c) => ({ ...c, fill: Math.min(c.fill ?? 0.84, 0.86), fillH: c.fillH === undefined ? undefined : Math.min(c.fillH, 0.86) }))} shakeAt={b.shake} box={{ w: WINDOW.w, h: WINDOW.h }} />
       </div>
       {flash > 0 && <AbsoluteFill style={{ background: `radial-gradient(ellipse 70% 55% at 50% 45%, rgba(255,59,48,${0.32 * flash}) 0%, rgba(255,59,48,0) 70%)`, mixBlendMode: "screen" }} />}
     </AbsoluteFill>
