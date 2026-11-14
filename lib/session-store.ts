@@ -10,7 +10,7 @@ import { limitsFromEnv, type LimitStatus } from "./limits";
 import { log } from "./log";
 import type { Usage } from "./model";
 import { isCachedScan, type CacheKey, type CachedScan } from "./scan-cache";
-import { currentOdds } from "./odds";
+import { currentOdds, readyToWin } from "./odds";
 import { reviewOf, type Review } from "./review";
 import {
   newSession,
@@ -582,6 +582,72 @@ export async function loadLatestShareable(
     .maybeSingle<{ id: string; events: Row["events"] }>();
   if (error) throw error;
   return data ? { id: data.id, odds: currentOdds(data.events) } : null;
+}
+
+export type BoardEntry = {
+  id: string;
+  repo: string;
+  odds: number;
+  ready: boolean;
+  oneLiner: string;
+  eventSlug: string | null;
+  at: string;
+  /** This browser listed it: it may hide it. Never the owner's hash itself. */
+  mine: boolean;
+};
+
+export const BOARD_SORTS = ["recent", "top"] as const;
+export type BoardSort = (typeof BOARD_SORTS)[number];
+
+/**
+ * The public board: verdicts their owners listed (shareable too) and nobody hid. Top sorts by
+ * odds over the latest 300, so an old high score can't sit on top forever.
+ */
+export async function boardEntries(opts: { eventSlug?: string | null; sort: BoardSort; limit?: number }): Promise<BoardEntry[]> {
+  let q = db()
+    .from("sessions")
+    .select("id, repo, events, claims, panel, event_slug, updated_at, owner_hash")
+    .eq("listed", true)
+    .eq("shareable", true)
+    .is("hidden_at", null)
+    .in("act", ["verdict", "share"])
+    .order("updated_at", { ascending: false })
+    .limit(300);
+  if (opts.eventSlug) q = q.eq("event_slug", opts.eventSlug);
+  const { data, error } = await q.returns<
+    (Pick<Row, "id" | "repo" | "events" | "claims" | "panel" | "event_slug" | "owner_hash"> & { updated_at: string })[]
+  >();
+  if (error) throw error;
+  const owner = await ownerHash();
+  const rows = data
+    .filter((r) => r.panel)
+    .map((r): BoardEntry => {
+      const odds = currentOdds(r.events);
+      return {
+        id: r.id,
+        repo: r.repo,
+        odds,
+        ready: readyToWin(odds, r.claims ?? []),
+        oneLiner: r.panel!.oneLiner,
+        eventSlug: r.event_slug,
+        at: r.updated_at,
+        mine: !!owner && r.owner_hash === owner,
+      };
+    });
+  if (opts.sort === "top") rows.sort((a, b) => b.odds - a.odds || b.at.localeCompare(a.at));
+  return rows.slice(0, opts.limit ?? 100);
+}
+
+/** Admin: hide a listed verdict from the board (or show it again). */
+export async function setHidden(id: string, hidden: boolean): Promise<boolean> {
+  if (!ID_RE.test(id)) return false;
+  const { data, error } = await db()
+    .from("sessions")
+    .update({ hidden_at: hidden ? new Date().toISOString() : null })
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+  return data.length === 1;
 }
 
 /** Verdicts their owners listed publicly (and nobody hid), newest first: for the sitemap and the board. */

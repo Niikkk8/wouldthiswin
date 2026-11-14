@@ -615,6 +615,21 @@ export const copy = {
       "questions-hackathon-judges-ask": "25 questions hackathon judges ask",
     },
   },
+  // The public board, /board and /e/[slug]/board.
+  board: {
+    metaTitle: "The board: hackathon projects judged in public",
+    metaDescription: "Hackathon projects whose teams chose to list their verdict: the odds, the status and the line the judges will remember.",
+    eventTitle: "{name}: the board",
+    eventDescription: "Projects from {name} whose teams listed their verdict publicly, with their odds and status.",
+    title: "The board",
+    lede: "Projects whose teams chose to list their verdict. Nothing private is ever shown here.",
+    loading: "Loading the board",
+    sort: { recent: "Recent", top: "Top odds" },
+    allEvents: "All",
+    empty: "Nobody has listed a verdict here yet. Yours could be first.",
+    howTo: 'To list yours, open the share screen of your review and tick "{listed}".',
+    hide: "Hide",
+  },
   // A CLI scan's report, /r/[id].
   publicReport: {
     metaTitle: "Repo check",
