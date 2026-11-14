@@ -476,7 +476,7 @@ export const copy = {
     },
     grilling: {
       answerLabel: "Your answer",
-      hint: "Enter to answer. Silence counts as an answer too.",
+      hint: "Enter to answer. Stuck? Skipping costs less than silence.",
       read: "Clock starts in {n}",
       followUp: "Follow-up",
       // The progress line above each question.
@@ -613,6 +613,8 @@ export const copy = {
         listed: "List publicly",
         listedNote: "Also shows it on the public board and lets search engines find it.",
         off: "Only you can see this review. Make it shareable to post it.",
+        // The share screen's main button before the link is on. Pressing it is the opt-in.
+        turnOn: "Make it shareable",
       },
       link: "Verdict link",
       linkNote: "Anyone with the link sees the verdict. Never your answers or private findings.",

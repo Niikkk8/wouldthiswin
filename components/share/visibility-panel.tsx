@@ -10,6 +10,26 @@ import type { Visibility } from "@/lib/session";
 const V = copy.acts.share.visibility;
 const Reply = z.object({ shareable: z.boolean(), listed: z.boolean() });
 
+/** Saves an opt-in change and returns what the server stored. Null (with a toast) on failure. */
+export async function saveVisibility(
+  id: string,
+  change: Partial<Visibility>,
+): Promise<Visibility | null> {
+  try {
+    const res = await fetch(`/api/sessions/${id}/visibility`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(change),
+    });
+    const parsed = Reply.safeParse(await res.json().catch(() => null));
+    if (!res.ok || !parsed.success) throw new Error(String(res.status));
+    return parsed.data;
+  } catch {
+    toast.error(copy.errors.network);
+    return null;
+  }
+}
+
 /** The owner's two opt-ins, both off until they turn them on: a public link, and the public board. */
 export function VisibilityPanel({
   id,
@@ -24,20 +44,9 @@ export function VisibilityPanel({
 
   async function save(change: Partial<Visibility>) {
     setSaving(true);
-    try {
-      const res = await fetch(`/api/sessions/${id}/visibility`, {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(change),
-      });
-      const parsed = Reply.safeParse(await res.json().catch(() => null));
-      if (!res.ok || !parsed.success) throw new Error(String(res.status));
-      onChange(parsed.data);
-    } catch {
-      toast.error(copy.errors.network);
-    } finally {
-      setSaving(false);
-    }
+    const next = await saveVisibility(id, change);
+    if (next) onChange(next);
+    setSaving(false);
   }
 
   const row = (key: keyof Visibility, label: string, note: string, disabled: boolean) => (

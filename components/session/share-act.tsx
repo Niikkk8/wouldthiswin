@@ -28,7 +28,7 @@ import {
 import { useDesktop } from "@/lib/use-desktop";
 import { BadgeSnippet } from "@/components/share/badge-snippet";
 import { ShareLinks } from "@/components/share/share-links";
-import { VisibilityPanel } from "@/components/share/visibility-panel";
+import { VisibilityPanel, saveVisibility } from "@/components/share/visibility-panel";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { ReReview } from "@/components/review/re-review";
 import { ActTitle } from "./act-parts";
@@ -206,6 +206,15 @@ export function ShareScreen({
   const desktop = useDesktop();
   const [format, setFormat] = useState<PostFormat>("landscape");
   const [visibility, setVisibility] = useState({ shareable: r.shareable, listed: r.listed });
+  const [opting, setOpting] = useState(false);
+  // The bar's button turns the link on itself: the opt-in is still one deliberate click,
+  // not a checkbox to find in the side panel before anything can be posted.
+  const makeShareable = async () => {
+    setOpting(true);
+    const next = await saveVisibility(r.id, { shareable: true });
+    if (next) setVisibility(next);
+    setOpting(false);
+  };
   // Nothing that points at the verdict link appears until the owner turns the link on.
   const shared = visibility.shareable;
   const getFile = useImageFiles(r, !demo && !desktop, format);
@@ -258,7 +267,7 @@ export function ShareScreen({
         </motion.section>
 
         <motion.div
-          className="grid min-w-0 content-start gap-9"
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-9"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: reduce ? 0.2 : 0.4, ease: EASE, delay: reduce ? 0 : 0.15 }}
@@ -341,13 +350,17 @@ export function ShareScreen({
         <ActionBar label={copy.demo.yourTurn} ready href={`/#${REPO_FOCUS}`} />
       ) : desktop ? (
         <ActionBar
-          label={S.postX}
-          ready={shared}
-          status={S.visibility.off}
-          onNext={() => {
-            logShare(r.id, { kind: "x_clicked" });
-            window.open(postToXUrl(r), "_blank", "noopener,noreferrer");
-          }}
+          label={shared ? S.postX : S.visibility.turnOn}
+          ready
+          pending={opting}
+          onNext={
+            shared
+              ? () => {
+                  logShare(r.id, { kind: "x_clicked" });
+                  window.open(postToXUrl(r), "_blank", "noopener,noreferrer");
+                }
+              : () => void makeShareable()
+          }
         />
       ) : (
         <ActionBar label={S.shareImage} ready onNext={() => void shareImage()} />
