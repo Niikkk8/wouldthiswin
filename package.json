@@ -11,7 +11,7 @@
     "clear-test-data": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/clear-test-data.ts",
     "test": "vitest run",
     "judges": "node --import tsx scripts/process-judges.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "stats": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/stats.ts",
     "eval": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx evals/run.ts",
     "research": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/research/scan.ts",
