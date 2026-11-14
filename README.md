@@ -23,9 +23,9 @@ flowchart LR
 ```
 
 1. **Scan.** Claims come from the README, an optional Devpost page and pasted submission text. A tool-using agent checks each one against the repo at the exact commit and cites the lines. Deterministic checks look for leaked keys, starter-template leftovers, setup gaps, missing README essentials, hygiene issues, dead demo links and overstated AI.
-2. **Grill.** Each judge asks one question grounded in a finding: the Engineer about the code, the Investor about users and money, the Tired Judge about what it even is. The clock starts after the question has rendered plus a 3-second read; answers can be typed or spoken. A vague answer gets one follow-up.
+2. **Grill.** Each judge asks one question grounded in a finding: the Engineer about the code, the Investor about users and money, the Tired Judge about what it even is. The clock starts after the question has rendered plus a 3-second read; each gets at least 60 seconds, and answers can be typed or spoken. One vague answer per session gets a follow-up, so it's never more than four questions. Any question can be skipped for a small fixed cost, and a session left part way can be picked up within 24 hours, with a fresh clock on the next question.
 3. **Deliberate.** The panel talks it over and scores the rubric, citing findings.
-4. **Verdict.** A code review: Ready to win or Changes requested, the scored rubric with evidence, a fix list sorted by severity and effort, and honest pitch tools. Opt in to a shareable verdict, a README badge and the public board.
+4. **Verdict.** A code review: Ready to win or Changes requested, the scored rubric with evidence, a fix list sorted by severity and effort, and honest pitch tools. Opt in to a shareable verdict, a README badge and the public board, which lists finished verdicts of Honorable mention or better.
 
 ## Trust model
 
