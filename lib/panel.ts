@@ -44,6 +44,7 @@ export const PanelOutput = z.object({
   fixes: z.array(z.string()),
   reviews: z.object({ engineer: ModelReview, investor: ModelReview, tired: ModelReview }),
   criteria: z.array(ModelCriterion),
+  strongAnswers: z.array(z.object({ question: z.number(), points: z.array(z.string()) })),
 });
 
 const SYSTEM = `You are a hackathon judging panel of three, deliberating after the questions, then writing a pull-request style review of the project.
@@ -68,7 +69,8 @@ Write:
 - criteria: one entry per rubric criterion listed in the message, by its key.
   - score: an integer from 0 to 10 for this project on that criterion alone. 5 is an ordinary hackathon entry.
   - reason: one plain sentence under 25 words saying why, from the findings and answers. Describe the evidence, never the people.
-  - findings: the ids of up to 4 findings the score rests on, copied exactly from the findings list. Empty if none apply.`;
+  - findings: the ids of up to 4 findings the score rests on, copied exactly from the findings list. Empty if none apply.
+- strongAnswers: for each question, by its number, 2 to 4 short points a strong answer would have covered, each under 20 words and grounded in this repo: name the file, the dependency, the user or the number. Coaching for next time, not a verdict on the answer given.`;
 
 const esc = escapeDelimiters;
 
@@ -99,7 +101,7 @@ export function buildPanelPrompt(s: SessionState, rubric: Rubric = rubricFor(s.e
       const a = s.answers[i];
       const answer = !a || a.silent ? (a?.late ? "(answered after the buzzer)" : "(said nothing)") : a.text;
       return [
-        `${q.judge} asked: ${esc(q.text)}`,
+        `Question ${i + 1}. ${q.judge} asked: ${esc(q.text)}`,
         `<untrusted_answer judge="${q.judge}">\n${esc(answer)}\n</untrusted_answer>`,
         `scored ${a?.score ?? 0}: ${esc(a?.reason ?? "")}`,
       ].join("\n");
@@ -214,7 +216,24 @@ export function validatePanel(
   if (!scored && !fallback) return { ok: false, reason: "criteria" };
   const criteria = scored ?? fallbackCriteria(rubric, sheetOf(s), copy.review.rubric.fallback);
 
-  return { ok: true, panel: { chat, oneLiner, fixes, reviews, criteria }, dropped };
+  return { ok: true, panel: { chat, oneLiner, fixes, reviews, criteria, strongAnswers: strongAnswersOf(p.strongAnswers, s.questions.length) }, dropped };
+}
+
+const MAX_POINT = 160;
+
+/**
+ * "A strong answer would cover": 2 to 4 short, plain points per question. Bad entries are
+ * dropped rather than failing the panel; a question with fewer than 2 usable points has none.
+ */
+export function strongAnswersOf(raw: readonly { question: number; points: string[] }[], count: number): string[][] {
+  const out: string[][] = Array.from({ length: count }, () => []);
+  for (const r of raw) {
+    const i = Math.round(r.question) - 1;
+    if (i < 0 || i >= count || out[i].length) continue;
+    const points = r.points.map(oneLine).filter((p) => ok(p, MAX_POINT)).slice(0, 4);
+    if (points.length >= 2) out[i] = points;
+  }
+  return out;
 }
 
 export class PanelError extends Error {

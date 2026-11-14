@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { tokens } from "./model-test-utils";
 import { describe, test } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
-import { anchorComment, buildPanelPrompt, runPanel, validatePanel } from "./panel";
+import { anchorComment, buildPanelPrompt, runPanel, strongAnswersOf, validatePanel } from "./panel";
 import { DEFAULT_RUBRIC } from "./rubric";
 import { newSession, type Claim, type SessionState } from "./session";
 import type { Source } from "./sources";
@@ -66,6 +66,7 @@ const output = (over: Record<string, unknown> = {}) => ({
   fixes: ["Fix the demo link.", "Name one buyer.", "Show severity ranking."],
   reviews: { engineer: review(), investor: review({ status: "commented" }), tired: review({ status: "commented" }) },
   criteria: DEFAULT_RUBRIC.criteria.map((c) => ({ criterion: c.name, score: 6, reason: "Holds up.", findings: ["claim-1"] })),
+  strongAnswers: [{ question: 1, points: ["Name the county dispatch office that would use it.", "Say the map comes from the caller's GPS."] }],
   ...over,
 });
 
@@ -209,5 +210,20 @@ describe("the call", () => {
 
   test("two bad outputs fail", async () => {
     await assert.rejects(runPanel(session(), async () => message({ chat: [] })), /invalid panel after retry/);
+  });
+});
+
+describe("strong answers", () => {
+  test("2 to 4 plain points per question, by number; bad ones are dropped, never fatal", () => {
+    const out = strongAnswersOf(
+      [
+        { question: 1, points: ["Name the buyer.", "Give the price."] },
+        { question: 2, points: ["Only one point."] },
+        { question: 3, points: ["a liar would say that", "Name the file.", "Show the call."] },
+        { question: 9, points: ["x", "y"] },
+      ],
+      3,
+    );
+    assert.deepEqual(out, [["Name the buyer.", "Give the price."], [], ["Name the file.", "Show the call."]]);
   });
 });

@@ -152,6 +152,8 @@ export type Panel = {
   reviews: Record<Judge, JudgeReview>;
   /** The rubric, scored. Panels written before rubrics existed have none. */
   criteria?: ScoredCriterion[];
+  /** Per question, in order: what a strong answer would have covered. Shown after the verdict, to the owner. */
+  strongAnswers?: string[][];
 };
 
 export type SessionState = {

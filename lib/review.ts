@@ -42,6 +42,8 @@ export type Review = {
   eventSlug: string | null;
   shareable: boolean;
   listed: boolean;
+  /** The owner's practice notes: each question and what a strong answer would cover. Never public. */
+  practice: { judge: Judge; question: string; points: string[] }[];
 };
 
 export type RubricView = {
@@ -149,6 +151,13 @@ export function reviewOf(s: SessionState, audience: Audience = "public", rubric:
     rubric: rubricView(panel.criteria, rubric, new Set(findings.map((f) => f.id))),
     commit: s.signals?.commit ?? null,
     eventSlug: s.eventSlug ?? null,
+    practice:
+      audience === "owner"
+        ? s.questions.flatMap((q, i) => {
+            const points = panel.strongAnswers?.[i] ?? [];
+            return points.length ? [{ judge: q.judge, question: q.text, points }] : [];
+          })
+        : [],
     shareable: s.visibility?.shareable === true,
     listed: s.visibility?.listed === true,
   };

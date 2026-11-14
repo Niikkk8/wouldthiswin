@@ -142,6 +142,11 @@ export const DEMO_PANEL: Panel = {
     { judge: "tired", text: "they explained the stack when i asked what it is. classic." },
   ],
   oneLiner: "the one that put the waiting room on a QR code",
+  strongAnswers: [
+    ["Name the SMS provider you'd wire in, and where: onTurnClose in server/notify.ts.", "Say what's real today: the QR join and the live queue."],
+    ["Name the buyer: the clinic, per location.", "Give a price a clinic manager would sign off on."],
+    ["One sentence: a clinic's waiting room on a QR code.", "Say who it's for before how it's built."],
+  ],
   // Weighted to 5.1 of 10: a middling sheet, so the rubric leaves the odds at 37.
   criteria: [
     { key: "technical", score: 4, reason: "Joining the queue is real; the SMS alert and offline mode aren't in the code yet.", findings: ["claim-1", "claim-2"], source: "panel" },

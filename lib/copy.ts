@@ -629,6 +629,10 @@ export const copy = {
       noEvidence: "No single finding; from the answers.",
       fallback: "Scored by fixed rules: the panel's own scores didn't hold up this time.",
     },
+    practice: {
+      heading: "A strong answer would cover",
+      note: "Only you see this. For the next time a judge asks.",
+    },
     yours: "Would yours win?",
     yoursCta: "Face the panel",
   },
