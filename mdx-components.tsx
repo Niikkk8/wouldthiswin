@@ -1,5 +1,6 @@
 import type { MDXComponents } from "mdx/types";
 import Link from "next/link";
+import { CopyPre } from "@/components/guides/copy-pre";
 
 // The guides' typography, in the site's design system. @next/mdx requires this file at the
 // root; every MDX file renders through it.
@@ -21,12 +22,7 @@ const components: MDXComponents = {
     ),
   blockquote: (p) => <blockquote className="mt-8 border-l-2 border-border-strong pl-5 text-[22px] leading-snug font-bold text-text [&_p]:mt-0 [&_p]:text-inherit" {...p} />,
   code: (p) => <code className="rounded-[6px] bg-surface-2 px-1.5 py-0.5 font-mono text-[0.88em] text-text" {...p} />,
-  pre: (p) => (
-    <pre
-      className="mt-6 overflow-x-auto rounded-card border border-border bg-surface p-5 font-mono text-[15px] leading-relaxed [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-text-muted"
-      {...p}
-    />
-  ),
+  pre: (p) => <CopyPre {...p} />,
   hr: () => <hr className="mt-12 border-border" />,
 };
 

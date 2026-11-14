@@ -543,6 +543,22 @@ export const copy = {
     privacy: { title: "Privacy: what Would This Win? keeps" },
     guides: { title: "Hackathon guides: judging, READMEs, demos, pitches", description: "How hackathon judges score projects, and how to get your README, demo and answers ready before you submit." },
   },
+  // A real hackathon's page, /hackathons/[slug], generated only from its preset.
+  hackathons: {
+    title: "{name}: how it's judged, and a pre-flight check",
+    description: "What {name} judges on, with weights, and a free check of your repo against those criteria before you submit.",
+    heading: "{name}: how it's judged",
+    lede: "The criteria {name} scores, and a way to run your repo past them before you submit.",
+    criteria: "What {name} scores",
+    tracks: "Sponsor tracks",
+    cta: "Check your repo for {name}",
+    guides: "Before you submit",
+    guideTitles: {
+      "how-hackathon-judges-score-projects": "How hackathon judges score projects",
+      "hackathon-submission-checklist": "Hackathon submission checklist",
+      "questions-hackathon-judges-ask": "25 questions hackathon judges ask",
+    },
+  },
   // An event's page, /e/[slug].
   events: {
     eyebrow: "Event",
@@ -701,9 +717,15 @@ export const copy = {
     lede: "How hackathon judges think, and how to get your project ready for them.",
     eyebrow: "Guide",
     by: "By",
-    published: "Published {date}",
-    updated: "Updated {date}",
     empty: "The first guides are on their way.",
+    lastUpdated: "Last updated {date}",
+    draft: "Draft: not published, not indexed.",
+    readNext: "Read next",
+    author: {
+      heading: "About the author",
+      bio: "5x hackathon winner, HACKaMINeD 2025 Overall Winner, and a NASA Space Apps Global Nomination. Built Would This Win? to give every team the pre-flight check he wanted.",
+    },
+    copyTemplate: "Copy",
     cta: {
       title: "Would yours win?",
       body: "Paste your repo. Three judges check every claim, grill you with a question each, and give you your odds. Free, no sign-up.",

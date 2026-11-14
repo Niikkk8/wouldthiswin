@@ -18,7 +18,14 @@ export type GuideMeta = {
   updated?: string;
   /** Hidden from the index, the sitemap and search until it's flipped to false. */
   draft?: boolean;
+  /** Slugs of guides to read next: at least two. */
+  related?: string[];
 };
+
+type Env = Record<string, string | undefined>;
+
+/** A draft exists only outside production, so it can be read and edited before it's published. */
+export const visible = (g: Pick<GuideMeta, "draft">, env: Env = process.env) => !g.draft || env.NODE_ENV !== "production";
 
 export type Guide = GuideMeta & { slug: string };
 
@@ -41,10 +48,16 @@ export async function loadGuide(slug: string): Promise<{ meta: Guide; Body: Comp
   return { meta: { ...mod.meta, slug }, Body: mod.default };
 }
 
-/** Every guide, newest first. */
+/** Every published guide, newest first. Drafts never appear in lists, the sitemap or llms.txt. */
 export async function allGuides(): Promise<Guide[]> {
   const guides = await Promise.all(guideSlugs().map(async (s) => (await loadGuide(s))!.meta));
-  return guides.sort((a, b) => b.date.localeCompare(a.date));
+  return guides.filter((g) => !g.draft).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/** The guides a guide links to next, in its own order, skipping drafts in production and missing slugs. */
+export async function relatedGuides(meta: Guide): Promise<Guide[]> {
+  const found = await Promise.all((meta.related ?? []).map(async (s) => (await loadGuide(s))?.meta ?? null));
+  return found.filter((g): g is Guide => !!g && visible(g));
 }
 
 export const guidePath = (slug: string) => `/guides/${slug}`;

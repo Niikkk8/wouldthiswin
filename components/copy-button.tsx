@@ -13,8 +13,11 @@ export function CopyButton({
   idle = text.acts.share.copy,
   className,
   onCopied,
+  getValue,
 }: {
   value: string;
+  /** Reads the text at click time instead, for content that's only in the DOM. */
+  getValue?: () => string;
   label: string;
   idle?: string;
   className?: string;
@@ -27,7 +30,7 @@ export function CopyButton({
       className={cn(buttonVariants({ variant: "secondary" }), "h-10 shrink-0 gap-2 px-3 text-[14px]", className)}
       onClick={async () => {
         try {
-          await navigator.clipboard.writeText(value);
+          await navigator.clipboard.writeText(getValue ? getValue() : value);
           setCopied(true);
           onCopied?.();
           setTimeout(() => setCopied(false), 1600);

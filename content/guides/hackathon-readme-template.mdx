@@ -1,0 +1,78 @@
+export const meta = {
+  title: "A hackathon README template judges can read fast",
+  description: "A copyable README template for hackathon projects: one line on what it is, a demo link, a screenshot, how it works, the stack, the team and setup steps.",
+  date: "2026-11-14",
+  draft: true,
+  related: ["hackathon-submission-checklist", "how-to-explain-your-tech-stack-to-judges"],
+};
+
+A good hackathon README tells a judge what the project is in one line, shows it running, and proves the main claim in under a minute. Copy the template below, fill in every section, and delete any claim the code doesn't back yet.
+
+## What do judges look for in a README?
+
+Judges open the README first and usually skim it in under a minute [VERIFY: source for typical judge reading time, or remove the number]. They look for seven things, in roughly this order:
+
+1. One plain sentence near the top saying what it does and for whom.
+2. A demo link that loads.
+3. A screenshot or GIF.
+4. How it works, in a few lines.
+5. The stack.
+6. The team.
+7. Setup steps someone else can follow.
+
+[Would This Win?](/) checks a README for exactly these seven, so you can see which ones are missing before you submit.
+
+## What's the template?
+
+```markdown
+# Project name
+
+One sentence: what it does, and who it's for.
+
+**Live demo:** https://your-app.vercel.app · **Video:** https://youtu.be/...
+
+![Screenshot of the main screen](docs/screenshot.png)
+
+## How it works
+
+1. The user does X.
+2. The app does Y with Z (name the file: `src/lib/z.ts`).
+3. The result is shown as ...
+
+## Built with
+
+- Frontend: ...
+- Backend: ...
+- AI: which model, called from which file
+- Data: where it comes from
+
+## Team
+
+- Name: what they built
+- Name: what they built
+
+## Run it locally
+
+1. `git clone https://github.com/you/project && cd project`
+2. `cp .env.example .env` and fill in the keys listed there
+3. `npm install`
+4. `npm run dev`, then open http://localhost:3000
+```
+
+## Why lead with one sentence?
+
+The first sentence is what a tired judge remembers at the end of the day. Write what the project does and for whom, not how it's built: "Turns a clinic's waiting room into a QR code queue" beats "A Next.js app with Supabase and real-time updates". The stack has its own section.
+
+[NIKET: one before and after README opener from a project of yours.]
+
+## How should you describe how it works?
+
+Three to five numbered steps, each naming the file or service that does the work. This is where judges check your claims, so link the claim to the code. If a step uses sample data or a mock, say so: an honest "uses sample data for the demo" reads far better than a claim a judge can disprove in the file you linked.
+
+## What about setup steps?
+
+Judges rarely run your code, but a reviewer might, and missing steps read as unfinished. List every environment variable in `.env.example`, commit the lockfile, and make sure each command in the README exists in `package.json`. The [submission checklist](/guides/hackathon-submission-checklist) covers the rest of what to check before you hit submit.
+
+## How can you check your README?
+
+Paste your repo into [Would This Win?](/): it scores the README against these seven items and checks each claim against the code, with links to the lines.

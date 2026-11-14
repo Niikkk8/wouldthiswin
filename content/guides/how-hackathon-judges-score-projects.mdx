@@ -1,0 +1,47 @@
+export const meta = {
+  title: "How hackathon judges score projects",
+  description: "Judges score four or five criteria, but a running demo, one clear sentence and honest answers decide most rooms. What each criterion looks for.",
+  date: "2026-11-14",
+  draft: true,
+  related: ["questions-hackathon-judges-ask", "hackathon-submission-checklist"],
+};
+
+Hackathon judges score each project against four or five weighted criteria, usually technical execution, impact, the demo and the pitch, often with originality or design on top. In practice the scores bunch together, and the gap between first and fifth comes from a working demo, a one-sentence explanation, and answers that hold up when a judge pushes.
+
+## What is on a typical judging sheet?
+
+Most sheets list four or five criteria with a weight or a 1 to 10 scale beside each. A common split puts technical execution, impact and originality near a quarter each, with the demo and polish sharing what's left [VERIFY: cite one or two public rubrics, for example an MLH or Devpost sample rubric]. Judges fill the sheet in minutes, between demos, often from memory of a three-minute pitch.
+
+That speed matters. A judge who can't tell what your project does in the first thirty seconds will score every row from that confusion. A judge who saw it run will give technical execution the benefit of the doubt.
+
+[NIKET: one sentence on the most common sheet you've been judged on, and how many criteria it had.]
+
+## How do judges score technical execution?
+
+Technical execution asks whether the code does what you say it does. Judges look for a real implementation behind the headline feature, not a mock or a hardcoded response. If your README says "real-time", they want to see a socket or a stream, not a poll every sixty seconds.
+
+Most judges don't read every file. They open the repo, scan the structure, and click into the file that should hold your main claim. A clear `src/` layout and a README that names the files behind each feature saves them time and earns credit. A claim with nothing behind it costs more than having no claim at all.
+
+## What counts as impact?
+
+Impact is about a specific person with a specific problem. "Healthcare workers" is a category; "the night nurse who re-enters the same vitals three times" is a user. Judges score higher when you name who it's for and what they do today without your project.
+
+If you can add who would pay, or who already said yes to a pilot, say so plainly. Don't invent traction: judges ask follow-up questions, and a number you can't back up turns an impact score into a credibility problem.
+
+## Why does the demo matter so much?
+
+A demo that runs is the single strongest signal in most rooms. It proves the technical claims at once and gives judges something to remember. A dead link or a demo that only works on your laptop loses that, and judges often mark the whole project down for it.
+
+Have a deployed link, check it in a private window before you submit, and keep a two-minute video as backup for when the wifi fails. See the [demo video script](/guides/hackathon-demo-video-script) for a structure that fits two minutes.
+
+## How do the questions change the score?
+
+Questions are where judges check whether you understand what you built. A specific answer (the file, the library, the number) moves scores up. A vague answer, or a confident claim the repo doesn't support, moves them down fast.
+
+Admitting a gap and saying what you'd do next is not a weak answer; judges tend to reward it. The [questions judges ask](/guides/questions-hackathon-judges-ask) guide lists the common ones by judge type, with what a good answer covers.
+
+[NIKET: a short example of a question you were asked that decided a result.]
+
+## How can you check your project before the judges do?
+
+Run your repo through the same checks: does each README claim have code behind it, does the demo load, can you answer the obvious questions in a sentence? [Would This Win?](/) does this in a few minutes, with three AI judges and cited evidence for every finding.

@@ -1,0 +1,42 @@
+export const meta = {
+  title: "How to explain your tech stack to hackathon judges",
+  description: "Explain your stack to judges in four sentences: what runs where, where the data comes from, what the AI really does, and which parts you built.",
+  date: "2026-11-14",
+  draft: true,
+  related: ["questions-hackathon-judges-ask", "hackathon-readme-template"],
+};
+
+Explain your stack in four sentences: what the user touches, what runs on the server, where the data comes from, and what the AI part actually does. Then say which parts you built and which are libraries or APIs, because that's the question judges ask next.
+
+## Why not just list the technologies?
+
+A list of logos tells a judge what you installed, not what you built. "Next.js, Supabase, OpenAI, Tailwind" could describe a thousand projects. Judges want the shape of yours: what talks to what, and why.
+
+[NIKET: an example of a stack explanation that worked for you in a pitch.]
+
+## What's the four-sentence version?
+
+1. **The front end:** "A Next.js app on Vercel that clinic staff open on a tablet."
+2. **The back end:** "API routes that write each check-in to Postgres on Supabase."
+3. **The data:** "Wait times come from the clinic's own check-in history, not a model."
+4. **The AI:** "One call to Claude summarizes the day's notes for the doctor."
+
+Each sentence names a real component and what it does. A judge can follow it in twenty seconds, and every claim points to code they can find.
+
+## How do you talk about the AI part honestly?
+
+Say exactly what it is. One API call with a good prompt is a fine thing to build; calling it "our custom model" is not, and judges check. If you trained or fine-tuned something, name the data and the file that does it. If you use retrieval, name the vector store and what's in it.
+
+The most common mistake is overstating the AI: "proprietary model" for a hosted API, "real-time ML" for a random number. A judge who finds that in the code stops trusting the rest of the pitch.
+
+## How do you say what you built yourself?
+
+Be specific: "We built the queue logic and the wait-time estimate; auth and the database are Supabase; the SMS is Twilio." Judges respect clear credit. Claiming a library's work as your own is easy to spot in the repo.
+
+## How do you handle "why this stack?"
+
+One reason per choice, tied to the problem or the time you had: "Supabase because we needed auth and a database in a day." "Why it's popular" isn't a reason.
+
+## How can you check your explanation against the code?
+
+[Would This Win?](/) classifies how deep the AI in your repo actually goes and flags claims that say more than the code does. The [questions guide](/guides/questions-hackathon-judges-ask) lists the follow-ups judges ask about stacks.

@@ -1,0 +1,41 @@
+export const meta = {
+  title: "Hackathon submission checklist: what to check first",
+  description: "What to check in the hour before you submit a hackathon project: the demo link, the README, secrets, setup steps, the video and the claims you make.",
+  date: "2026-11-14",
+  draft: true,
+  related: ["hackathon-readme-template", "hackathon-demo-video-script"],
+};
+
+Before you submit, check that the demo link loads, the README says what the project is in one line, no keys are in the repo, and every claim has code behind it. Do it an hour before the deadline, not five minutes, because each check can turn up a fix.
+
+## Does the demo still load?
+
+Open the demo link in a private window, on your phone's data, not the venue wifi. A deployment that sleeps, a link to localhost, or a "deployment not found" page is the most common way a good project loses points. If the page title still says "Create Next App" or "Vite + React", change it: it's the first thing a judge sees in the tab.
+
+## Is the README ready?
+
+Check the top three lines: project name, one sentence on what it does and for whom, and a working demo link. Then a screenshot, how it works, the stack, the team and setup steps. The [README template](/guides/hackathon-readme-template) has all seven, ready to copy.
+
+Delete anything the code doesn't do yet. A judge who finds one claim that isn't true starts doubting the rest.
+
+## Are any keys in the repo?
+
+Search the repo for `sk-`, `AKIA`, `ghp_` and `-----BEGIN` before you push the final commit. A committed `.env` file is worse than it looks: deleting it later doesn't remove it from git history, so rotate any key it ever held. Add `.env` to `.gitignore` and ship a `.env.example` with every variable name and no values.
+
+[NIKET: if you've seen a team lose time to a leaked key during an event, one sentence on it.]
+
+## Can someone else run it?
+
+Commit the lockfile. Make sure every command in the README exists in `package.json`. List every environment variable the code reads. A judge who tries to run it and hits an error in the first command marks the project as unfinished.
+
+## Is the video ready as a backup?
+
+Record two minutes that show the project running, start to finish. Upload it somewhere that doesn't need a login, and check the link in a private window. The [demo video script](/guides/hackathon-demo-video-script) breaks two minutes into sections that fit what judges look for.
+
+## Can you answer the obvious questions?
+
+Practise saying what it is in one sentence, who it's for, which part is yours and which is a library, and what breaks first. Judges ask these at nearly every event [VERIFY: or reword as "in most rooms" if there's no source].
+
+## How can you run the whole check at once?
+
+[Would This Win?](/) runs these checks on your repo in a few minutes: claims against code, the demo link, keys and env files, setup steps and the README, then three AI judges ask you the questions.
