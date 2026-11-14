@@ -49,8 +49,10 @@ describe("the clock", () => {
     assert.equal(clockStart(q()), T0 + typingMs(q().text, null) + READ_GRACE_MS);
   });
 
-  test("each kind of question gets its own window: 45, 75, 90 seconds", () => {
-    assert.deepEqual(WINDOW_MS, { fact: 45_000, decision: 75_000, tradeoff: 90_000 });
+  test("each kind of question gets its own window: 60, 75, 90 seconds", () => {
+    assert.deepEqual(WINDOW_MS, { fact: 60_000, decision: 75_000, tradeoff: 90_000 });
+    // The shortest window is a full minute.
+    assert.ok(Math.min(...Object.values(WINDOW_MS)) >= 60_000);
     for (const kind of ["fact", "decision", "tradeoff"] as const) {
       assert.equal(deadlineOf(q({ kind }), NORMAL) - clockStart(q({ kind })), WINDOW_MS[kind]);
     }
@@ -109,13 +111,13 @@ describe("what the client sees", () => {
     const start = clockStart(q());
     assert.deepEqual(clockView(q(), NORMAL, start + 5_000), {
       readMs: 0,
-      remainingMs: 40_000,
-      windowMs: 45_000,
+      remainingMs: 55_000,
+      windowMs: 60_000,
     });
     assert.equal(clockView(q(), NORMAL, start + 999_999).remainingMs, 0);
   });
 
   test("the lifeline shows as a longer window", () => {
-    assert.equal(clockView(q({ lifeline: true }), NORMAL, T0).windowMs, 75_000);
+    assert.equal(clockView(q({ lifeline: true }), NORMAL, T0).windowMs, 90_000);
   });
 });

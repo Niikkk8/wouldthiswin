@@ -14,7 +14,7 @@ import { useDesktop } from "@/lib/use-desktop";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { AnswerField } from "./answer-field";
 import { Bench } from "./bench";
-import { LifelineButton, LifelineLine } from "./lifeline";
+import { LifelineButton, LifelineLine, SkipButton } from "./lifeline";
 import { QuestionText } from "./question-text";
 import { Timer } from "./timer";
 import { useAnswerClock } from "./use-answer-clock";
@@ -76,19 +76,21 @@ export function Question({
   const stopped = phase !== "asking" || frozen;
   const clock = useAnswerClock(q, !stopped, frozen);
 
-  const submit = (answer: string) => {
+  const deliver = (action: Parameters<Send>[0]) => {
     if (sent.current) return;
     sent.current = true;
     wake();
     clock.stop();
     setPhase("waiting");
-    send({ action: "answer", question: index, text: answer }).then(({ ok }) => {
+    send(action).then(({ ok }) => {
       if (ok) return setPhase("reacting");
       sent.current = false;
       clock.resume();
       setPhase("asking");
     });
   };
+  const submit = (answer: string) => deliver({ action: "answer", question: index, text: answer });
+  const skip = () => deliver({ action: "skip", question: index });
   const submitRef = useRef(submit);
   useEffect(() => {
     submitRef.current = submit;
@@ -144,6 +146,8 @@ export function Question({
 
   const judge = copy.judges[q.judge];
   const a = q.answer;
+  // A skip is the Tired Judge's to wave through, whoever asked.
+  const speaker = a?.skipped ? copy.judges.tired : judge;
   const reaction = phase === "reacting" && a?.score != null && a.reason;
   // The two listening react to the score once it's in.
   const kind = phase === "reacting" && chipEvent ? reactionForDelta(chipEvent.delta) : null;
@@ -180,7 +184,7 @@ export function Question({
               animate={{ opacity: 1 }}
               transition={{ duration: reduce ? 0.2 : 0.3, ease: EASE }}
             >
-              <p className="label-mono uppercase">{judge.name}</p>
+              <p className="label-mono uppercase">{speaker.name}</p>
               <p className="mt-3 max-w-[900px] text-[24px] leading-tight font-bold tracking-[-0.02em] text-balance lg:text-[34px]">
                 {reaction}
               </p>
@@ -235,11 +239,16 @@ export function Question({
                   stopped={stopped}
                 />
                 {live && q.lifeline && <LifelineLine />}
-                {live && lifelineAvailable && !q.lifeline && phase === "asking" && (
-                  <LifelineButton
-                    disabled={clock.left === 0}
-                    onUse={() => void send({ action: "lifeline", question: index })}
-                  />
+                {live && phase === "asking" && (
+                  <div className="flex items-center gap-3">
+                    <SkipButton disabled={clock.left === 0} onSkip={skip} />
+                    {lifelineAvailable && !q.lifeline && (
+                      <LifelineButton
+                        disabled={clock.left === 0}
+                        onUse={() => void send({ action: "lifeline", question: index })}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
             </motion.form>

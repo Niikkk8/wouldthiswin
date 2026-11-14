@@ -27,6 +27,7 @@ export type BasisKey =
   | "demoDead"
   | "answer"
   | "silent"
+  | "skipped"
   | "notAsked"
   | "fixes";
 
@@ -89,7 +90,7 @@ export function sheetOf(s: {
   claims: readonly { status: ClaimStatus; weight: ClaimWeight }[] | null;
   signals: ScanSignals | null;
   questions: readonly Pick<Question, "judge">[];
-  answers: readonly Pick<Answer, "score" | "silent">[];
+  answers: readonly Pick<Answer, "score" | "silent" | "skipped">[];
 }): Criterion[] {
   const claims = s.claims ?? [];
   const backed = claims.filter((c) => c.status === "backed").length;
@@ -118,8 +119,8 @@ export function sheetOf(s: {
     else
       sheet.push({
         key,
-        score: answerScore(a.score, a.silent),
-        basis: a.silent ? "silent" : "answer",
+        score: answerScore(a.score, a.silent || a.skipped === true),
+        basis: a.skipped ? "skipped" : a.silent ? "silent" : "answer",
       });
   }
   const it = s.signals?.iteration;

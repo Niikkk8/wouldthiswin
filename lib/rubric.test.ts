@@ -81,6 +81,12 @@ describe("the judging sheet", () => {
         ["defense", 1, "silent"],
       ],
     );
+    // A skipped question scores like silence on the sheet, and says it was skipped.
+    const skipped = sheetOf({
+      ...base,
+      answers: [...base.answers.slice(0, 2), { score: -4, silent: false, skipped: true }],
+    });
+    assert.deepEqual([skipped.at(-1)!.score, skipped.at(-1)!.basis], [1, "skipped"]);
     const again = sheetOf({
       ...base,
       signals: { ...base.signals, iteration: it(["addressed", "addressed", "partly"]) },

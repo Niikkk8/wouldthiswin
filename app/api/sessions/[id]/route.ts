@@ -10,6 +10,8 @@ import {
   settleAnswer,
   toView,
   pullLifeline,
+  resumeGrilling,
+  skipQuestion,
   type SessionState,
 } from "@/lib/session";
 import { overBudget } from "@/lib/budget";
@@ -46,6 +48,8 @@ const Body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("answer"), question: Question, text: z.string().max(4000) }),
   z.object({ action: z.literal("deliberate") }),
   z.object({ action: z.literal("lifeline"), question: Question }),
+  z.object({ action: z.literal("skip"), question: Question }),
+  z.object({ action: z.literal("resume") }),
 ]);
 
 const ok = (s: SessionState) => Response.json({ view: toView(s, Date.now()) });
@@ -62,7 +66,8 @@ async function finishPending(
     const a = r.session.answers[i];
     if (a.score !== null) continue;
     let scored: { score: number; reason: string; followUp: string | null } | null = null;
-    if (!a.silent) {
+    // Silence and skips have fixed scores: no model call.
+    if (!a.silent && !a.skipped) {
       const q = r.session.questions[i];
       const out = await scoreAnswer({
         judge: q.judge,
@@ -221,11 +226,11 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
         }
       }
       case "advance": {
-        r = await mutate(id, owner, (s) => advance(s, body.from));
+        r = await mutate(id, owner, (s) => advance(s, body.from, now));
         // A scoring step that failed earlier gets another go before the grilling can end.
         if (!r.ok && r.error === "actIncomplete" && body.from === "grilling" && r.session) {
           const pending = await finishPending(id, owner, r.session);
-          if (pending.ok) r = await mutate(id, owner, (s) => advance(s, body.from));
+          if (pending.ok) r = await mutate(id, owner, (s) => advance(s, body.from, now));
         }
         break;
       }
@@ -237,6 +242,16 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
         break;
       case "answer": {
         r = await mutate(id, owner, (s) => acceptAnswer(s, body.question, body.text, now));
+        if (r.ok) r = await finishPending(id, owner, r.session);
+        break;
+      }
+      case "skip": {
+        r = await mutate(id, owner, (s) => skipQuestion(s, body.question, now));
+        if (r.ok) r = await finishPending(id, owner, r.session);
+        break;
+      }
+      case "resume": {
+        r = await mutate(id, owner, (s) => resumeGrilling(s, now));
         if (r.ok) r = await finishPending(id, owner, r.session);
         break;
       }

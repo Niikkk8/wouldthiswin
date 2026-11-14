@@ -112,8 +112,13 @@ export function buildPanelPrompt(
   const qa = s.questions
     .map((q, i) => {
       const a = s.answers[i];
-      const answer =
-        !a || a.silent ? (a?.late ? "(answered after the buzzer)" : "(said nothing)") : a.text;
+      const answer = a?.skipped
+        ? "(skipped the question)"
+        : !a || a.silent
+          ? a?.late
+            ? "(answered after the buzzer)"
+            : "(said nothing)"
+          : a.text;
       return [
         `Question ${i + 1}. ${q.judge} asked: ${esc(q.text)}`,
         `<untrusted_answer judge="${q.judge}">\n${esc(answer)}\n</untrusted_answer>`,

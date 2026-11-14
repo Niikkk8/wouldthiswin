@@ -6,10 +6,13 @@ import {
   acceptsLifeline,
   acceptsAnswer,
   clockView,
+  deadlineOf,
   type ClockSettings,
   type QuestionKind,
 } from "./deadline";
 import { displayTree } from "./file-tree";
+import { findingsOf } from "./findings";
+import { fixItems, type FixItem } from "./fix-list";
 import type { ClaimCategory } from "./evidence/extract";
 import type { Finding } from "./findings";
 import type { PitchFacts } from "./pitch";
@@ -27,6 +30,7 @@ import {
   type Tier,
   BULK_FIRST_COMMIT_DELTA,
   LIFELINE_DELTA,
+  SKIP_DELTA,
   fixDelta,
   SILENCE_SCORE,
   START_ODDS,
@@ -48,9 +52,20 @@ export type Judge = (typeof JUDGES)[number];
 
 export const QUESTION_COUNT = 3;
 /** A vague answer gets one short follow-up from the same judge; at most this many a session. */
-export const MAX_FOLLOW_UPS = 2;
+export const MAX_FOLLOW_UPS = 1;
 /** The most questions a grilling can have: one per judge, plus the follow-ups. */
 export const MAX_QUESTIONS = QUESTION_COUNT + MAX_FOLLOW_UPS;
+/**
+ * An unfinished session can be picked up again for this long after it started. After that the
+ * file contents the review needs are gone (lib/retention.ts), so the grilling closes and the
+ * page keeps only what the scan found.
+ */
+export const RESUME_WINDOW_MS = 24 * 60 * 60 * 1000;
+/**
+ * An empty answer that arrives this long after the buzzer came from a tab left open while its
+ * owner was away (the browser held the timer back). It counts as skipped, not as silence.
+ */
+export const AWAY_AFTER_MS = 30_000;
 /** Long enough for 90 seconds of speech. */
 export const MAX_ANSWER_LENGTH = 1000;
 
@@ -136,6 +151,10 @@ export type Answer = {
   /** Empty or late. Scored as silence without asking the model. */
   silent: boolean;
   late: boolean;
+  /** Skipped: "Skip this one", or the clock ran out while they were away. A fixed SKIP_DELTA. */
+  skipped?: boolean;
+  /** The skip was the clock running out while they were away, not the button. */
+  away?: boolean;
   score: number | null;
   reason: string | null;
 };
@@ -179,6 +198,8 @@ export type SessionState = {
   visibility: Visibility;
   /** The event this session was judged for (lib/events): its rubric and judge context. */
   eventSlug: string | null;
+  /** Epoch ms the session started. Sessions built in memory (the sample, tests) may have none and never close. */
+  createdAt?: number | null;
 };
 
 export type Visibility = { shareable: boolean; listed: boolean };
@@ -203,7 +224,8 @@ export type SessionError =
   | "alreadyAnswered"
   | "alreadyScored"
   | "needsScore"
-  | "alreadyDeliberated";
+  | "alreadyDeliberated"
+  | "closed";
 
 export type Result = { ok: true; session: SessionState } | { ok: false; error: SessionError };
 
@@ -297,6 +319,15 @@ export function applyScan(s: SessionState, scan: Scan): Result {
   });
 }
 
+/**
+ * Past RESUME_WINDOW_MS, a session that never reached the deliberation can't go on: no new
+ * question, no moving on from the scan or the grilling.
+ */
+export function isClosed(s: Pick<SessionState, "act" | "createdAt">, now: number): boolean {
+  if (s.act !== "scan" && s.act !== "grilling") return false;
+  return s.createdAt != null && now - s.createdAt >= RESUME_WINDOW_MS;
+}
+
 function actComplete(s: SessionState): boolean {
   switch (s.act) {
     case "scan":
@@ -312,10 +343,15 @@ function actComplete(s: SessionState): boolean {
   }
 }
 
-/** Moves one act forward. `from` must be the current act, so a stale or replayed call can't skip one. */
-export function advance(s: SessionState, from: ActName): Result {
+/**
+ * Moves one act forward. `from` must be the current act, so a stale or replayed call can't skip
+ * one. The clock is read only for a stored session (one with a start time): in-memory ones,
+ * like the landing page's prerendered sample, never close.
+ */
+export function advance(s: SessionState, from: ActName, now?: number): Result {
   if (s.act !== from || from === "share") return fail("wrongAct");
   if (!actComplete(s)) return fail("actIncomplete");
+  if (s.createdAt != null && isClosed(s, now ?? Date.now())) return fail("closed");
   return ok({ ...s, act: ACTS[ACTS.indexOf(from) + 1] });
 }
 
@@ -324,6 +360,7 @@ export function issueQuestion(s: SessionState, index: number, now: number): Resu
   if (s.act !== "grilling") return fail("wrongAct");
   if (index !== s.answers.length || index >= s.questions.length) return fail("badQuestion");
   if (s.questions[index].issuedAt !== null) return ok(s);
+  if (isClosed(s, now)) return fail("closed");
   const questions = s.questions.map((q, i) => (i === index ? { ...q, issuedAt: now } : q));
   return ok({ ...s, questions });
 }
@@ -373,13 +410,17 @@ export function pullLifeline(s: SessionState, index: number, now: number): Resul
   return ok({ ...s, questions, events: [...s.events, event] });
 }
 
-/** Records an answer, once. Late or empty answers are recorded as silence. */
+/**
+ * Records an answer, once. Late or empty answers are recorded as silence, except an empty one
+ * that arrives long after the buzzer: its owner was away, so it counts as skipped.
+ */
 export function acceptAnswer(s: SessionState, index: number, text: string, now: number): Result {
   const open = openQuestion(s, index);
   if (!open.ok) return fail(open.error);
 
   const late = isLate(s, open.q, now);
   const trimmed = text.trim().slice(0, MAX_ANSWER_LENGTH);
+  if (late && trimmed === "" && awayFrom(s, open.q, now)) return ok(withSkip(s, now, true));
   const silent = late || trimmed === "";
   const answer: Answer = {
     text: silent ? "" : trimmed,
@@ -390,6 +431,52 @@ export function acceptAnswer(s: SessionState, index: number, text: string, now: 
     reason: null,
   };
   return ok({ ...s, answers: [...s.answers, answer] });
+}
+
+const awayFrom = (s: SessionState, q: OpenQuestion, now: number) =>
+  now > deadlineOf(clockOf(q), s.settings) + AWAY_AFTER_MS;
+
+const withSkip = (s: SessionState, now: number, away: boolean): SessionState => ({
+  ...s,
+  answers: [
+    ...s.answers,
+    {
+      text: "",
+      receivedAt: now,
+      silent: false,
+      late: false,
+      skipped: true,
+      ...(away ? { away: true } : {}),
+      score: null,
+      reason: null,
+    },
+  ],
+});
+
+/**
+ * "Skip this one": the open question is passed over for a fixed SKIP_DELTA, cheaper than
+ * silence. Only while its clock runs; after the buzzer it's an answer like any other.
+ */
+export function skipQuestion(s: SessionState, index: number, now: number): Result {
+  const open = openQuestion(s, index);
+  if (!open.ok) return fail(open.error);
+  if (isLate(s, open.q, now)) return fail("tooLate");
+  return ok(withSkip(s, now, false));
+}
+
+/**
+ * Picking an unfinished grilling back up. If the open question's clock ran out while they
+ * were away, it counts as skipped, and the next question starts on a fresh clock when it's
+ * shown: a question already seen never gets a new clock. A question still on the clock
+ * carries on as it is, and between questions there's nothing to do.
+ */
+export function resumeGrilling(s: SessionState, now: number): Result {
+  if (s.act !== "grilling") return fail("wrongAct");
+  if (isClosed(s, now)) return fail("closed");
+  const q = s.questions[s.answers.length];
+  if (!q || q.issuedAt === null) return ok(s);
+  if (!isLate(s, { ...q, issuedAt: q.issuedAt }, now)) return ok(s);
+  return ok(withSkip(s, now, true));
 }
 
 /** Applies the score. Silent answers get SILENCE_SCORE and ignore `scored`; others need it. */
@@ -407,7 +494,12 @@ export function settleAnswer(
 
   let score: number;
   let reason: string;
-  if (answer.silent) {
+  let kind: OddsEvent["kind"] = "answer";
+  if (answer.skipped) {
+    score = SKIP_DELTA;
+    reason = answer.away ? copy.acts.grilling.skip.away : copy.acts.grilling.skip.line;
+    kind = "skip";
+  } else if (answer.silent) {
     score = SILENCE_SCORE;
     reason = answer.late ? copy.odds.late : copy.odds.silence;
   } else {
@@ -416,18 +508,18 @@ export function settleAnswer(
     reason = scored.reason;
   }
 
-  const event = makeEvent(s.events, { act: 2, kind: "answer", rawDelta: score, reason });
+  const event = makeEvent(s.events, { act: 2, kind, rawDelta: score, reason });
   const answers = s.answers.map((a, i) => (i === index ? { ...a, score, reason } : a));
   const questions = withFollowUp(
     s.questions,
     index,
-    answer.silent ? null : (scored?.followUp ?? null),
+    answer.silent || answer.skipped ? null : (scored?.followUp ?? null),
   );
   return ok({ ...s, questions, answers, events: [...s.events, event] });
 }
 
 /**
- * After a vague answer, the same judge asks one short follow-up (a 45-second quick fact),
+ * After a vague answer, the same judge asks one short follow-up (a 60-second quick fact),
  * straight after. Never a follow-up to a follow-up, and at most MAX_FOLLOW_UPS a session.
  */
 export function withFollowUp(
@@ -493,6 +585,8 @@ export function verdictOf(s: SessionState): Verdict {
 // of the clock, and the deliberation and verdict stay hidden until their act.
 
 export type QuestionView = {
+  /** Which of the QUESTION_COUNT questions this is, from 1. A follow-up shares its question's number. */
+  number: number;
   judge: Judge;
   text: string;
   caught: string | null;
@@ -521,6 +615,12 @@ export type SessionView = {
   tree: string[];
   questionCount: number;
   questions: QuestionView[];
+  /** The open question's clock ran out while nobody was there: offer to carry on (resumeGrilling). */
+  away: boolean;
+  /** Unfinished and past RESUME_WINDOW_MS: only the scan's findings and fixes remain. */
+  closed: boolean;
+  /** Before the deliberation: the scan's fix list, kept on the page if they leave. */
+  scanFixes: FixItem[] | null;
   /** The owner's own settings and lifeline. The public review never carries these. */
   settings: SessionSettings;
   lifelineAvailable: boolean;
@@ -533,11 +633,14 @@ export type SessionView = {
 export function toView(s: SessionState, now: number): SessionView {
   const at = ACTS.indexOf(s.act);
   const questions: QuestionView[] = [];
+  let number = 0;
   for (const [i, q] of s.questions.entries()) {
     if (q.issuedAt === null) break;
+    if (q.followUpOf === undefined) number++;
     const a = s.answers[i];
     const clock = clockView(clockOf({ ...q, issuedAt: q.issuedAt }), s.settings, now);
     questions.push({
+      number: Math.max(1, number),
       judge: q.judge,
       text: q.text,
       caught: q.caught,
@@ -548,10 +651,24 @@ export function toView(s: SessionState, now: number): SessionView {
       lifeline: q.lifeline === true,
       followUp: q.followUpOf !== undefined,
       answer: a
-        ? { text: a.text, silent: a.silent, late: a.late, score: a.score, reason: a.reason }
+        ? {
+            text: a.text,
+            silent: a.silent,
+            late: a.late,
+            ...(a.skipped ? { skipped: true } : {}),
+            ...(a.away ? { away: true } : {}),
+            score: a.score,
+            reason: a.reason,
+          }
         : null,
     });
   }
+  const open = s.act === "grilling" ? s.questions[s.answers.length] : undefined;
+  const away =
+    !!open &&
+    open.issuedAt !== null &&
+    !acceptsAnswer(clockOf({ ...open, issuedAt: open.issuedAt }), s.settings, now);
+  const early = s.act === "scan" || s.act === "grilling";
   return {
     id: s.id,
     repo: s.repo,
@@ -565,8 +682,26 @@ export function toView(s: SessionState, now: number): SessionView {
     questions,
     settings: s.settings,
     lifelineAvailable: s.act === "grilling" && !lifelineUsed(s),
+    away,
+    closed: isClosed(s, now),
+    scanFixes:
+      early && s.claims ? fixItems(findingsOf(s), s.repo, s.signals?.commit ?? null) : null,
     panel: at >= ACTS.indexOf("deliberation") ? s.panel : null,
     verdict: at >= ACTS.indexOf("verdict") ? verdictOf(s) : null,
     review: at >= ACTS.indexOf("verdict") ? reviewOf(s, "owner") : null,
   };
+}
+
+/**
+ * Where the grilling is, for "Question 2 of 3": the question on screen (or the next one to
+ * be shown), counted among the QUESTION_COUNT main questions. A follow-up keeps its number.
+ */
+export function grillingProgress(
+  questions: readonly Pick<QuestionView, "number" | "followUp">[],
+  onScreen: number,
+): { number: number; total: number; followUp: boolean } {
+  const q = questions[onScreen];
+  if (q) return { number: q.number, total: QUESTION_COUNT, followUp: q.followUp };
+  const last = questions.at(-1)?.number ?? 0;
+  return { number: Math.min(last + 1, QUESTION_COUNT), total: QUESTION_COUNT, followUp: false };
 }

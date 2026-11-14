@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { GrillingProgress } from "@/components/grilling/progress";
 import { Question } from "@/components/grilling/question";
 import { Transcript } from "@/components/grilling/transcript";
 import { copy } from "@/lib/copy";
-import type { SessionView } from "@/lib/session";
+import { grillingProgress, type SessionView } from "@/lib/session";
 import type { Send } from "./session-shell";
 import { ActionBar } from "./action-bar";
 
@@ -55,8 +56,18 @@ export function GrillingAct({
   const settle = useCallback(() => onReveal(eventCount), [onReveal, eventCount]);
   const next = useCallback(() => setOnScreen((i) => i + 1), []);
 
+  const progress = grillingProgress(view.questions, onScreen);
+  // Main questions behind them: answered, and not a follow-up still to come.
+  const behind = view.questions.filter((q, i) => i < onScreen && !q.followUp).length;
+
   return (
     <>
+      <GrillingProgress
+        number={done ? progress.total : progress.number}
+        total={progress.total}
+        followUp={!done && progress.followUp}
+        done={done ? progress.total : behind}
+      />
       <Transcript questions={view.questions} />
       {current && (
         <Question

@@ -23,7 +23,11 @@ export function Transcript({ questions }: { questions: QuestionView[] }) {
               layoutId={answerId(i)}
               className="block min-w-0 truncate text-text-muted/80"
             >
-              {a.silent ? copy.acts.grilling.silence : a.text}
+              {a.skipped
+                ? copy.acts.grilling.skip.transcript
+                : a.silent
+                  ? copy.acts.grilling.silence
+                  : a.text}
             </motion.span>
             {a.score !== null && (
               <span

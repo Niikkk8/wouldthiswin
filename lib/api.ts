@@ -24,6 +24,7 @@ const STATUS: Record<ErrorKey, number> = {
   network: 503,
   tooLate: 409,
   lifelineUsed: 409,
+  sessionClosed: 409,
   eventClosed: 409,
   invalidDevpost: 400,
 };
@@ -48,6 +49,7 @@ export function failMutation(r: Extract<MutateResult, { ok: false }>) {
   if (r.error === "notFound") return fail("notFound");
   if (r.error === "alreadyAnswered") return fail("alreadyAnswered", r.session);
   if (r.error === "tooLate" || r.error === "lifelineUsed") return fail(r.error, r.session);
+  if (r.error === "closed") return fail("sessionClosed", r.session);
   return fail("stale", r.session);
 }
 

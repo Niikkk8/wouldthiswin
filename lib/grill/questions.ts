@@ -84,7 +84,7 @@ Ask the version of each question that fits this project, under 200 characters ea
 For each:
 - caught: 2 to 6 words copied verbatim from that same question that point at the problem, or null. Never the whole question.
 - finding: the id of the finding the question is about, copied from that judge's list, or null.
-- kind: "fact" for a one-line answer (a file, a name, one sentence), "decision" when they must explain why they chose something, "tradeoff" when they must defend a choice against its cost. The answer window follows from it (45, 75 or 90 seconds).
+- kind: "fact" for a one-line answer (a file, a name, one sentence), "decision" when they must explain why they chose something, "tradeoff" when they must defend a choice against its cost. The answer window follows from it (60, 75 or 90 seconds).
 Tone: direct and dry. Be blunt about the evidence, never about the people.`;
 
 const FINDING: Record<string, string> = {

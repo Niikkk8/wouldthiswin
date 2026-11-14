@@ -46,6 +46,13 @@ export function demoDelta(status: DemoStatus): number {
 /** The grilling's one lifeline (30 more seconds) costs this, whatever the odds. */
 export const LIFELINE_DELTA = -2;
 
+/**
+ * "Skip this one" in the grilling, or a question whose clock ran out while they were away.
+ * Fixed and small: well short of silence, a little worse than a weak answer, so skipping is
+ * a way through, not a free pass on a hard question.
+ */
+export const SKIP_DELTA = -4;
+
 /** The first commit added more than 70% of the files. */
 export const BULK_FIRST_COMMIT_DELTA = -10;
 
@@ -85,7 +92,7 @@ export type OddsAct = 1 | 2 | 3;
 
 export type OddsEvent = {
   act: OddsAct;
-  kind: "claim" | "demo" | "commits" | "iteration" | "answer" | "lifeline" | "rubric";
+  kind: "claim" | "demo" | "commits" | "iteration" | "answer" | "lifeline" | "skip" | "rubric";
   /** Set on claim events, so the replay can color unclear claims. */
   status?: ClaimStatus;
   /** What the odds actually moved, after clamping. */

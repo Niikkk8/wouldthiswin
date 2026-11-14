@@ -461,6 +461,12 @@ export const copy = {
         clean: "Every claim checks out. The panel will have to dig.",
       },
       next: "Continue to the grilling",
+      // Under the scan, once it has played: what comes next, and how short it is.
+      handoff: {
+        eyebrow: "Next: the grilling",
+        title: "The judges have {n} questions for you.",
+        body: "One at a time, a minute or more each. Stuck on one? Skipping it costs {points} points.",
+      },
       // The bar's button while the act is still playing.
       busy: {
         reading: "The panel is reading your repo…",
@@ -473,6 +479,17 @@ export const copy = {
       hint: "Enter to answer. Silence counts as an answer too.",
       read: "Clock starts in {n}",
       followUp: "Follow-up",
+      // The progress line above each question.
+      progress: "Question {i} of {total}",
+      progressFollowUp: "Question {i} of {total}: follow-up",
+      skip: {
+        button: "Skip this one",
+        label: "Skip this question. Costs {points} points.",
+        // The Tired Judge's line when a question is skipped, and when the clock ran out while they were away.
+        line: "fine. skip it. it's going on your record.",
+        away: "you stepped out. we moved on without you.",
+        transcript: "(skipped)",
+      },
       voice: {
         label: "Answer out loud",
         idle: "Tap or hold to talk",
@@ -533,6 +550,29 @@ export const copy = {
     },
     verdict: {
       next: "Share it",
+    },
+    // Coming back to a session that stopped part way, within RESUME_WINDOW_MS.
+    resume: {
+      eyebrow: "Welcome back",
+      scanTitle: "Your scan is done. The judges have {n} questions for you.",
+      scanBody: "Pick up where you left off. The first question starts on a fresh clock.",
+      grillingTitle: "You left on question {i} of {total}.",
+      awayBody:
+        "Its clock ran out while you were away, so it counts as skipped, which costs {points} points. The next question starts on a fresh clock.",
+      betweenBody: "The next question starts on a fresh clock when you continue.",
+      doneTitle: "You answered all {total} questions.",
+      doneBody: "The panel has what it needs. Continue, and they'll deliberate.",
+      window: "Sessions stay open for 24 hours after they start.",
+      next: "Continue where I left off",
+      fixesHeading: "What the scan found so far",
+    },
+    // Past RESUME_WINDOW_MS: the grilling can't go on, the scan's findings stay.
+    closed: {
+      eyebrow: "Session closed",
+      title: "This session closed before the verdict.",
+      body: "Sessions stay open for 24 hours after they start. What the scan found stays here, with the fixes it points to.",
+      again: "Face the panel again",
+      noFixes: "The scan found nothing to fix. The judges would still have had questions.",
     },
     share: {
       eyebrow: "Share",
@@ -850,6 +890,7 @@ export const copy = {
         answer: "From your answer to {judge}.",
         silent: "No answer to {judge}.",
         notAsked: "Not asked.",
+        skipped: "Skipped {judge}'s question.",
         fixes: "Of {total} fixes the panel asked for: {done} done, {started} started.",
       },
     },
@@ -900,6 +941,7 @@ export const copy = {
     network: "Lost the connection to the room. Try again.",
     tooLate: "The buzzer went before that got in.",
     lifelineUsed: "You've already used your lifeline.",
+    sessionClosed: "This session closed after 24 hours. What the scan found is still here.",
     eventClosed:
       "This event isn't taking repos right now. Face the panel without it from the home page.",
     invalidDevpost:

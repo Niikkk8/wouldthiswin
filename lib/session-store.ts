@@ -59,7 +59,7 @@ export async function ensureOwner(): Promise<string> {
 }
 
 const COLUMNS =
-  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, settings, shareable, listed, event_slug, version, owner_hash, demo_url, input_tokens, output_tokens";
+  "id, repo, repo_url, latest_sha, act, claims, questions, answers, events, panel, signals, files, sources, settings, shareable, listed, event_slug, version, owner_hash, demo_url, input_tokens, output_tokens, created_at";
 
 const Settings = z.object({ extendedTime: z.boolean() });
 
@@ -92,6 +92,7 @@ type Row = {
   event_slug: string | null;
   input_tokens: number | null;
   output_tokens: number | null;
+  created_at: string | null;
 };
 
 export type Loaded = {
@@ -146,6 +147,7 @@ export async function loadSession(id: string, owner: string | null): Promise<Loa
     settings: parseSettings(data.settings),
     visibility: { shareable: data.shareable === true, listed: data.listed === true },
     eventSlug: data.event_slug,
+    createdAt: data.created_at ? Date.parse(data.created_at) : null,
   };
   return {
     session,

@@ -19,6 +19,8 @@ import {
   toView,
   pullLifeline,
   withFollowUp,
+  MAX_FOLLOW_UPS,
+  MAX_QUESTIONS,
   verdictOf,
 } from "./session";
 
@@ -447,7 +449,7 @@ describe("view", () => {
     const v = toView(s, start + 10_000);
     assert.equal(v.questions.length, 1);
     assert.equal(v.questions[0].readMs, 0);
-    assert.equal(v.questions[0].remainingMs, 35_000);
+    assert.equal(v.questions[0].remainingMs, 50_000);
     assert.equal(v.questions[0].kind, "fact");
     assert.equal(v.questionCount, 3);
   });
@@ -542,13 +544,26 @@ describe("follow-ups", () => {
     assert.equal(toView(unwrap(issueQuestion(s, 1, T0 + 2_000)), T0).questions[1].followUp, true);
   });
 
-  test("never a follow-up to a follow-up, and at most two a session", () => {
+  test("never a follow-up to a follow-up, and at most one a session", () => {
     let qs = grilling().questions;
     qs = withFollowUp(qs, 0, "a?");
-    assert.equal(withFollowUp(qs, 1, "b?").length, qs.length);
-    qs = withFollowUp(qs, 2, "c?");
-    assert.equal(qs.length, 5);
-    assert.equal(withFollowUp(qs, 4, "d?").length, 5);
+    assert.equal(qs.length, 4);
+    assert.equal(withFollowUp(qs, 1, "b?").length, 4);
+    assert.equal(withFollowUp(qs, 2, "c?").length, 4);
+    assert.equal(withFollowUp(qs, 3, "d?").length, 4);
+  });
+
+  test("the grilling never runs past 3 questions plus 1 follow-up", () => {
+    assert.equal(MAX_FOLLOW_UPS, 1);
+    assert.equal(MAX_QUESTIONS, 4);
+    let s = grilling();
+    for (let i = 0; s.answers.length < s.questions.length; i++) {
+      s = unwrap(issueQuestion(s, i, T0));
+      s = unwrap(acceptAnswer(s, i, "vague", T0 + 1_000));
+      s = unwrap(settleAnswer(s, i, { score: -3, reason: "r", followUp: "And?" }));
+    }
+    assert.equal(s.questions.length, MAX_QUESTIONS);
+    assert.equal(s.questions.filter((q) => q.followUpOf !== undefined).length, 1);
   });
 
   test("a silent answer gets no follow-up", () => {

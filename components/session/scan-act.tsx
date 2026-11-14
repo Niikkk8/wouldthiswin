@@ -19,9 +19,10 @@ import { JudgeRow, type ReactionCue } from "@/components/judge-portrait";
 import { copy, fill } from "@/lib/copy";
 import { reactionForDelta } from "@/lib/judge-sprites";
 import { EASE } from "@/lib/motion";
-import { toneOf, type OddsEvent, type Tone } from "@/lib/odds";
+import { SKIP_DELTA, toneOf, type OddsEvent, type Tone } from "@/lib/odds";
 import { progressLine, type ScanProgress } from "@/lib/scan-progress";
-import type { Claim, SessionView } from "@/lib/session";
+import { QUESTION_COUNT, type Claim, type SessionView } from "@/lib/session";
+import { GrillingProgress } from "@/components/grilling/progress";
 import { ActTitle } from "./act-parts";
 import { ActionBar } from "./action-bar";
 import type { Send } from "./session-shell";
@@ -619,6 +620,7 @@ function XRay({
       {done && (
         <p className="mt-12 text-[20px] leading-snug font-bold text-balance lg:mt-14">{footer}</p>
       )}
+      {done && <GrillingHandoff />}
       <ActionBar
         label={copy.acts.scan.next}
         status={copy.acts.scan.busy.checking}
@@ -729,5 +731,29 @@ export function ScanAct({
         />
       )}
     </>
+  );
+}
+
+const H = copy.acts.scan.handoff;
+
+/** Under the played scan: the grilling is next, and it's three questions. */
+export function GrillingHandoff({ className }: { className?: string }) {
+  return (
+    <section
+      aria-labelledby="handoff-heading"
+      className={cn(
+        "mt-8 max-w-[640px] rounded-panel border border-border bg-surface p-5",
+        className,
+      )}
+    >
+      <p className="label-mono uppercase">{H.eyebrow}</p>
+      <h2 id="handoff-heading" className="mt-2 text-[22px] leading-tight font-bold text-balance">
+        {fill(H.title, { n: QUESTION_COUNT })}
+      </h2>
+      <p className="mt-2 text-[16px] leading-snug text-pretty text-text-muted">
+        {fill(H.body, { points: -SKIP_DELTA })}
+      </p>
+      <GrillingProgress number={0} total={QUESTION_COUNT} done={0} className="mt-4" />
+    </section>
   );
 }

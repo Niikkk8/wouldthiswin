@@ -12,7 +12,7 @@ export const QUESTION_KINDS = ["fact", "decision", "tradeoff"] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
 
 export const WINDOW_MS: Record<QuestionKind, number> = {
-  fact: 45_000,
+  fact: 60_000,
   decision: 75_000,
   tradeoff: 90_000,
 };

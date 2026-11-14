@@ -10,7 +10,9 @@ import {
   applyScan,
   issueQuestion,
   pullLifeline,
+  resumeGrilling,
   settleAnswer,
+  skipQuestion,
   toView,
   type Result,
   type SessionState,
@@ -24,7 +26,9 @@ export type DemoAction =
   | { action: "show"; question: number }
   | { action: "answer"; question: number; text: string }
   | { action: "deliberate" }
-  | { action: "lifeline"; question: number };
+  | { action: "lifeline"; question: number }
+  | { action: "skip"; question: number }
+  | { action: "resume" };
 
 export type TransportResult = { status: number; body: Record<string, unknown> };
 
@@ -103,6 +107,17 @@ export function demoTransport(
       }
       case "lifeline":
         return apply(pullLifeline(state, a.question, Date.now()));
+      case "skip": {
+        const skipped = apply(skipQuestion(state, a.question, Date.now()));
+        if (skipped.status !== 200) return skipped;
+        return apply(settleAnswer(state, a.question, null));
+      }
+      case "resume": {
+        const resumed = apply(resumeGrilling(state, Date.now()));
+        const i = state.answers.length - 1;
+        if (resumed.status !== 200 || i < 0 || state.answers[i].score !== null) return resumed;
+        return apply(settleAnswer(state, i, null));
+      }
       case "deliberate":
         if (state.panel) return { status: 200, body: { view: view() } };
         await wait(timings.deliberateMs);

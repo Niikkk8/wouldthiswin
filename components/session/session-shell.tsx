@@ -9,10 +9,11 @@ import { copy, fill } from "@/lib/copy";
 import { EASE } from "@/lib/motion";
 import { ANSWER_MAX } from "@/lib/odds";
 import type { ScanProgress } from "@/lib/scan-progress";
-import { ACTS, type ActName, type SessionView } from "@/lib/session";
+import { ACTS, grillingProgress, type ActName, type SessionView } from "@/lib/session";
 import { ActFrame } from "./action-bar";
 import { DeliberationAct } from "./deliberation-act";
 import { GrillingAct } from "./grilling-act";
+import { ClosedSession, ResumeOffer, isReturning } from "./resume-act";
 import { ScanAct } from "./scan-act";
 import { ShareAct } from "./share-act";
 import { VerdictAct } from "./verdict-act";
@@ -28,6 +29,8 @@ export type SessionAction =
   | { action: "answer"; question: number; text: string }
   | { action: "deliberate" }
   | { action: "lifeline"; question: number }
+  | { action: "skip"; question: number }
+  | { action: "resume" }
   | { action: "recording"; question: number };
 
 export type SendResult = {
@@ -125,10 +128,8 @@ function headerStatus(view: SessionView, revealed: number): string {
     // of the judge's reaction.
     const held = Math.max(0, view.events.length - revealed);
     const answered = view.questions.filter((q) => q.answer).length - held;
-    return fill(copy.header.question, {
-      i: Math.min(answered + 1, view.questionCount),
-      total: view.questionCount,
-    });
+    const p = grillingProgress(view.questions, Math.max(0, answered));
+    return fill(copy.header.question, { i: p.number, total: p.total });
   }
   return fill(copy.header.act, { n: ACTS.indexOf(view.act) + 1 });
 }
@@ -151,9 +152,15 @@ export function SessionShell({
 }) {
   const reduce = useReducedMotion();
   const [{ view, pending }, dispatch] = useReducer(reducer, { view: initial, pending: false });
+  // Coming back to a session left part way (a real one, not the sample): offer to carry on first.
+  const [offer, setOffer] = useState(
+    () => !demo && transport === fetchTransport && isReturning(initial),
+  );
   // How many events the widget shows. The scan plays its events in, and act 2 holds each
   // answer's event back until its chip has flown to the widget. Later acts show all.
-  const [revealed, setRevealed] = useState(initial.act === "scan" ? 0 : initial.events.length);
+  const [revealed, setRevealed] = useState(
+    initial.act === "scan" && !offer && !initial.closed ? 0 : initial.events.length,
+  );
   // The scan is running: the widget sits at 50% with a slow pulse until playback starts.
   const [waiting, setWaiting] = useState(initial.act === "scan" && initial.claims === null);
 
@@ -180,54 +187,69 @@ export function SessionShell({
   );
 
   const advance = (from: ActName) => () => send({ action: "advance", from });
+  // Carry on: from the scan straight into the grilling; a question whose clock ran out
+  // while they were away is closed as skipped, so the next one starts fresh.
+  const carryOn = async () => {
+    if (view.act === "scan") {
+      if ((await send({ action: "advance", from: "scan" })).ok) setOffer(false);
+      return;
+    }
+    if (view.away && !(await send({ action: "resume" })).ok) return;
+    setRevealed(view.events.length);
+    setOffer(false);
+  };
+  const early = view.act === "scan" || view.act === "grilling";
   const events =
     view.act === "scan" || view.act === "grilling" ? view.events.slice(0, revealed) : view.events;
   const asking = view.act === "grilling" && view.questions.some((q) => !q.answer);
 
   let act: React.ReactNode;
-  switch (view.act) {
-    case "scan":
-      act = (
-        <ScanAct
-          view={view}
-          send={send}
-          revealed={revealed}
-          onReveal={setRevealed}
-          onNext={advance("scan")}
-          onWaiting={setWaiting}
-          pending={pending}
-        />
-      );
-      break;
-    case "grilling":
-      act = (
-        <GrillingAct
-          view={view}
-          send={send}
-          revealed={revealed}
-          onReveal={setRevealed}
-          pending={pending}
-          autoAnswers={answers}
-        />
-      );
-      break;
-    case "deliberation":
-      act = (
-        <DeliberationAct
-          view={view}
-          send={send}
-          onNext={advance("deliberation")}
-          pending={pending}
-        />
-      );
-      break;
-    case "verdict":
-      act = <VerdictAct view={view} onNext={advance("verdict")} pending={pending} demo={demo} />;
-      break;
-    case "share":
-      act = <ShareAct view={view} demo={demo} drawCards={drawCards} />;
-      break;
-  }
+  if (early && view.closed) act = <ClosedSession view={view} />;
+  else if (early && offer) act = <ResumeOffer view={view} onContinue={carryOn} pending={pending} />;
+  else
+    switch (view.act) {
+      case "scan":
+        act = (
+          <ScanAct
+            view={view}
+            send={send}
+            revealed={revealed}
+            onReveal={setRevealed}
+            onNext={advance("scan")}
+            onWaiting={setWaiting}
+            pending={pending}
+          />
+        );
+        break;
+      case "grilling":
+        act = (
+          <GrillingAct
+            view={view}
+            send={send}
+            revealed={revealed}
+            onReveal={setRevealed}
+            pending={pending}
+            autoAnswers={answers}
+          />
+        );
+        break;
+      case "deliberation":
+        act = (
+          <DeliberationAct
+            view={view}
+            send={send}
+            onNext={advance("deliberation")}
+            pending={pending}
+          />
+        );
+        break;
+      case "verdict":
+        act = <VerdictAct view={view} onNext={advance("verdict")} pending={pending} demo={demo} />;
+        break;
+      case "share":
+        act = <ShareAct view={view} demo={demo} drawCards={drawCards} />;
+        break;
+    }
 
   return (
     <ActFrame
@@ -251,7 +273,11 @@ export function SessionShell({
             events={events}
             travel={view.act === "grilling"}
             waiting={view.act === "scan" && waiting}
-            note={asking ? fill(copy.acts.grilling.riding, { max: ANSWER_MAX }) : undefined}
+            note={
+              asking && !offer && !view.closed
+                ? fill(copy.acts.grilling.riding, { max: ANSWER_MAX })
+                : undefined
+            }
             // The act's own column now: its right edge is the content's.
             className="lg:right-0!"
           />
@@ -259,7 +285,7 @@ export function SessionShell({
       </AnimatePresence>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={view.act}
+          key={early && (offer || view.closed) ? "resume" : view.act}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: reduce ? 0.2 : 0.25, ease: EASE } }}

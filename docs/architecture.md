@@ -30,7 +30,7 @@ Malformed output gets one retry, then a fallback that never invents a score (an 
 
 ## Server-owned sessions and deadlines
 
-The client mirrors a `SessionView` the server builds; it never computes state (`lib/session.ts`, pure transitions, saved with optimistic locking on `version`). The grilling clock is the server's: a question's window starts after its typing time plus a 3-second read, follows the question's kind (45, 75 or 90 seconds), doubles with extended time, and gains 30 seconds with the one lifeline (`lib/deadline.ts`). A voice recording's start is stamped server-side, and its upload is accepted only if that start was before the buzzer.
+The client mirrors a `SessionView` the server builds; it never computes state (`lib/session.ts`, pure transitions, saved with optimistic locking on `version`). The grilling clock is the server's: a question's window starts after its typing time plus a 3-second read, follows the question's kind (60, 75 or 90 seconds), doubles with extended time, and gains 30 seconds with the one lifeline (`lib/deadline.ts`). A grilling is 3 questions plus at most 1 follow-up. Any question can be skipped for a fixed small cost, and a question whose clock ran out while its owner was away counts as skipped, never as silence. Coming back within 24 hours of the start picks the session up again: the next question gets a fresh clock, and a question already seen never gets a new one. After 24 hours an unfinished session closes, and its page keeps the scan's findings and fix list. A voice recording's start is stamped server-side, and its upload is accepted only if that start was before the buzzer.
 
 ## Private findings stay private
 
