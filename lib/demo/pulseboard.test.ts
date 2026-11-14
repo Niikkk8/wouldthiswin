@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, test } from "vitest";
 import { currentOdds } from "../odds";
+import { acceptAnswer, issueQuestion, settleAnswer, type Result } from "../session";
 import { demoState } from "./fixture";
-import { PULSEBOARD } from "./pulseboard";
+import { PULSEBOARD, PULSEBOARD_FOLLOWUP } from "./pulseboard";
 import { PULSEBOARD_ROUND2 } from "./pulseboard-round2";
 
 describe("the PulseBoard capture fixture", () => {
@@ -36,5 +37,29 @@ describe("the PulseBoard capture fixture", () => {
     const titles = (after.signals?.checks ?? []).map((f) => f.title).join("\n");
     assert.doesNotMatch(titles, /Create Next App|\.env is committed/);
     assert.match(titles, /still in git history/);
+  });
+});
+
+describe("the follow-up capture fixture", () => {
+  const unwrap = (r: Result) => {
+    if (!r.ok) throw new Error(r.error);
+    return r.session;
+  };
+
+  test("a vague second answer makes the same judge ask its follow-up next", () => {
+    let s = demoState("grilling", 0, PULSEBOARD_FOLLOWUP);
+    for (let i = 0; i < 3; i++) {
+      const a = PULSEBOARD_FOLLOWUP.answers[i];
+      s = unwrap(issueQuestion(s, i, 1_000 * i));
+      s = unwrap(acceptAnswer(s, i, a.text, 1_000 * i + 500));
+      s = unwrap(
+        settleAnswer(s, i, { score: a.score, reason: a.reason, followUp: a.followUp ?? null }),
+      );
+    }
+    const followUp = s.questions[2];
+    assert.equal(followUp.followUpOf, 1);
+    assert.equal(followUp.judge, s.questions[1].judge);
+    assert.equal(followUp.text, PULSEBOARD_FOLLOWUP.answers[1].followUp);
+    assert.equal(s.questions.length, 4);
   });
 });

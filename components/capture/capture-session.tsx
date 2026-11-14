@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { SessionShell, type Transport } from "@/components/session/session-shell";
 import { CAPTURE_START, type CaptureAct } from "@/lib/demo/capture-acts";
 import { demoState } from "@/lib/demo/fixture";
-import { PULSEBOARD } from "@/lib/demo/pulseboard";
+import { PULSEBOARD, PULSEBOARD_FOLLOWUP } from "@/lib/demo/pulseboard";
 import { PULSEBOARD_ROUND2 } from "@/lib/demo/pulseboard-round2";
 import { demoTransport } from "@/lib/demo/transport";
 import { toView } from "@/lib/session";
@@ -18,7 +18,8 @@ installScriptedSpeech(PULSEBOARD.answers[0].text);
 /** One act of the PulseBoard session, live, for the demo videos. */
 export function CaptureSession({ act }: { act: CaptureAct }) {
   const [start] = useState(() => {
-    const fixture = act === "rejudge" ? PULSEBOARD_ROUND2 : PULSEBOARD;
+    const fixture =
+      act === "rejudge" ? PULSEBOARD_ROUND2 : act === "followup" ? PULSEBOARD_FOLLOWUP : PULSEBOARD;
     const s = demoState(CAPTURE_START[act], Date.now(), fixture);
     return {
       view: toView(s, Date.now()),
@@ -36,6 +37,12 @@ export function CaptureSession({ act }: { act: CaptureAct }) {
   }, [act]);
 
   return (
-    <SessionShell initial={start.view} transport={start.transport} answers={TYPED} drawCards />
+    <SessionShell
+      initial={start.view}
+      transport={start.transport}
+      // The follow-up act types every answer in, so it reaches the follow-up quickly.
+      answers={act === "followup" ? PULSEBOARD_FOLLOWUP.answers.map((a) => a.text) : TYPED}
+      drawCards
+    />
   );
 }

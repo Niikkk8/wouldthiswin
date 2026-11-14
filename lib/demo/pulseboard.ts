@@ -316,3 +316,28 @@ export const PULSEBOARD: DemoFixture = {
   answers: ANSWERS,
   panel: PANEL,
 };
+
+/**
+ * The same session with a vague second answer, so the investor asks a follow-up: what the
+ * live panel does when an answer dodges (lib/session.ts withFollowUp). Answers are by
+ * question index, and the follow-up is asked straight after the answer it follows.
+ */
+export const PULSEBOARD_FOLLOWUP: DemoFixture = {
+  ...PULSEBOARD,
+  id: "capturefollowup",
+  answers: [
+    ANSWERS[0],
+    {
+      text: "Probably venues? Or promoters. Someone in events.",
+      score: -1,
+      reason: "Three maybes is not a buyer.",
+      followUp: "Name one venue that would pay for this.",
+    },
+    {
+      text: "Riverside Arena. Their ops lead asked for a pilot this season.",
+      score: 4,
+      reason: "A name and a season. That's a buyer.",
+    },
+    ANSWERS[2],
+  ],
+};

@@ -57,6 +57,8 @@ const TARGETS: Target[] = [
   { name: "since", text: "[Ss]ince (the )?(last|round one)", up: 1 },
   { name: "chat", css: "li", pick: "last" },
   { name: "readmeClaim", text: "custom AI model", up: 0 },
+  { name: "practice", css: 'section[aria-labelledby="practice"]' },
+  { name: "followLabel", text: "^Follow-up$" },
 ];
 
 type Target = {
@@ -232,7 +234,7 @@ const scrollTo = (text: string, at: number) => async (page: Page) =>
   page.evaluate(
     ([src, k]) => {
       const re = new RegExp(src as string);
-      const el = [...document.querySelectorAll("h3, p, span, div")].find((e) => re.test((e.textContent || "").trim()) && !e.children.length);
+      const el = [...document.querySelectorAll("h2, h3, p, span, div")].find((e) => re.test((e.textContent || "").trim()) && !e.children.length);
       const sc = document.querySelector("[data-act-scroll]");
       if (!el) return sc ? sc.scrollTop : window.scrollY;
       const top = el.getBoundingClientRect().top + (sc ? sc.scrollTop - sc.getBoundingClientRect().top : window.scrollY);
@@ -344,6 +346,23 @@ const TAKES: Record<string, { url: string; run: TakeFn }> = {
       await rec.record(3);
       await rec.glide(scrollTo("[Ss]ince (the )?(last|round one)", 0.25), 1.4);
       await rec.record(2.5);
+    },
+  },
+  // The review's "A strong answer would cover" section (practice mode), owner only.
+  practice: {
+    url: "/capture/verdict",
+    run: async (rec) => {
+      await rec.record(1.5);
+      await rec.glide(scrollTo("^A strong answer would cover$", 0.12), 1.6);
+      await rec.record(3);
+    },
+  },
+  // A vague answer, then the same judge's follow-up (the followup capture act).
+  followup: {
+    url: "/capture/followup",
+    run: async (rec, page) => {
+      await rec.until(async () => (await page.getByText("Name one venue that would pay for this.").count()) > 0, 90);
+      await rec.record(4);
     },
   },
   readme: {

@@ -255,7 +255,8 @@ export type DemoFixture = {
   id: string;
   repo: string;
   scan: Scan;
-  answers: readonly { text: string; score: number; reason: string }[];
+  /** `followUp`: the panel found the answer vague and the same judge asks this next. */
+  answers: readonly { text: string; score: number; reason: string; followUp?: string }[];
   panel: Panel;
 };
 

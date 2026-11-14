@@ -102,7 +102,11 @@ export function demoTransport(
         await wait(timings.thinkMs);
         const scored = fixture.answers[a.question];
         return apply(
-          settleAnswer(state, a.question, { score: scored.score, reason: scored.reason }),
+          settleAnswer(state, a.question, {
+            score: scored.score,
+            reason: scored.reason,
+            followUp: scored.followUp ?? null,
+          }),
         );
       }
       case "lifeline":
