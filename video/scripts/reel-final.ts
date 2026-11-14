@@ -217,6 +217,7 @@ const raw = join(WORK, "reel_final.raw.mp4");
 await render("reel-final-9x16", raw, { plan });
 const m = master(raw, join(OUT, "reel_final_9x16.mp4"), -14);
 console.log(`out/reel_final_9x16.mp4  ${Number(m.after.input_i).toFixed(1)} LUFS, ${Number(m.after.input_tp).toFixed(1)} dBTP`);
-// Cover: the odds dropping, mid-punch, caption up.
-await still("reel-final-9x16", join(OUT, "reel_final_cover.png"), Math.round(((ev.drops[0] ?? 1) + 0.4) * 30), { plan });
+// Cover: its own still (src/reel/Cover.tsx): the face from the first line, sharp, under the hook.
+ffmpeg(["-ss", "0.5", "-i", join(PUB, "face.mp4"), "-frames:v", "1", join(PUB, "cover-face.png")]);
+await still("reel-final-cover", join(OUT, "reel_final_cover.png"), 0, { face: "reel-final/cover-face.png" });
 console.log("out/reel_final_cover.png");

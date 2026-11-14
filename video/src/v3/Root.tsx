@@ -1,8 +1,9 @@
-import { Composition, Folder } from "remotion";
+import { Composition, Folder, Still } from "remotion";
 import { Edit, durationOf, FPS, type Spec } from "./edit";
 import edits from "./edits.json";
 import { Reel, type ReelProps } from "../reel/Reel";
 import { ReelFinal, type FinalProps } from "../reel/Final";
+import { ReelCover, type CoverProps } from "../reel/Cover";
 
 const all = edits as unknown as Record<string, Spec>;
 
@@ -33,6 +34,7 @@ export function ReelV3() {
         defaultProps={{ plan: null } as FinalProps}
         calculateMetadata={({ props }: { props: FinalProps }) => ({ durationInFrames: Math.max(30, Math.round((props.plan?.duration ?? 1) * FPS)) })}
       />
+      <Still id="reel-final-cover" component={ReelCover} width={1080} height={1920} defaultProps={{ face: null } as CoverProps} />
       <Composition id="reel-4x5" component={Reel} fps={FPS} width={1080} height={1350} durationInFrames={30} defaultProps={{ plan: null } as ReelProps} calculateMetadata={meta} />
     </Folder>
   );
