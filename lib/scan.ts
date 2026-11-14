@@ -23,7 +23,8 @@ import { fetchPage } from "./demo-check";
 import { runChecks } from "./checks";
 import type { Finding } from "./findings";
 import { commitsTouching, readFileAt, readRawAt, type RawRepoData } from "./github";
-import { QuestionsError, buildQuestionsPrompt, writeQuestions, type WrittenQuestion } from "./grill/questions";
+import { QuestionsError, buildQuestionsPrompt, routeFindings, writeQuestions, type WrittenQuestion } from "./grill/questions";
+import { findingsOf } from "./findings";
 import { log } from "./log";
 import { newUsage, type Usage } from "./model";
 import { HAIKU } from "./pricing";
@@ -63,7 +64,7 @@ export type ScanDeps = {
     usage: Usage,
     onRead: (path: string) => void,
   ) => Promise<{ verdicts: Verdict[]; files: ReadonlyMap<string, string> }>;
-  questions: (prompt: { system: string; user: string }, usage: Usage) => Promise<WrittenQuestion[]>;
+  questions: (prompt: { system: string; user: string; routed?: Record<string, string[]> }, usage: Usage) => Promise<WrittenQuestion[]>;
   devpost: (url: string) => Promise<Devpost | null>;
   read: (raw: RawRepoData, path: string) => Promise<string | null>;
 };
@@ -79,7 +80,7 @@ const realDeps: ScanDeps = {
   read: (raw, path) => readFileAt(raw.ref, raw.latestSha, path),
 };
 
-export type ScanModelResult = { claims: Claim[]; questions: WrittenQuestion[]; sources: Source[]; usage: Usage };
+export type ScanModelResult = { claims: Claim[]; questions: WrittenQuestion[]; sources: Source[]; findings: Finding[]; usage: Usage };
 
 /** Claims, verification, questions. A failed extraction or question call fails the scan; a failed check doesn't. */
 export async function runScanModel(
@@ -91,6 +92,8 @@ export async function runScanModel(
     submission?: SubmissionInput | null;
     /** Already fetched by the caller, so the demo check can share it. */
     devpost?: Devpost | null;
+    /** The deterministic checks, running alongside; questions wait for them. */
+    checks?: Promise<CheckResult>;
     deps?: Partial<ScanDeps>;
   } = {},
 ): Promise<ScanModelResult> {
@@ -122,15 +125,21 @@ export async function runScanModel(
     });
   const claims = toClaims(extracted, checked.verdicts, checked.files);
 
+  // The AI-depth findings need the claims, so they come last.
+  const checks = opts.checks ? await opts.checks : null;
+  const findings = checks ? [...checks.findings, ...aiDepthFindings(checks.depth, claims, checks.pretrained)] : [];
+  const routed = routeFindings([...findingsOf({ claims, signals: null }), ...findings]);
   const prompt = buildQuestionsPrompt({
     repo: raw.meta.fullName,
     description: raw.meta.description,
     claims,
+    routed,
     previousFixes: opts.previous?.fixes,
     eventContext: opts.eventContext,
   });
-  const questions = await deps.questions(prompt, usage).catch(wrap);
-  return { claims, questions, sources: sourcesFrom(checked.files, checked.verdicts), usage };
+  const ids = Object.fromEntries(Object.entries(routed).map(([j, fs]) => [j, fs.map((f) => f.id)]));
+  const questions = await deps.questions({ ...prompt, routed: ids }, usage).catch(wrap);
+  return { claims, questions, sources: sourcesFrom(checked.files, checked.verdicts), findings, usage };
 }
 
 /** Checks a demo link and records it the way the session stores it. */
@@ -187,11 +196,11 @@ export async function scanRepo(
   } = {},
 ): Promise<{ scan: Scan; usage: Usage }> {
   const devpost = opts.submission?.devpostUrl ? await fetchDevpost(opts.submission.devpostUrl).catch(() => null) : null;
-  const [model, auto, given, checks] = await Promise.all([
-    runScanModel(raw, { ...opts, devpost }),
+  const checks = deterministicChecks(raw, devpost, opts.window ?? null, { signatures: opts.sponsors ?? [], entered: opts.submission?.tracks ?? [] });
+  const [model, auto, given] = await Promise.all([
+    runScanModel(raw, { ...opts, devpost, checks }),
     demoSignal(findDemoUrl(raw), false),
     opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
-    deterministicChecks(raw, devpost, opts.window ?? null, { signatures: opts.sponsors ?? [], entered: opts.submission?.tracks ?? [] }),
   ]);
   const { firstCommitAddedOver70Pct } = computeSignals(raw, null);
   log.info("scan.validated", { repo: raw.ref.url, claims: model.claims.length, read: model.sources.length });
@@ -203,8 +212,7 @@ export async function scanRepo(
         demo: given ?? auto,
         bulkFirstCommit: firstCommitAddedOver70Pct,
         commit: raw.latestSha,
-        // The AI-depth findings need the claims, so they come last.
-        checks: [...checks.findings, ...aiDepthFindings(checks.depth, model.claims, checks.pretrained)],
+        checks: model.findings,
       },
       files: raw.headFilePaths.slice(0, STORED_FILES),
       sources: model.sources,

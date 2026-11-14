@@ -8,7 +8,7 @@ import type { Scan } from "./session";
 import type { Source } from "./sources";
 
 /** Bump whenever the checks, prompts or validation change what a scan finds. */
-export const SCAN_VERSION = 7;
+export const SCAN_VERSION = 8;
 
 export type CacheKey = { owner: string; repo: string; sha: string; version: number };
 

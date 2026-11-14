@@ -428,6 +428,7 @@ export const copy = {
       answerLabel: "Your answer",
       hint: "Enter to answer. Silence counts as an answer too.",
       read: "Clock starts in {n}",
+      followUp: "Follow-up",
       voice: {
         label: "Answer out loud",
         idle: "Tap or hold to talk",

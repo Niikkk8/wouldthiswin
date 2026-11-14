@@ -2,7 +2,7 @@ import { z } from "zod";
 import { badRequest, fail, failMutation } from "@/lib/api";
 import {
   ACTS,
-  QUESTION_COUNT,
+  MAX_QUESTIONS,
   acceptAnswer,
   advance,
   applyPanel,
@@ -33,7 +33,7 @@ import {
 // The scan: GitHub (~5s), demo check in parallel, up to two model calls.
 export const maxDuration = 60;
 
-const Question = z.number().int().min(0).max(QUESTION_COUNT - 1);
+const Question = z.number().int().min(0).max(MAX_QUESTIONS - 1);
 
 const Body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("scan") }),
@@ -56,7 +56,7 @@ async function finishPending(id: string, owner: string | null, s: SessionState):
     if (!r.ok) return r;
     const a = r.session.answers[i];
     if (a.score !== null) continue;
-    let scored: { score: number; reason: string } | null = null;
+    let scored: { score: number; reason: string; followUp: string | null } | null = null;
     if (!a.silent) {
       const q = r.session.questions[i];
       const out = await scoreAnswer({

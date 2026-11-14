@@ -2,7 +2,7 @@ import { z } from "zod";
 import { badRequest, fail } from "@/lib/api";
 import { ID_RE } from "@/lib/db";
 import { errorText, log } from "@/lib/log";
-import { MAX_ANSWER_LENGTH, QUESTION_COUNT, uploadRefusal } from "@/lib/session";
+import { MAX_ANSWER_LENGTH, MAX_QUESTIONS, uploadRefusal } from "@/lib/session";
 import { addStepTiming, loadSession, ownerHash } from "@/lib/session-store";
 import { MAX_AUDIO_BYTES, TranscribeError, audioType, cleanTranscript, transcribe } from "@/lib/transcribe";
 
@@ -11,7 +11,7 @@ export const maxDuration = 30;
 
 const Fields = z.object({
   session: z.string().regex(ID_RE),
-  question: z.coerce.number().int().min(0).max(QUESTION_COUNT - 1),
+  question: z.coerce.number().int().min(0).max(MAX_QUESTIONS - 1),
 });
 
 /**

@@ -20,6 +20,7 @@ import {
   toView,
   uploadRefusal,
   pullLifeline,
+  withFollowUp,
   verdictOf,
 } from "./session";
 
@@ -446,5 +447,33 @@ describe("visibility", () => {
     const shared = nextVisibility(off, { shareable: true });
     assert.deepEqual(nextVisibility(shared, { listed: true }), { shareable: true, listed: true });
     assert.deepEqual(nextVisibility({ shareable: true, listed: true }, { shareable: false }), off);
+  });
+});
+
+describe("follow-ups", () => {
+  test("a vague answer brings one follow-up from the same judge, asked next, as a quick fact", () => {
+    let s = unwrap(issueQuestion(grilling(), 0, T0));
+    s = unwrap(acceptAnswer(s, 0, "It's AI.", T0 + 1_000));
+    s = unwrap(settleAnswer(s, 0, { score: -5, reason: "vague", followUp: "Which model, in which file?" }));
+    assert.equal(s.questions.length, 4);
+    assert.deepEqual([s.questions[1].judge, s.questions[1].text, s.questions[1].kind, s.questions[1].followUpOf], ["tired", "Which model, in which file?", "fact", 0]);
+    assert.equal(s.questions[2].judge, "investor");
+    assert.equal(toView(unwrap(issueQuestion(s, 1, T0 + 2_000)), T0).questions[1].followUp, true);
+  });
+
+  test("never a follow-up to a follow-up, and at most two a session", () => {
+    let qs = grilling().questions;
+    qs = withFollowUp(qs, 0, "a?");
+    assert.equal(withFollowUp(qs, 1, "b?").length, qs.length);
+    qs = withFollowUp(qs, 2, "c?");
+    assert.equal(qs.length, 5);
+    assert.equal(withFollowUp(qs, 4, "d?").length, 5);
+  });
+
+  test("a silent answer gets no follow-up", () => {
+    let s = unwrap(issueQuestion(grilling(), 0, T0));
+    s = unwrap(acceptAnswer(s, 0, "", T0 + 1_000));
+    s = unwrap(settleAnswer(s, 0, { score: 0, reason: "r", followUp: "Hello?" }));
+    assert.equal(s.questions.length, 3);
   });
 });

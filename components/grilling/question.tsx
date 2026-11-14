@@ -157,6 +157,7 @@ export function Question({
         <p className="flex items-center gap-2.5 font-mono text-[13px]">
           <span aria-hidden className="size-2 rounded-full bg-loss" />
           {judge.name}
+          {q.followUp && <span className="label-mono uppercase">{copy.acts.grilling.followUp}</span>}
         </p>
         <h1 className="mt-5 max-w-[1120px] text-[36px] leading-[1.02] font-extrabold tracking-[-0.035em] text-balance lg:mt-6 lg:text-question">
           <QuestionText text={q.text} caught={q.caught} onTyped={typed} />

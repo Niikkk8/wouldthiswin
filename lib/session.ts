@@ -48,6 +48,10 @@ export const JUDGES = ["engineer", "investor", "tired"] as const;
 export type Judge = (typeof JUDGES)[number];
 
 export const QUESTION_COUNT = 3;
+/** A vague answer gets one short follow-up from the same judge; at most this many a session. */
+export const MAX_FOLLOW_UPS = 2;
+/** The most questions a grilling can have: one per judge, plus the follow-ups. */
+export const MAX_QUESTIONS = QUESTION_COUNT + MAX_FOLLOW_UPS;
 /** Long enough for 90 seconds of speech, transcribed. */
 export const MAX_ANSWER_LENGTH = 1000;
 
@@ -107,6 +111,10 @@ export type Question = {
   lifeline?: boolean;
   /** Server time a voice recording started, if one did. Uploads are judged against it. */
   recordingStartedAt?: number | null;
+  /** A follow-up: the index of the question whose vague answer it follows. */
+  followUpOf?: number;
+  /** The finding the question is about (lib/findings.ts), when it's grounded in one. */
+  findingId?: string | null;
 };
 
 /** The window a question gets when the scan didn't say: the one-sentence question is a quick fact. */
@@ -379,7 +387,7 @@ export function acceptAnswer(s: SessionState, index: number, text: string, now: 
 export function settleAnswer(
   s: SessionState,
   index: number,
-  scored: { score: unknown; reason: string } | null,
+  scored: { score: unknown; reason: string; followUp?: string | null } | null,
 ): Result {
   if (s.act !== "grilling") return fail("wrongAct");
   const answer = s.answers[index];
@@ -401,7 +409,20 @@ export function settleAnswer(
 
   const event = makeEvent(s.events, { act: 2, kind: "answer", rawDelta: score, reason });
   const answers = s.answers.map((a, i) => (i === index ? { ...a, score, reason } : a));
-  return ok({ ...s, answers, events: [...s.events, event] });
+  const questions = withFollowUp(s.questions, index, answer.silent ? null : (scored?.followUp ?? null));
+  return ok({ ...s, questions, answers, events: [...s.events, event] });
+}
+
+/**
+ * After a vague answer, the same judge asks one short follow-up (a 45-second quick fact),
+ * straight after. Never a follow-up to a follow-up, and at most MAX_FOLLOW_UPS a session.
+ */
+export function withFollowUp(questions: Question[], index: number, text: string | null): Question[] {
+  const q = questions[index];
+  if (!text || !q || q.followUpOf !== undefined) return questions;
+  if (questions.filter((x) => x.followUpOf !== undefined).length >= MAX_FOLLOW_UPS) return questions;
+  const followUp: Question = { judge: q.judge, text, caught: null, kind: "fact", issuedAt: null, followUpOf: index, findingId: q.findingId ?? null };
+  return [...questions.slice(0, index + 1), followUp, ...questions.slice(index + 1)];
 }
 
 /**
@@ -446,6 +467,8 @@ export type QuestionView = {
   /** The whole window, lifeline included, for the progress bar. */
   windowMs: number;
   lifeline: boolean;
+  /** A follow-up to the answer before it. */
+  followUp: boolean;
   answer: Omit<Answer, "receivedAt"> | null;
 };
 
@@ -486,6 +509,7 @@ export function toView(s: SessionState, now: number): SessionView {
       remainingMs: a ? null : clock.remainingMs,
       windowMs: clock.windowMs,
       lifeline: q.lifeline === true,
+      followUp: q.followUpOf !== undefined,
       answer: a ? { text: a.text, silent: a.silent, late: a.late, score: a.score, reason: a.reason } : null,
     });
   }
