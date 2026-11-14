@@ -9,6 +9,7 @@ export const CAPTURE_ACTS = [
   "verdict",
   "fixes",
   "share",
+  "rejudge",
 ] as const;
 export type CaptureAct = (typeof CAPTURE_ACTS)[number];
 
@@ -19,4 +20,6 @@ export const CAPTURE_START: Record<CaptureAct, DemoAt> = {
   verdict: "verdict",
   fixes: "verdict",
   share: "share",
+  // The second round's review, with what changed since the first.
+  rejudge: "verdict",
 };

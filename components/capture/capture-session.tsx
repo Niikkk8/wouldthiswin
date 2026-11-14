@@ -5,6 +5,7 @@ import { SessionShell, type Transport } from "@/components/session/session-shell
 import { CAPTURE_START, type CaptureAct } from "@/lib/demo/capture-acts";
 import { demoState } from "@/lib/demo/fixture";
 import { PULSEBOARD } from "@/lib/demo/pulseboard";
+import { PULSEBOARD_ROUND2 } from "@/lib/demo/pulseboard-round2";
 import { demoTransport } from "@/lib/demo/transport";
 import { toView } from "@/lib/session";
 
@@ -35,10 +36,11 @@ function useScriptedTranscript() {
 export function CaptureSession({ act }: { act: CaptureAct }) {
   useScriptedTranscript();
   const [start] = useState(() => {
-    const s = demoState(CAPTURE_START[act], Date.now(), PULSEBOARD);
+    const fixture = act === "rejudge" ? PULSEBOARD_ROUND2 : PULSEBOARD;
+    const s = demoState(CAPTURE_START[act], Date.now(), fixture);
     return {
       view: toView(s, Date.now()),
-      transport: demoTransport(s, { fixture: PULSEBOARD }) as Transport,
+      transport: demoTransport(s, { fixture }) as Transport,
     };
   });
 

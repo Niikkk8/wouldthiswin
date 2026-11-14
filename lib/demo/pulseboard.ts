@@ -9,12 +9,12 @@ import { runChecks } from "../checks";
 import type { Claim, Panel, Scan } from "../session";
 import type { DemoFixture } from "./fixture";
 
-const REPO = "team-pulse/pulseboard";
+export const REPO = "team-pulse/pulseboard";
 
 // Obviously fake, and assembled here so no key-shaped string is committed to this repo.
 const FAKE_KEY = ["sk-", "FAKE", "pulseboard", "DEMOkey", "7Qz3Rw9Lm2Tx8Vn4Hj6Kp1Bc5"].join("");
 
-const FILES: Record<string, string> = {
+export const FILES: Record<string, string> = {
   ".env": `# PulseBoard config\nOPENAI_API_KEY=${FAKE_KEY}\nCROWDNET_MODEL_PATH=./models/crowdnet-v2.pt\n`,
   "app/layout.tsx": `import type { Metadata } from "next";
 import "./globals.css";
@@ -77,7 +77,7 @@ const README = `# PulseBoard
 http://localhost:3000
 `;
 
-const TREE = [
+export const TREE = [
   ".env",
   ".gitignore",
   "README.md",
@@ -189,7 +189,7 @@ const SCAN: Scan = {
   })),
 };
 
-const ANSWERS = [
+export const ANSWERS = [
   {
     text: "The code is the truth. CrowdNet isn't trained yet, so the prediction is the live count plus noise. The model was the plan for Sunday and we ran out of time.",
     score: 6,
