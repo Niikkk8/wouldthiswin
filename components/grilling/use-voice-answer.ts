@@ -2,121 +2,79 @@
 
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
-import type { Send } from "@/components/session/session-shell";
 import { copy } from "@/lib/copy";
-import { recordingType, type RecorderState } from "./use-recorder";
+import { recognitionCtor, useDictation, type Unavailable } from "./use-dictation";
 import { useVoicePref } from "./use-voice-pref";
 
 const V = copy.acts.grilling.voice;
-const Reply = z.object({ text: z.string().optional(), message: z.string().optional() });
 const noop = () => () => {};
 
 /**
- * The voice half of an answer: tells the server a recording started (the upload is judged by
- * that time), sends the audio to be transcribed, and hands the words back. If the buzzer went
- * while recording or uploading, the words go straight in as the answer.
+ * The voice half of an answer: the browser writes down what's said, straight into the answer
+ * box, where it stays editable until the buzzer. It arrives as text, so the server treats it
+ * exactly like typing. Where the browser can't do it, the mic is hidden; where the mic is
+ * refused, typing it is, and that choice is remembered.
  */
 export function useVoiceAnswer({
-  sessionId,
-  index,
-  send,
-  onTranscript,
-  onLateTranscript,
+  text,
+  onText,
+  desktop,
 }: {
-  sessionId: string;
-  index: number;
-  send: Send;
-  onTranscript: (text: string) => void;
-  onLateTranscript: (answer: string) => void;
+  text: () => string;
+  onText: (text: string) => void;
+  desktop: boolean;
 }) {
   const [pref, setPref] = useVoicePref();
   const supported = useSyncExternalStore(
     noop,
-    () => recordingType() !== null,
+    () => recognitionCtor() !== null,
     () => false,
   );
-  const [reason, setReason] = useState<Extract<RecorderState, "denied" | "unsupported"> | null>(
-    null,
-  );
-  const [recording, setRecording] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const lateText = useRef<string | null>(null);
-
-  const started = useCallback(() => {
-    setRecording(true);
-    void send({ action: "recording", question: index });
-  }, [send, index]);
-
-  const finish = useCallback(
-    (words: string | null) => {
-      const late = lateText.current;
-      if (late !== null) {
-        lateText.current = null;
-        onLateTranscript([late.trim(), words ?? ""].filter(Boolean).join(" "));
-      } else if (words) {
-        onTranscript(words);
-      }
-    },
-    [onLateTranscript, onTranscript],
-  );
-
-  const upload = useCallback(
-    async (audio: Blob) => {
-      setRecording(false);
-      setUploading(true);
-      const form = new FormData();
-      form.append("session", sessionId);
-      form.append("question", String(index));
-      form.append("audio", audio);
-      let words: string | null = null;
-      try {
-        const res = await fetch("/api/transcribe", { method: "POST", body: form });
-        const body = Reply.safeParse(await res.json().catch(() => ({})));
-        const reply = body.success ? body.data : {};
-        if (res.ok && reply.text) words = reply.text;
-        else toast.error(reply.message ?? copy.errors.voiceUnavailable);
-      } catch {
-        toast.error(copy.errors.network);
-      }
-      // Audio is dropped here: only the words are kept, in the answer box.
-      setUploading(false);
-      finish(words);
-    },
-    [sessionId, index, finish],
-  );
+  const [reason, setReason] = useState<Unavailable | null>(null);
+  const meter = useRef<(level: number) => void>(() => {});
 
   const unavailable = useCallback(
-    (why: Extract<RecorderState, "denied" | "unsupported">) => {
-      setRecording(false);
+    (why: Unavailable) => {
       setReason(why);
       setPref("off");
     },
     [setPref],
   );
+  const dictation = useDictation({
+    onText,
+    onLevel: (level) => meter.current(level),
+    onUnavailable: unavailable,
+    onLost: () => toast.error(V.lost),
+    meter: desktop,
+  });
 
   return {
     enabled: pref === "on" && supported,
     note:
-      pref === "off"
+      supported && pref === "off"
         ? reason === "denied"
           ? V.denied
-          : reason === "unsupported"
+          : reason
             ? V.unsupported
             : V.off
         : null,
-    uploading,
-    busy: recording || uploading,
-    started,
-    upload,
-    unavailable,
+    state: dictation.state,
+    since: dictation.since,
+    metered: dictation.metered,
+    /** The button's meter: called with the input level (0 to 1) every frame, styles only. */
+    setMeter: (draw: (level: number) => void) => {
+      meter.current = draw;
+    },
+    start: () => dictation.start(text()),
+    stop: dictation.stop,
+    abort: dictation.abort,
+    /** The box was edited: dictation carries on from the edited text. */
+    rebase: dictation.rebase,
     turnOn: () => {
       setReason(null);
       setPref("on");
     },
-    /** The buzzer went mid-recording: whatever was typed waits for the transcript. */
-    expire: (typed: string) => {
-      lateText.current = typed;
-    },
   };
 }
+
+export type VoiceAnswer = ReturnType<typeof useVoiceAnswer>;

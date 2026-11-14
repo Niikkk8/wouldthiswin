@@ -138,3 +138,20 @@
     animation: none;
   }
 }
+
+/* The mic's bars while it listens without a level meter (phones): a slow, even breath. */
+@keyframes listen {
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(0.85);
+  }
+}
+@utility listen {
+  animation: listen 0.9s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

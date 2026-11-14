@@ -86,7 +86,6 @@ Run the migrations in `db/migrations` against your own Supabase database, in ord
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | yes      | Storage, server-side only                                                          |
 | `IP_HASH_SALT`                              | yes      | Salts the IP hashes behind the per-visitor limit                                   |
 | `CRON_SECRET`                               | yes      | Authorizes the daily retention job                                                 |
-| `GROQ_API_KEY`                              | no       | Voice answers (Whisper); without it, answers are typed                             |
 | `MAX_SESSIONS_PER_USER_PER_DAY`             | no       | Default 5                                                                          |
 | `MAX_SESSIONS_PER_DAY`                      | no       | Default 300                                                                        |
 | `DAILY_SPEND_LIMIT_USD`                     | no       | Default 20, measured from logged spend                                             |

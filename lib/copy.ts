@@ -479,9 +479,10 @@ export const copy = {
         idleDesktop: "Hold space or click to talk",
         recording: "Listening. Tap to stop",
         holding: "Listening. Let go to stop",
-        uploading: "Writing down what you said",
+        engine: "Uses your browser's speech recognition.",
+        lost: "Lost the speech recognition connection. Type the rest, or try the mic again.",
         denied: "No microphone access, so typing it is.",
-        unsupported: "This browser can't record audio, so typing it is.",
+        unsupported: "No microphone or speech recognition here, so typing it is.",
         off: "Voice is off.",
         turnOn: "Use voice",
         seconds: "{s}s",
@@ -891,8 +892,6 @@ export const copy = {
     network: "Lost the connection to the room. Try again.",
     tooLate: "The buzzer went before that got in.",
     lifelineUsed: "You've already used your lifeline.",
-    voiceUnavailable: "Voice answers aren't working right now. Type yours instead.",
-    voiceEmpty: "Didn't catch any words. Try again, or type it.",
     eventClosed:
       "This event isn't taking repos right now. Face the panel without it from the home page.",
     invalidDevpost:

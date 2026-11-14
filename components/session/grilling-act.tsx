@@ -63,7 +63,6 @@ export function GrillingAct({
           key={onScreen}
           q={current}
           index={onScreen}
-          sessionId={view.id}
           send={send}
           lifelineAvailable={view.lifelineAvailable}
           eventCount={eventCount}

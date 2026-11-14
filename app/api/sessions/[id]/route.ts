@@ -8,7 +8,6 @@ import {
   applyPanel,
   issueQuestion,
   settleAnswer,
-  startRecording,
   toView,
   pullLifeline,
   type SessionState,
@@ -47,8 +46,6 @@ const Body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("answer"), question: Question, text: z.string().max(4000) }),
   z.object({ action: z.literal("deliberate") }),
   z.object({ action: z.literal("lifeline"), question: Question }),
-  // A voice recording started: the server notes the time, so the upload is judged by it.
-  z.object({ action: z.literal("recording"), question: Question }),
 ]);
 
 const ok = (s: SessionState) => Response.json({ view: toView(s, Date.now()) });
@@ -237,9 +234,6 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
         break;
       case "lifeline":
         r = await mutate(id, owner, (s) => pullLifeline(s, body.question, now));
-        break;
-      case "recording":
-        r = await mutate(id, owner, (s) => startRecording(s, body.question, now));
         break;
       case "answer": {
         r = await mutate(id, owner, (s) => acceptAnswer(s, body.question, body.text, now));

@@ -9,7 +9,7 @@ import { copy } from "@/lib/copy";
 import { reactionForDelta } from "@/lib/judge-sprites";
 import { EASE } from "@/lib/motion";
 import type { OddsEvent } from "@/lib/odds";
-import type { QuestionView } from "@/lib/session";
+import { MAX_ANSWER_LENGTH, type QuestionView } from "@/lib/session";
 import { useDesktop } from "@/lib/use-desktop";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { AnswerField } from "./answer-field";
@@ -20,7 +20,7 @@ import { Timer } from "./timer";
 import { useAnswerClock } from "./use-answer-clock";
 import { useAutoAnswer, useDoze, useKeepInView, useReaction } from "./use-question-effects";
 import { useVoiceAnswer } from "./use-voice-answer";
-import { VoiceButton } from "./voice-button";
+import { VoiceSlot } from "./voice-button";
 
 const noop = () => () => {};
 
@@ -29,7 +29,6 @@ export type Phase = "asking" | "waiting" | "reacting";
 export function Question({
   q,
   index,
-  sessionId,
   send,
   eventCount,
   chipEvent,
@@ -41,7 +40,6 @@ export function Question({
 }: {
   q: QuestionView;
   index: number;
-  sessionId: string;
   send: Send;
   /** How many events the view has; once this answer is scored, its event is the last. */
   eventCount: number;
@@ -96,30 +94,26 @@ export function Question({
     submitRef.current = submit;
   });
 
-  const voice = useVoiceAnswer({
-    sessionId,
-    index,
-    send,
-    onTranscript: (t) => setText((cur) => (cur.trim() ? `${cur.trim()} ${t}` : t)),
-    // A transcript that arrives after the buzzer goes straight in: the server allows the grace.
-    onLateTranscript: (t) => submitRef.current(t),
-  });
-
-  // When the clock runs out, whatever is typed goes in, unless a recording is still finishing:
-  // then it goes in with the transcript.
-  const expired = clock.left === 0 && !stopped;
   const textRef = useRef(text);
   useEffect(() => {
     textRef.current = text;
   }, [text]);
-  const voiceRef = useRef(voice);
-  useEffect(() => {
-    voiceRef.current = voice;
+  // Spoken words land in the box as they're heard, editable like typing.
+  const voice = useVoiceAnswer({
+    text: () => textRef.current,
+    onText: (t) => setText(t.slice(0, MAX_ANSWER_LENGTH)),
+    desktop,
   });
+  // Once the answer is in (or the buzzer went), the mic stops listening.
+  const { abort: stopListening } = voice;
   useEffect(() => {
-    if (!expired) return;
-    if (voiceRef.current.busy) voiceRef.current.expire(textRef.current);
-    else submitRef.current(textRef.current);
+    if (phase !== "asking") stopListening();
+  }, [phase, stopListening]);
+
+  // When the clock runs out, whatever is in the box goes in, half-heard words included.
+  const expired = clock.left === 0 && !stopped;
+  useEffect(() => {
+    if (expired) submitRef.current(textRef.current);
   }, [expired]);
 
   // A reload mid-reaction lands here with the answer already scored: skip straight on.
@@ -219,6 +213,7 @@ export function Question({
                 onText={(t) => {
                   wake();
                   setText(t);
+                  voice.rebase(t);
                 }}
                 asking={phase === "asking"}
                 waitingFor={phase === "waiting" ? judge.name : null}
@@ -227,27 +222,8 @@ export function Question({
                 onSubmit={() => submit(text)}
                 onFocus={() => setTimeout(keepInView, 300)}
                 voice={
-                  live && voice.enabled ? (
-                    <VoiceButton
-                      desktop={desktop}
-                      disabled={phase !== "asking"}
-                      uploading={voice.uploading}
-                      stopNow={expired}
-                      onStart={voice.started}
-                      onAudio={voice.upload}
-                      onUnavailable={voice.unavailable}
-                    />
-                  ) : live && voice.note ? (
-                    <p className="text-[14px] text-text-subtle">
-                      {voice.note}{" "}
-                      <button
-                        type="button"
-                        onClick={voice.turnOn}
-                        className="underline decoration-1 underline-offset-4 hover:text-text"
-                      >
-                        {copy.acts.grilling.voice.turnOn}
-                      </button>
-                    </p>
+                  live ? (
+                    <VoiceSlot voice={voice} disabled={phase !== "asking"} desktop={desktop} />
                   ) : null
                 }
               />

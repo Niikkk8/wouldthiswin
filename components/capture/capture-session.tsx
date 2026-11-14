@@ -8,33 +8,15 @@ import { PULSEBOARD } from "@/lib/demo/pulseboard";
 import { PULSEBOARD_ROUND2 } from "@/lib/demo/pulseboard-round2";
 import { demoTransport } from "@/lib/demo/transport";
 import { toView } from "@/lib/session";
+import { installScriptedSpeech } from "./scripted-speech";
 
-// The first answer is spoken (the voice button, a real recording); the rest are typed in.
+// The first answer is spoken (the voice button, with the script's words heard live); the rest
+// are typed in.
 const TYPED = [undefined, ...PULSEBOARD.answers.slice(1).map((a) => a.text)];
-const TRANSCRIBE_MS = 900;
-
-/**
- * Stands in for /api/transcribe while a capture runs: the recording is real, the words are
- * the script's. Restores fetch on the way out.
- */
-function useScriptedTranscript() {
-  useEffect(() => {
-    const real = window.fetch;
-    window.fetch = async (input, init) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (!url.endsWith("/api/transcribe")) return real(input, init);
-      await new Promise((r) => setTimeout(r, TRANSCRIBE_MS));
-      return Response.json({ text: PULSEBOARD.answers[0].text });
-    };
-    return () => {
-      window.fetch = real;
-    };
-  }, []);
-}
+installScriptedSpeech(PULSEBOARD.answers[0].text);
 
 /** One act of the PulseBoard session, live, for the demo videos. */
 export function CaptureSession({ act }: { act: CaptureAct }) {
-  useScriptedTranscript();
   const [start] = useState(() => {
     const fixture = act === "rejudge" ? PULSEBOARD_ROUND2 : PULSEBOARD;
     const s = demoState(CAPTURE_START[act], Date.now(), fixture);

@@ -4,9 +4,8 @@
 // A question's clock starts once it has fully rendered (the word-by-word typing), plus a
 // 3-second read grace shown in the UI. Each kind of question gets its own window. Extended
 // time doubles the window, with no penalty. The one lifeline adds 30 seconds.
-// Typed answers get a short network grace past the deadline. A voice answer whose recording
-// started before the deadline also gets an upload grace, so a sentence finished at the
-// buzzer still counts.
+// Answers get a short network grace past the deadline. Spoken answers are written down in the
+// browser as they're said, so they arrive as text like typed ones and share the same rule.
 
 /** fact: "which file sends the SMS?". decision: "why Postgres?". tradeoff: "why poll, not push?". */
 export const QUESTION_KINDS = ["fact", "decision", "tradeoff"] as const;
@@ -20,11 +19,8 @@ export const WINDOW_MS: Record<QuestionKind, number> = {
 export const READ_GRACE_MS = 3_000;
 export const EXTENDED_FACTOR = 2;
 export const LIFELINE_MS = 30_000;
-/** Typed answers: time for the request to arrive after the clock hits zero. */
+/** Time for the answer's request to arrive after the clock hits zero. */
 export const SUBMIT_GRACE_MS = 3_000;
-/** Voice answers: time to upload and transcribe a recording that started before the buzzer. */
-export const UPLOAD_GRACE_MS = 5_000;
-export const MAX_RECORDING_MS = 90_000;
 
 // The question types out word by word (components/grilling/question-text.tsx): plain words
 // first, then the caught phrase, then its underline.
@@ -71,41 +67,9 @@ export function deadlineOf(q: Clock, settings: ClockSettings): number {
   return clockStart(q) + windowMs(q.kind, settings) + (q.lifeline ? LIFELINE_MS : 0);
 }
 
-/** A typed answer counts until the deadline plus the network grace. */
-export function acceptsTyped(q: Clock, settings: ClockSettings, now: number): boolean {
+/** An answer, typed or spoken, counts until the deadline plus the network grace. */
+export function acceptsAnswer(q: Clock, settings: ClockSettings, now: number): boolean {
   return now <= deadlineOf(q, settings) + SUBMIT_GRACE_MS;
-}
-
-/** A recording may start any time before the buzzer. */
-export function acceptsRecordingStart(q: Clock, settings: ClockSettings, now: number): boolean {
-  return now < deadlineOf(q, settings);
-}
-
-/** The audio upload: the recording started before the buzzer, and it arrives within the upload grace. */
-export function acceptsUpload(
-  q: Clock,
-  settings: ClockSettings,
-  recordingStartedAt: number | null,
-  now: number,
-): boolean {
-  const deadline = deadlineOf(q, settings);
-  return (
-    recordingStartedAt !== null &&
-    recordingStartedAt < deadline &&
-    now <= deadline + UPLOAD_GRACE_MS
-  );
-}
-
-/** The answer after a voice recording: the upload grace plus the network grace. */
-export function acceptsSpoken(
-  q: Clock,
-  settings: ClockSettings,
-  recordingStartedAt: number | null,
-  now: number,
-): boolean {
-  if (recordingStartedAt === null || recordingStartedAt >= deadlineOf(q, settings))
-    return acceptsTyped(q, settings, now);
-  return now <= deadlineOf(q, settings) + UPLOAD_GRACE_MS + SUBMIT_GRACE_MS;
 }
 
 /** The lifeline can be pulled while the clock is still running. */

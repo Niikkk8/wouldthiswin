@@ -4,15 +4,11 @@ import {
   LIFELINE_MS,
   READ_GRACE_MS,
   SUBMIT_GRACE_MS,
-  UPLOAD_GRACE_MS,
   WINDOW_MS,
   WORD_IN_MS,
   WORD_MS,
   acceptsLifeline,
-  acceptsRecordingStart,
-  acceptsSpoken,
-  acceptsTyped,
-  acceptsUpload,
+  acceptsAnswer,
   clockStart,
   clockView,
   deadlineOf,
@@ -77,51 +73,18 @@ describe("typed answers", () => {
   const d = deadlineOf(q(), NORMAL);
 
   test("count up to the deadline plus the network grace", () => {
-    assert.equal(acceptsTyped(q(), NORMAL, d), true);
-    assert.equal(acceptsTyped(q(), NORMAL, d + SUBMIT_GRACE_MS), true);
-    assert.equal(acceptsTyped(q(), NORMAL, d + SUBMIT_GRACE_MS + 1), false);
+    assert.equal(acceptsAnswer(q(), NORMAL, d), true);
+    assert.equal(acceptsAnswer(q(), NORMAL, d + SUBMIT_GRACE_MS), true);
+    assert.equal(acceptsAnswer(q(), NORMAL, d + SUBMIT_GRACE_MS + 1), false);
   });
 
   test("time spent reading is never taken from the answer", () => {
-    assert.equal(acceptsTyped(q(), NORMAL, clockStart(q()) + WINDOW_MS.fact), true);
+    assert.equal(acceptsAnswer(q(), NORMAL, clockStart(q()) + WINDOW_MS.fact), true);
   });
 
   test("extended time moves the buzzer", () => {
-    assert.equal(acceptsTyped(q(), NORMAL, d + 10_000), false);
-    assert.equal(acceptsTyped(q(), EXTENDED, d + 10_000), true);
-  });
-});
-
-describe("voice answers", () => {
-  const d = deadlineOf(q(), NORMAL);
-
-  test("a recording may start until the buzzer, not at it", () => {
-    assert.equal(acceptsRecordingStart(q(), NORMAL, d - 1), true);
-    assert.equal(acceptsRecordingStart(q(), NORMAL, d), false);
-  });
-
-  test("the upload counts if recording started in time and it arrives within 5 seconds", () => {
-    assert.equal(acceptsUpload(q(), NORMAL, d - 2_000, d + UPLOAD_GRACE_MS), true);
-    assert.equal(acceptsUpload(q(), NORMAL, d - 2_000, d + UPLOAD_GRACE_MS + 1), false);
-    assert.equal(acceptsUpload(q(), NORMAL, d, d + 1), false);
-    assert.equal(acceptsUpload(q(), NORMAL, null, d - 1), false);
-  });
-
-  test("the transcript answer gets the upload grace on top of the network grace", () => {
-    const late = d + UPLOAD_GRACE_MS + SUBMIT_GRACE_MS;
-    assert.equal(acceptsSpoken(q(), NORMAL, d - 1_000, late), true);
-    assert.equal(acceptsSpoken(q(), NORMAL, d - 1_000, late + 1), false);
-  });
-
-  test("without a recording that started in time, a spoken answer is a typed one", () => {
-    assert.equal(acceptsSpoken(q(), NORMAL, null, d + SUBMIT_GRACE_MS + 1), false);
-    assert.equal(acceptsSpoken(q(), NORMAL, d + 1, d + SUBMIT_GRACE_MS + 1), false);
-  });
-
-  test("extended time stretches the voice deadline too", () => {
-    const de = deadlineOf(q(), EXTENDED);
-    assert.equal(acceptsUpload(q(), EXTENDED, de - 1, de + UPLOAD_GRACE_MS), true);
-    assert.equal(acceptsUpload(q(), NORMAL, de - 1, de), false);
+    assert.equal(acceptsAnswer(q(), NORMAL, d + 10_000), false);
+    assert.equal(acceptsAnswer(q(), EXTENDED, d + 10_000), true);
   });
 });
 

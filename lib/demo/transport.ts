@@ -11,7 +11,6 @@ import {
   issueQuestion,
   pullLifeline,
   settleAnswer,
-  startRecording,
   toView,
   type Result,
   type SessionState,
@@ -25,8 +24,7 @@ export type DemoAction =
   | { action: "show"; question: number }
   | { action: "answer"; question: number; text: string }
   | { action: "deliberate" }
-  | { action: "lifeline"; question: number }
-  | { action: "recording"; question: number };
+  | { action: "lifeline"; question: number };
 
 export type TransportResult = { status: number; body: Record<string, unknown> };
 
@@ -105,8 +103,6 @@ export function demoTransport(
       }
       case "lifeline":
         return apply(pullLifeline(state, a.question, Date.now()));
-      case "recording":
-        return apply(startRecording(state, a.question, Date.now()));
       case "deliberate":
         if (state.panel) return { status: 200, body: { view: view() } };
         await wait(timings.deliberateMs);

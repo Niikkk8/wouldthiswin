@@ -24,8 +24,6 @@ const STATUS: Record<ErrorKey, number> = {
   network: 503,
   tooLate: 409,
   lifelineUsed: 409,
-  voiceUnavailable: 503,
-  voiceEmpty: 422,
   eventClosed: 409,
   invalidDevpost: 400,
 };

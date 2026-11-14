@@ -4,9 +4,7 @@
 import { copy, fill } from "./copy";
 import {
   acceptsLifeline,
-  acceptsRecordingStart,
-  acceptsSpoken,
-  acceptsUpload,
+  acceptsAnswer,
   clockView,
   type ClockSettings,
   type QuestionKind,
@@ -53,7 +51,7 @@ export const QUESTION_COUNT = 3;
 export const MAX_FOLLOW_UPS = 2;
 /** The most questions a grilling can have: one per judge, plus the follow-ups. */
 export const MAX_QUESTIONS = QUESTION_COUNT + MAX_FOLLOW_UPS;
-/** Long enough for 90 seconds of speech, transcribed. */
+/** Long enough for 90 seconds of speech. */
 export const MAX_ANSWER_LENGTH = 1000;
 
 export type Claim = {
@@ -112,8 +110,6 @@ export type Question = {
   issuedAt: number | null;
   /** The session's one lifeline was pulled on this question: 30 more seconds. */
   lifeline?: boolean;
-  /** Server time a voice recording started, if one did. Uploads are judged against it. */
-  recordingStartedAt?: number | null;
   /** A follow-up: the index of the question whose vague answer it follows. */
   followUpOf?: number;
   /** The finding the question is about (lib/findings.ts), when it's grounded in one. */
@@ -350,30 +346,9 @@ function openQuestion(
 
 const clockOf = (q: OpenQuestion) => ({ ...q, kind: kindOf(q) });
 
-/** Late by the server's clock (lib/deadline.ts), with the voice grace when a recording started in time. */
+/** Late by the server's clock (lib/deadline.ts). Spoken and typed answers share the rule. */
 function isLate(s: SessionState, q: OpenQuestion, now: number): boolean {
-  return !acceptsSpoken(clockOf(q), s.settings, q.recordingStartedAt ?? null, now);
-}
-
-/** Marks when a voice recording started, once, if the clock is still running. */
-export function startRecording(s: SessionState, index: number, now: number): Result {
-  const open = openQuestion(s, index);
-  if (!open.ok) return fail(open.error);
-  if (open.q.recordingStartedAt != null) return ok(s);
-  if (!acceptsRecordingStart(clockOf(open.q), s.settings, now)) return fail("tooLate");
-  const questions = s.questions.map((q, i) =>
-    i === index ? { ...q, recordingStartedAt: now } : q,
-  );
-  return ok({ ...s, questions });
-}
-
-/** Whether a recording's audio may be transcribed now. Null when it may; the reason otherwise. */
-export function uploadRefusal(s: SessionState, index: number, now: number): SessionError | null {
-  const open = openQuestion(s, index);
-  if (!open.ok) return open.error;
-  return acceptsUpload(clockOf(open.q), s.settings, open.q.recordingStartedAt ?? null, now)
-    ? null
-    : "tooLate";
+  return !acceptsAnswer(clockOf(q), s.settings, now);
 }
 
 export const lifelineUsed = (s: Pick<SessionState, "questions">) =>

@@ -1,13 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "vitest";
-import {
-  LIFELINE_MS,
-  SUBMIT_GRACE_MS,
-  UPLOAD_GRACE_MS,
-  WINDOW_MS,
-  clockStart,
-  deadlineOf,
-} from "./deadline";
+import { LIFELINE_MS, SUBMIT_GRACE_MS, WINDOW_MS, clockStart, deadlineOf } from "./deadline";
 import { LIFELINE_DELTA, SILENCE_SCORE } from "./odds";
 import {
   type Claim,
@@ -23,9 +16,7 @@ import {
   newSession,
   nextVisibility,
   settleAnswer,
-  startRecording,
   toView,
-  uploadRefusal,
   pullLifeline,
   withFollowUp,
   verdictOf,
@@ -308,35 +299,9 @@ describe("answers", () => {
     assert.equal(s.events.length, grilling().events.length);
   });
 
-  test("a recording started before the buzzer earns the upload grace", () => {
+  test("a spoken answer gets no extra time: past the network grace it's late", () => {
     let s = unwrap(issueQuestion(grilling(), 0, T0));
-    s = unwrap(startRecording(s, 0, buzzer() - 1_000));
-    s = unwrap(
-      acceptAnswer(s, 0, "Said it out loud.", buzzer() + UPLOAD_GRACE_MS + SUBMIT_GRACE_MS),
-    );
-    assert.equal(s.answers[0].silent, false);
-  });
-
-  test("a recording can't start after the buzzer, and its first start time sticks", () => {
-    let s = unwrap(issueQuestion(grilling(), 0, T0));
-    assert.deepEqual(startRecording(s, 0, buzzer()), { ok: false, error: "tooLate" });
-    s = unwrap(startRecording(s, 0, T0 + 10_000));
-    s = unwrap(startRecording(s, 0, T0 + 20_000));
-    assert.equal(s.questions[0].recordingStartedAt, T0 + 10_000);
-  });
-
-  test("audio is accepted only for a recording that started before the buzzer, within 5 seconds", () => {
-    let s = unwrap(issueQuestion(grilling(), 0, T0));
-    assert.equal(uploadRefusal(s, 0, T0 + 1_000), "tooLate");
-    s = unwrap(startRecording(s, 0, buzzer() - 1_000));
-    assert.equal(uploadRefusal(s, 0, buzzer() + UPLOAD_GRACE_MS), null);
-    assert.equal(uploadRefusal(s, 0, buzzer() + UPLOAD_GRACE_MS + 1), "tooLate");
-    assert.equal(uploadRefusal(s, 1, T0), "badQuestion");
-  });
-
-  test("without a recording, a typed answer past the network grace is late", () => {
-    let s = unwrap(issueQuestion(grilling(), 0, T0));
-    s = unwrap(acceptAnswer(s, 0, "Typed.", buzzer() + UPLOAD_GRACE_MS));
+    s = unwrap(acceptAnswer(s, 0, "Said it out loud.", buzzer() + SUBMIT_GRACE_MS + 1));
     assert.equal(s.answers[0].late, true);
   });
 
