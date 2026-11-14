@@ -573,6 +573,7 @@ export const copy = {
       body: "Sessions stay open for 24 hours after they start. What the scan found stays here, with the fixes it points to.",
       again: "Face the panel again",
       noFixes: "The scan found nothing to fix. The judges would still have had questions.",
+      noScan: "The scan didn't finish before the session closed, so there are no findings to keep.",
     },
     share: {
       eyebrow: "Share",

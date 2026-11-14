@@ -23,7 +23,12 @@ export function isReturning(v: SessionView): boolean {
 /** What the scan found that has a fix, kept on the page whether they go on or not. */
 function ScanFixes({ view }: { view: SessionView }) {
   const items = view.scanFixes ?? [];
-  if (!items.length) return <p className="mt-10 text-[16px] text-text-muted">{C.noFixes}</p>;
+  if (!items.length)
+    return (
+      <p className="mt-10 text-[16px] text-text-muted">
+        {view.claims === null ? C.noScan : C.noFixes}
+      </p>
+    );
   return (
     <div className="mt-10">
       <FixList items={items} repo={view.repo} reviewId={view.id} issues />
