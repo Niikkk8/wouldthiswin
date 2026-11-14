@@ -49,7 +49,11 @@ export function RepoForm({
   const router = useRouter();
   // A link from a repo check (/r/[id]) arrives with ?repo=owner/name: it fills the field until
   // the visitor types.
-  const prefill = useSyncExternalStore(noop, () => (id === REPO_FOCUS ? readPrefill() : ""), () => "");
+  const prefill = useSyncExternalStore(
+    noop,
+    () => (id === REPO_FOCUS ? readPrefill() : ""),
+    () => "",
+  );
   const [typed, setRepo] = useState<string | null>(null);
   const repo = typed ?? prefill;
   const [invalid, setInvalid] = useState(false);

@@ -603,7 +603,11 @@ export type BoardSort = (typeof BOARD_SORTS)[number];
  * The public board: verdicts their owners listed (shareable too) and nobody hid. Top sorts by
  * odds over the latest 300, so an old high score can't sit on top forever.
  */
-export async function boardEntries(opts: { eventSlug?: string | null; sort: BoardSort; limit?: number }): Promise<BoardEntry[]> {
+export async function boardEntries(opts: {
+  eventSlug?: string | null;
+  sort: BoardSort;
+  limit?: number;
+}): Promise<BoardEntry[]> {
   let q = db()
     .from("sessions")
     .select("id, repo, events, claims, panel, event_slug, updated_at, owner_hash")
@@ -614,9 +618,12 @@ export async function boardEntries(opts: { eventSlug?: string | null; sort: Boar
     .order("updated_at", { ascending: false })
     .limit(300);
   if (opts.eventSlug) q = q.eq("event_slug", opts.eventSlug);
-  const { data, error } = await q.returns<
-    (Pick<Row, "id" | "repo" | "events" | "claims" | "panel" | "event_slug" | "owner_hash"> & { updated_at: string })[]
-  >();
+  const { data, error } =
+    await q.returns<
+      (Pick<Row, "id" | "repo" | "events" | "claims" | "panel" | "event_slug" | "owner_hash"> & {
+        updated_at: string;
+      })[]
+    >();
   if (error) throw error;
   const owner = await ownerHash();
   const rows = data
@@ -636,6 +643,48 @@ export async function boardEntries(opts: { eventSlug?: string | null; sort: Boar
     });
   if (opts.sort === "top") rows.sort((a, b) => b.odds - a.odds || b.at.localeCompare(a.at));
   return rows.slice(0, opts.limit ?? 100);
+}
+
+/** An event's sessions, only the columns its anonymous stats read. */
+export async function eventSessions(
+  slug: string,
+): Promise<Pick<SessionState, "act" | "events" | "claims" | "signals">[]> {
+  const { data, error } = await db()
+    .from("sessions")
+    .select("act, events, claims, signals")
+    .eq("event_slug", slug)
+    .limit(5000)
+    .returns<Pick<Row, "act" | "events" | "claims" | "signals">[]>();
+  if (error) throw error;
+  return data.map((r) => ({
+    act: r.act,
+    events: r.events,
+    claims: r.claims,
+    signals: pendingPrevious(r.signals, r.claims) ? null : r.signals,
+  }));
+}
+
+/** Organizer requests one network may send per day. */
+export const ORGANIZER_REQUESTS_PER_DAY = 5;
+
+/** Saves an "add your hackathon" request for Niket to review. False when this network sent too many today. */
+export async function saveOrganizerRequest(
+  req: Record<string, string>,
+  ipHash: string,
+): Promise<boolean> {
+  const since = new Date(Date.now() - 86_400_000).toISOString();
+  const { count, error: countError } = await db()
+    .from("organizer_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("ip_hash", ipHash)
+    .gte("created_at", since);
+  if (countError) throw countError;
+  if ((count ?? 0) >= ORGANIZER_REQUESTS_PER_DAY) return false;
+  const { error } = await db()
+    .from("organizer_requests")
+    .insert({ ...req, ip_hash: ipHash });
+  if (error) throw error;
+  return true;
 }
 
 /** Admin: hide a listed verdict from the board (or show it again). */
