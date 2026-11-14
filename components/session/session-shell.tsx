@@ -137,11 +137,14 @@ export function SessionShell({
   initial,
   transport = fetchTransport,
   demo = false,
+  answers = demo ? DEMO_ANSWER_TEXTS : undefined,
 }: {
   initial: SessionView;
   transport?: Transport;
   /** The sample session: fixture data, answers typed for the team, no real links at the end. */
   demo?: boolean;
+  /** Answers typed in for the team, by question. A gap leaves that question to the person (or voice). */
+  answers?: readonly (string | undefined)[];
 }) {
   const reduce = useReducedMotion();
   const [{ view, pending }, dispatch] = useReducer(reducer, { view: initial, pending: false });
@@ -201,7 +204,7 @@ export function SessionShell({
           revealed={revealed}
           onReveal={setRevealed}
           pending={pending}
-          autoAnswers={demo ? DEMO_ANSWER_TEXTS : undefined}
+          autoAnswers={answers}
         />
       );
       break;

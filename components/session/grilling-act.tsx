@@ -24,7 +24,7 @@ export function GrillingAct({
   onReveal: (n: number) => void;
   pending: boolean;
   /** The sample session: the team's answers, typed in for them. */
-  autoAnswers?: readonly string[];
+  autoAnswers?: readonly (string | undefined)[];
   /** A still of the sample session. */
   frozen?: boolean;
 }) {

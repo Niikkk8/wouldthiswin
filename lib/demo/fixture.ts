@@ -250,6 +250,23 @@ export const DEMO_PANEL: Panel = {
   },
 };
 
+/** One scripted session: the repo, the model's output, and what the team answers. */
+export type DemoFixture = {
+  id: string;
+  repo: string;
+  scan: Scan;
+  answers: readonly { text: string; score: number; reason: string }[];
+  panel: Panel;
+};
+
+export const SAMPLE: DemoFixture = {
+  id: DEMO_ID,
+  repo: DEMO_REPO,
+  scan: DEMO_SCAN,
+  answers: DEMO_ANSWERS,
+  panel: DEMO_PANEL,
+};
+
 const T0 = Date.UTC(2026, 10, 7, 18, 0, 0);
 
 function must(r: ReturnType<typeof applyScan>): SessionState {
@@ -269,15 +286,15 @@ export type DemoAt =
   | "verdict"
   | "share";
 
-export function demoState(at: DemoAt, now = Date.now()): SessionState {
-  let s = newSession(DEMO_ID, DEMO_REPO);
+export function demoState(at: DemoAt, now = Date.now(), f: DemoFixture = SAMPLE): SessionState {
+  let s = newSession(f.id, f.repo);
   if (at === "start") return s;
-  s = must(applyScan(s, DEMO_SCAN));
+  s = must(applyScan(s, f.scan));
   if (at === "scanned") return s;
   s = must(advance(s, "scan"));
   if (at === "grilling") return s;
   if (at === "asking") return must(issueQuestion(s, 0, now));
-  DEMO_ANSWERS.forEach((a, i) => {
+  f.answers.forEach((a, i) => {
     s = must(issueQuestion(s, i, T0 + i * 60_000));
     s = must(acceptAnswer(s, i, a.text, T0 + i * 60_000 + 12_000));
     s = must(settleAnswer(s, i, { score: a.score, reason: a.reason }));
@@ -285,7 +302,7 @@ export function demoState(at: DemoAt, now = Date.now()): SessionState {
   if (at === "answered") return s;
   s = must(advance(s, "grilling"));
   if (at === "deliberation") return s;
-  s = must(applyPanel(s, DEMO_PANEL));
+  s = must(applyPanel(s, f.panel));
   if (at === "deliberated") return s;
   s = must(advance(s, "deliberation"));
   if (at === "verdict") return s;
