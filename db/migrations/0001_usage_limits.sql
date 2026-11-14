@@ -32,8 +32,8 @@ alter table public.sessions add column if not exists hidden_at timestamptz;
 
 update public.sessions set shareable = true where act in ('verdict', 'share') and panel is not null and shareable = false;
 
-create index if not exists sessions_created_idx on public.sessions (created_at);
-create index if not exists sessions_ip_created_idx on public.sessions (ip_hash, created_at);
+-- The caps read sessions by created_at and by (ip_hash, created_at). The live database already
+-- has both indexes (sessions_created_at_idx, sessions_ip_hash_created_at_idx), so none are added.
 
 -- Model spend so far in the current UTC day.
 create or replace function public.daily_spend_usd()
