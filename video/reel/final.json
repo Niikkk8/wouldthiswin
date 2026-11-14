@@ -28,10 +28,13 @@
         "clip": "phone-scan",
         "from": 1.5,
         "target": [
-          "judge:engineer",
-          "judge:tired"
+          18,
+          596,
+          1092,
+          812
         ],
-        "fill": 0.96
+        "fill": 0.96,
+        "fillH": 0.97
       },
       "label": "The judges"
     },
@@ -81,8 +84,14 @@
       "broll": {
         "clip": "phone-followup",
         "from": 0.7,
-        "target": "question",
-        "fill": 1.0
+        "target": [
+          -40,
+          1128,
+          1250,
+          880
+        ],
+        "fill": 0.96,
+        "fillH": 0.97
       },
       "label": "The engineer asks"
     },
@@ -92,8 +101,14 @@
       "broll": {
         "clip": "phone-followup",
         "from": 9.55,
-        "target": "question",
-        "fill": 1.0
+        "target": [
+          40,
+          1270,
+          1090,
+          768
+        ],
+        "fill": 0.96,
+        "fillH": 0.97
       },
       "label": "The investor asks"
     },
@@ -103,8 +118,14 @@
       "broll": {
         "clip": "phone-followup",
         "from": 16.5,
-        "target": "question",
-        "fill": 1.0
+        "target": [
+          40,
+          1300,
+          1090,
+          768
+        ],
+        "fill": 0.96,
+        "fillH": 0.97
       },
       "label": "Follow-up"
     },
@@ -145,7 +166,8 @@
             "ay": 0.5,
             "isolate": 30,
             "move": 0.18,
-            "ease": "out"
+            "ease": "out",
+            "ax": 0.6
           }
         ]
       },
@@ -158,12 +180,13 @@
         "clip": "phone-practice",
         "from": 3.2,
         "target": [
-          60,
-          439,
-          1050,
-          820
+          0,
+          420,
+          1170,
+          880
         ],
-        "fill": 0.98
+        "fill": 0.96,
+        "fillH": 0.97
       },
       "label": "Practice"
     },

@@ -9,7 +9,7 @@ import { C, F, Logo, Mask, easeIn, easeOut, prog } from "../v2/kit";
 import { Footage, type Cam } from "../v3/footage";
 
 /** One target and fill, or full camera keyframes (`cams`) and shake times for a move inside the shot. */
-export type Broll = { clip: string; from: number; rate?: number; target?: Cam["target"]; fill?: number; cams?: Cam[]; shake?: number[] };
+export type Broll = { clip: string; from: number; rate?: number; target?: Cam["target"]; fill?: number; fillH?: number; cams?: Cam[]; shake?: number[] };
 export type Visual =
   | { kind: "face"; src: string; start: number; dur: number; offset?: number }
   | { kind: "broll"; start: number; dur: number; broll: Broll; label?: string; pip?: { src: string; offset: number } }
