@@ -22,7 +22,7 @@ export default function Home() {
       <SiteHeader />
       <main id="main" tabIndex={-1} className="flex-1">
         {/* The hero fills one screen on desktop, demo field open or not: sizes follow the viewport's height. */}
-        <section className="page-x grid gap-6 pt-6 pb-16 lg:pt-[clamp(8px,3vh,40px)] xl:h-[calc(100svh-80px)] xl:min-h-[600px] xl:grid-cols-[minmax(0,1fr)_auto] xl:content-center xl:items-center xl:gap-8 2xl:gap-16 xl:py-0">
+        <section className="page-x grid gap-6 pt-6 pb-16 lg:pt-[clamp(8px,3vh,40px)] xl:min-h-[max(600px,calc(100svh-80px))] xl:grid-cols-[minmax(0,1fr)_auto] xl:content-center xl:items-center xl:gap-8 2xl:gap-16 xl:py-0">
           <div className="min-w-0">
             <Headline />
             <p className="mt-8 max-w-[520px] text-[19px] leading-[1.45] text-text-muted lg:mt-[clamp(14px,3.2vh,40px)] lg:text-[clamp(18px,2.5vh,22px)]">
