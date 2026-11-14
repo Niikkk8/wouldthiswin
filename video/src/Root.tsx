@@ -1,6 +1,6 @@
 import { Composition, Folder, Still } from "remotion";
 import { StyleFrame } from "./v2/StyleFrame";
-import { V3 } from "./v3/Root";
+import { ReelV3, V3 } from "./v3/Root";
 import { LaunchV2, LogoContract } from "./v2/Launch";
 import v2timeline from "./v2/timeline.json";
 import type { Plan } from "../scripts/plan";
@@ -15,6 +15,7 @@ export function Root() {
   return (
     <>
       <V3 />
+      <ReelV3 />
       <Folder name="v2">
         <Composition id="launch-v2-9x16" component={LaunchV2} fps={30} width={1080} height={1920} durationInFrames={v2timeline.frames} defaultProps={{ aspect: "9x16", safeZones: false }} />
         <Composition id="launch-v2-9x16-safe" component={LaunchV2} fps={30} width={1080} height={1920} durationInFrames={v2timeline.frames} defaultProps={{ aspect: "9x16", safeZones: true }} />

@@ -1,0 +1,193 @@
+{
+  "target": {
+    "min": 40,
+    "max": 50
+  },
+  "shots": {
+    "01_hook": {
+      "line": "I built three AI judges that read your hackathon code. So I made a project that lies.",
+      "emphasis": [
+        "three",
+        "read",
+        "lies"
+      ]
+    },
+    "01b_hook": {
+      "line": "Your README says AI-powered. Your code says Math.random().",
+      "alt": "01_hook",
+      "emphasis": [
+        "AI-powered",
+        "Math.random()"
+      ]
+    },
+    "01c_hook": {
+      "line": "Hackathon judges skim your README. Mine read your code.",
+      "alt": "01_hook",
+      "emphasis": [
+        "skim",
+        "read"
+      ]
+    },
+    "02_readme": {
+      "line": "It says real-time AI crowd analytics.",
+      "emphasis": [
+        "real-time",
+        "AI"
+      ]
+    },
+    "03_reactions": {
+      "line": null,
+      "note": "no dialogue, reaction shots"
+    },
+    "04_answer": {
+      "line": null,
+      "note": "answering the judge out loud; paired with the live dictation capture"
+    },
+    "05_verdict": {
+      "line": "Final verdict.",
+      "emphasis": [
+        "verdict"
+      ]
+    },
+    "06_fixlist": {
+      "line": "Then it hands you the fix list, so the real judges don't find this first.",
+      "emphasis": [
+        "fix",
+        "list",
+        "first"
+      ]
+    },
+    "07_cta": {
+      "line": "It's free. Paste your repo. Link in bio.",
+      "emphasis": [
+        "free",
+        "repo"
+      ]
+    },
+    "08_broll": {
+      "line": null,
+      "note": "b-roll, optional"
+    }
+  },
+  "structure": [
+    {
+      "beat": "hook",
+      "shot": "01_hook",
+      "alts": [
+        "01b_hook",
+        "01c_hook"
+      ]
+    },
+    {
+      "beat": "readme",
+      "shot": "02_readme",
+      "broll": {
+        "clip": "9x16-readme",
+        "from": 0.4,
+        "target": [
+          80,
+          420,
+          1460,
+          420
+        ],
+        "fill": 1.0
+      }
+    },
+    {
+      "beat": "findings",
+      "reactions": "03_reactions",
+      "findings": [
+        {
+          "label": "predictions: !Math.random()!",
+          "broll": {
+            "clip": "9x16-grilling",
+            "from": 0.1,
+            "target": "question",
+            "fill": 1.0
+          },
+          "dur": 1.8
+        },
+        {
+          "label": "data: !hardcoded JSON!",
+          "broll": {
+            "clip": "9x16-scan",
+            "from": 6.5,
+            "target": [
+              40,
+              345,
+              930,
+              150
+            ],
+            "fill": 0.95
+          },
+          "dur": 1.8
+        },
+        {
+          "label": "API key: !committed!",
+          "broll": {
+            "clip": "9x16-fixes",
+            "from": 3.4,
+            "target": "key",
+            "fill": 0.98
+          },
+          "dur": 1.8
+        },
+        {
+          "label": "title: !Create Next App!",
+          "broll": {
+            "clip": "9x16-fixes",
+            "from": 6.6,
+            "target": "title",
+            "fill": 0.98
+          },
+          "dur": 1.8
+        }
+      ],
+      "reactionDur": 1.0
+    },
+    {
+      "beat": "answer",
+      "shot": "04_answer",
+      "split": {
+        "clip": "9x16-grilling",
+        "from": 2.1,
+        "target": "answer",
+        "fill": 1.0,
+        "rate": 1.4
+      }
+    },
+    {
+      "beat": "verdict",
+      "shot": "05_verdict",
+      "after": {
+        "clip": "9x16-verdict",
+        "from": 0.4,
+        "target": [
+          60,
+          940,
+          700,
+          320
+        ],
+        "fill": 0.85,
+        "dur": 1.8
+      }
+    },
+    {
+      "beat": "fixlist",
+      "shot": "06_fixlist",
+      "broll": {
+        "clip": "9x16-fixes",
+        "from": 3.4,
+        "target": "key",
+        "fill": 0.98
+      },
+      "pip": true
+    },
+    {
+      "beat": "cta",
+      "shot": "07_cta",
+      "card": "end",
+      "pip": true
+    }
+  ]
+}
