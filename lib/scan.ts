@@ -1,6 +1,6 @@
 // The scan:
 //   1. claims from the README, the Devpost page and the pasted submission (Haiku, lib/evidence/extract);
-//   2. each claim checked against the code by the verification agent (Sonnet, lib/evidence/verify);
+//   2. each claim checked against the code by the verification agent (Haiku by default, lib/evidence/verify);
 //   3. the panel's questions, written from what the check found (Haiku, lib/grill/questions);
 // plus the signals measured in code (the demo link, the first commit). The model never sets odds.
 

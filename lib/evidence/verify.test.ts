@@ -141,8 +141,9 @@ describe("verification agent", () => {
     );
   });
 
-  test("Sonnet unless the flag says Haiku", () => {
-    assert.equal(agentModel({}), SONNET);
+  test("Haiku unless the flag says Sonnet", () => {
+    assert.equal(agentModel({}), HAIKU);
     assert.equal(agentModel({ CLAIM_AGENT_MODEL: "haiku" }), HAIKU);
+    assert.equal(agentModel({ CLAIM_AGENT_MODEL: "Sonnet" }), SONNET);
   });
 });

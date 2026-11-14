@@ -1,6 +1,6 @@
 // The claim verification agent: a tool loop over the repo (lib/evidence/repo-tools.ts) that
 // returns, per claim, supported / partial / unsupported / can't verify with line citations at
-// the exact commit. Sonnet by default (CLAIM_AGENT_MODEL=haiku falls back), its cost logged
+// the exact commit. Haiku by default (CLAIM_AGENT_MODEL=sonnet for more thorough checks), its cost logged
 // like every other call. Code checks every citation against the lines the agent was actually
 // shown; a verdict without one becomes "can't verify". It never guesses.
 
@@ -29,9 +29,9 @@ export const AGENT_TIME_MS = 25_000;
 
 type Env = Record<string, string | undefined>;
 
-/** Sonnet unless CLAIM_AGENT_MODEL says haiku. */
+/** Haiku unless CLAIM_AGENT_MODEL says sonnet. */
 export const agentModel = (env: Env = process.env) =>
-  env.CLAIM_AGENT_MODEL?.toLowerCase() === "haiku" ? HAIKU : SONNET;
+  env.CLAIM_AGENT_MODEL?.trim().toLowerCase() === "sonnet" ? SONNET : HAIKU;
 
 const Output = z.object({
   verdicts: z.array(

@@ -90,7 +90,7 @@ Run the migrations in `db/migrations` against your own Supabase database, in ord
 | `MAX_SESSIONS_PER_USER_PER_DAY`             | no       | Default 5                                                                          |
 | `MAX_SESSIONS_PER_DAY`                      | no       | Default 300                                                                        |
 | `DAILY_SPEND_LIMIT_USD`                     | no       | Default 20, measured from logged spend                                             |
-| `CLAIM_AGENT_MODEL`                         | no       | `sonnet` (default) or `haiku`                                                      |
+| `CLAIM_AGENT_MODEL`                         | no       | `haiku` (default) or `sonnet`                                                      |
 | `NEXT_PUBLIC_SITE_URL`                      | no       | Canonical site for links, default `https://wouldthiswin.com`                       |
 
 ## License
