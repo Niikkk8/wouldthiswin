@@ -66,7 +66,7 @@ export type Cam = {
 
 const MAX_SCALE = 2.6;
 /** Device-pixel size of each capture (scripts/capture-v3.ts ASPECTS). */
-export const SOURCE = { "16x9": { width: 2560, height: 1800 }, "9x16": { width: 1620, height: 2880 } } as const;
+export const SOURCE = { "16x9": { width: 2560, height: 1800 }, "9x16": { width: 1620, height: 2880 }, phone: { width: 1170, height: 2532 } } as const;
 
 function pose(meta: Meta, k: Cam, f: number, W: number, H: number) {
   let r: Rect | null;
@@ -147,7 +147,7 @@ export function Footage({ clip, from, rate = 1, cams, shakeAt, box }: { clip: st
   return (
     <>
     <div style={{ position: "absolute", left: 0, top: 0, transformOrigin: "0 0", transform: cam.transform }}>
-      <OffthreadVideo src={staticFile(`capture/v3/${clip}.mp4`)} startFrom={Math.round(from * 30)} playbackRate={rate} muted style={{ display: "block", ...SOURCE[clip.startsWith("9x16") ? "9x16" : "16x9"] }} />
+      <OffthreadVideo src={staticFile(`capture/v3/${clip}.mp4`)} startFrom={Math.round(from * 30)} playbackRate={rate} muted style={{ display: "block", ...SOURCE[clip.startsWith("9x16") ? "9x16" : clip.startsWith("phone") ? "phone" : "16x9"] }} />
     </div>
     {cam.spot && <div style={cam.spot} />}
     </>

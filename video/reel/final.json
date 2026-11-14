@@ -1,5 +1,5 @@
 {
-  "note": "One continuous take (footage/raw/full.*). Each spoken line is matched by phrase to a visual: face, or B-roll from the app captures. Read by scripts/reel-final.ts. A beat runs from the first word of its phrase to the first word of the next beat's.",
+  "note": "One continuous take (footage/raw/full.*). Each spoken line is matched by phrase to a visual: face, a card of app UI (B-roll from the captures, with a label), or the end card. A beat runs from the first word of its phrase to the first word of the next beat's. Read by scripts/reel-final.ts.",
   "target": {
     "min": 25,
     "max": 32
@@ -25,34 +25,38 @@
       "match": "they lose when",
       "visual": "broll",
       "broll": {
-        "clip": "9x16-scan",
+        "clip": "phone-scan",
         "from": 1.5,
         "target": [
           "judge:engineer",
           "judge:tired"
         ],
-        "fill": 0.92
-      }
+        "fill": 0.96
+      },
+      "label": "The judges"
     },
     {
       "match": "so i built",
       "visual": "broll",
       "broll": {
-        "clip": "9x16-landing",
-        "from": 0.4,
+        "clip": "phone-landing",
+        "from": 0.1,
         "target": "question",
-        "fill": 0.9
-      }
+        "fill": 0.96,
+        "rate": 0.7
+      },
+      "label": "Would this win?"
     },
     {
       "match": "paste your repo",
       "visual": "broll",
       "broll": {
-        "clip": "9x16-landing",
+        "clip": "phone-landing",
         "from": 1.25,
         "target": "repo",
         "fill": 0.98
-      }
+      },
+      "label": "Paste your repo"
     },
     {
       "match": "three ai judges",
@@ -60,11 +64,12 @@
       "hit": "finding",
       "hitAt": 0.45,
       "broll": {
-        "clip": "9x16-scan",
+        "clip": "phone-scan",
         "from": 6.1,
         "target": "claim",
         "fill": 0.98
-      }
+      },
+      "label": "The scan"
     },
     {
       "match": "and then they grill",
@@ -74,31 +79,34 @@
       "match": "why did you build",
       "visual": "broll",
       "broll": {
-        "clip": "9x16-grilling",
-        "from": 0.1,
+        "clip": "phone-followup",
+        "from": 0.7,
         "target": "question",
         "fill": 1.0
-      }
+      },
+      "label": "The engineer asks"
     },
     {
       "match": "who's going to pay",
       "visual": "broll",
       "broll": {
-        "clip": "9x16-followup",
+        "clip": "phone-followup",
         "from": 9.55,
         "target": "question",
         "fill": 1.0
-      }
+      },
+      "label": "The investor asks"
     },
     {
       "match": "give a vague answer",
       "visual": "broll",
       "broll": {
-        "clip": "9x16-followup",
+        "clip": "phone-followup",
         "from": 16.5,
         "target": "question",
         "fill": 1.0
-      }
+      },
+      "label": "Follow-up"
     },
     {
       "match": "give a bad one",
@@ -111,18 +119,18 @@
       "dropOn": "drop",
       "dropAt": 7.47,
       "broll": {
-        "clip": "9x16-scan",
+        "clip": "phone-scan",
         "cams": [
           {
             "at": 0,
             "target": [
               40,
               345,
-              930,
+              1080,
               150
             ],
-            "fill": 0.95,
-            "ay": 0.32,
+            "fill": 0.96,
+            "ay": 0.5,
             "isolate": 30
           },
           {
@@ -134,33 +142,41 @@
               121
             ],
             "fill": 0.62,
-            "ay": 0.3,
+            "ay": 0.5,
             "isolate": 30,
             "move": 0.18,
             "ease": "out"
           }
         ]
-      }
+      },
+      "label": "Your odds"
     },
     {
       "match": "at the end",
       "visual": "broll",
       "broll": {
-        "clip": "9x16-practice",
+        "clip": "phone-practice",
         "from": 3.2,
-        "target": "practice",
-        "fill": 1.0
-      }
+        "target": [
+          60,
+          439,
+          1050,
+          820
+        ],
+        "fill": 0.98
+      },
+      "label": "Practice"
     },
     {
       "match": "and what to fix",
       "visual": "broll",
       "broll": {
-        "clip": "9x16-fixes",
+        "clip": "phone-fixes",
         "from": 3.4,
         "target": "key",
         "fill": 0.98
-      }
+      },
+      "label": "Fix list"
     },
     {
       "match": "it's free",

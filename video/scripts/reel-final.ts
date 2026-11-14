@@ -15,7 +15,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
-import type { Broll, Plan, Visual, Word } from "../src/reel/Reel";
+import type { FinalBeat, FinalPlan } from "../src/reel/Final";
+import type { Broll, Word } from "../src/reel/Reel";
 import type { Cam } from "../src/v3/footage";
 import { CACHE, ffmpeg, master, OUT, probe, PUBLIC, render, still, VIDEO } from "./lib";
 import { transcribeWords, type W } from "./whisper-words";
@@ -38,6 +39,7 @@ type Beat = {
   hitAt?: number;
   dropOn?: string;
   dropAt?: number;
+  label?: string;
 };
 type Config = { target: { min: number; max: number }; corrections: Record<string, string>; emphasis: string[]; endHold: number; beats: Beat[] };
 
@@ -148,51 +150,71 @@ for (const beat of cfg.beats) {
   cursor = i + 1;
 }
 
-const visuals: Visual[] = [];
-const hits: { t: number; kind: string }[] = [];
+const beats: FinalBeat[] = [];
+const ev = { cardIn: [] as number[], cardOut: [] as number[], swap: [] as number[], labels: [] as number[], keys: [] as number[], questions: [] as number[], drops: [] as number[] };
 const total = speech + cfg.endHold;
+const meta = (clip: string): { frames: { typed: number }[] } => JSON.parse(readFileSync(join(PUBLIC, "capture", "v3", `${clip}.json`), "utf8"));
 starts.forEach(({ beat, at, word }, k) => {
   const end = k + 1 < starts.length ? starts[k + 1].at : total;
   const dur = end - at;
-  if (beat.visual === "face") visuals.push({ kind: "face", src: "reel-final/face.mp4", start: at, dur, offset: at });
-  else if (beat.visual === "card") {
-    visuals.push({ kind: "card", start: at, dur, pip: { src: "reel-final/face.mp4", offset: at } });
-    hits.push({ t: at, kind: "end" });
-  } else if (beat.broll) {
+  if (beat.visual === "face") beats.push({ kind: "face", start: at, dur });
+  else if (beat.visual === "card") beats.push({ kind: "card", start: at, dur });
+  else if (beat.broll) {
     const b = beat.broll;
     let from = b.from;
     let cams: Cam[] | undefined;
-    let shake: number[] | undefined;
+    let dropAt: number | undefined;
     // A beat that lands on a word (the odds dropping on "drop"): the capture is started so the
     // change on screen happens as the word is said.
     if (beat.dropOn && beat.dropAt !== undefined) {
       const w = find(beat.dropOn, word);
-      const tWord = w >= 0 ? fixed[w].start - at : dur / 2;
-      from = Math.max(0, beat.dropAt - tWord);
-      shake = [tWord];
-      hits.push({ t: at + tWord, kind: beat.hit ?? "drop" });
-      cams = b.cams?.map((c) => ({ ...c, at: c.at === "drop" ? tWord : c.at }));
-    } else if (beat.hit) hits.push({ t: at + (beat.hitAt ?? 0.1), kind: beat.hit });
-    visuals.push({ kind: "broll", start: at, dur, broll: { ...b, from, cams: cams ?? (b.cams as Cam[] | undefined), shake } });
+      dropAt = w >= 0 ? fixed[w].start - at : dur / 2;
+      from = Math.max(0, beat.dropAt - dropAt);
+      ev.drops.push(at + dropAt);
+      cams = b.cams?.map((c) => ({ ...c, at: c.at === "drop" ? dropAt! : c.at }));
+    }
+    // Keystrokes where the capture types (the repo field).
+    const frames = meta(b.clip).frames;
+    const rate = b.rate ?? 1;
+    for (let f = Math.round(from * 30) + 1; f < Math.min(frames.length, Math.round((from + dur * rate) * 30)); f++)
+      if (frames[f].typed > frames[f - 1].typed) ev.keys.push(at + (f / 30 - from) / rate);
+    if (/asks|follow-up/i.test(beat.label ?? "")) ev.questions.push(at + 0.25);
+    if (beat.label) ev.labels.push(at);
+    beats.push({ kind: "broll", start: at, dur, label: beat.label, dropAt, broll: { ...b, from, cams: cams ?? (b.cams as Cam[] | undefined), shake: dropAt === undefined ? undefined : [dropAt] } });
   }
 });
-
-const plan: Plan = { duration: total, voice: [{ src: "reel-final/face.mp4", start: 0, dur: speech }], visuals, words: capWords, sfx: null };
-writeFileSync(join(PUB, "hits.json"), JSON.stringify({ duration: total, hits }));
-const r = spawnSync("python", ["-m", "sfx.cues.reel", join(PUB, "hits.json"), join(PUB, "sfx.wav")], { cwd: VIDEO, encoding: "utf8" });
+// Card entrances, exits and content swaps, for the sound.
+beats.forEach((b, i) => {
+  if (b.kind !== "broll") return;
+  const prev = beats[i - 1];
+  const next = beats[i + 1];
+  if (prev?.kind === "broll") ev.swap.push(b.start);
+  else ev.cardIn.push(b.start);
+  if (next?.kind !== "broll" && next?.kind !== "card") ev.cardOut.push(b.start + b.dur);
+});
+const endBeat = beats.find((b) => b.kind === "card");
+const events = {
+  duration: total,
+  words: capWords.map((w) => ({ start: w.start, end: w.end })),
+  punches: capWords.filter((w) => w.emph).map((w) => w.start),
+  pulseFrom: beats[1]?.start ?? 2,
+  end: endBeat?.start ?? total - cfg.endHold,
+  ...ev,
+};
+writeFileSync(join(PUB, "events.json"), JSON.stringify(events));
+const r = spawnSync("python", ["-m", "sfx.cues.reel_final", join(PUB, "events.json"), join(PUB, "sfx.wav")], { cwd: VIDEO, encoding: "utf8" });
 if (r.status !== 0) throw new Error(r.stderr);
-plan.sfx = "reel-final/sfx.wav";
+const plan: FinalPlan = { duration: total, face: "reel-final/face.mp4", speech, words: capWords, beats, sfx: "reel-final/sfx.wav" };
 writeFileSync(join(WORK, "plan.json"), JSON.stringify(plan, null, 1));
 console.log(`cut: ${speech.toFixed(1)} s of speech + ${cfg.endHold} s end card = ${total.toFixed(1)} s${total < cfg.target.min || total > cfg.target.max ? ` (target ${cfg.target.min} to ${cfg.target.max} s)` : ""}`);
-for (const v of visuals) console.log(`  ${v.start.toFixed(2).padStart(6)}  ${v.dur.toFixed(2)}  ${v.kind}${"broll" in v ? " " + v.broll.clip : ""}`);
+for (const b of beats) console.log(`  ${b.start.toFixed(2).padStart(6)}  ${b.dur.toFixed(2)}  ${b.kind}${b.broll ? " " + b.broll.clip : ""}${b.label ? "  [" + b.label + "]" : ""}`);
 
 if (process.argv.includes("--no-render")) process.exit(0);
 mkdirSync(OUT, { recursive: true });
 const raw = join(WORK, "reel_final.raw.mp4");
-await render("reel-9x16", raw, { plan });
+await render("reel-final-9x16", raw, { plan });
 const m = master(raw, join(OUT, "reel_final_9x16.mp4"), -14);
 console.log(`out/reel_final_9x16.mp4  ${Number(m.after.input_i).toFixed(1)} LUFS, ${Number(m.after.input_tp).toFixed(1)} dBTP`);
 // Cover: the odds dropping, mid-punch, caption up.
-const drop = hits.find((h) => h.kind === "drop");
-await still("reel-9x16", join(OUT, "reel_final_cover.png"), Math.round(((drop?.t ?? 1) + 0.35) * 30), { plan });
+await still("reel-final-9x16", join(OUT, "reel_final_cover.png"), Math.round(((ev.drops[0] ?? 1) + 0.4) * 30), { plan });
 console.log("out/reel_final_cover.png");

@@ -9,6 +9,7 @@
 //
 //   16x9: 1280x900 desktop viewport at 2x -> 2560x1800 (taller than 16:9 so nothing scrolls away)
 //   9x16:  540x960 phone viewport at 3x  -> 1620x2880
+//   phone: 390x844 (iPhone) at 3x       -> 1170x2532, for the reel's cards
 //
 // Takes come from the dev-only capture routes (/capture/[act], PulseBoard fixture) plus the
 // real landing page (typed, never submitted) and the demo repo's README.
@@ -30,6 +31,9 @@ const REPO = "github.com/team-pulse/pulseboard";
 export const ASPECTS = {
   "16x9": { viewport: { width: 1280, height: 900 }, scale: 2 },
   "9x16": { viewport: { width: 540, height: 960 }, scale: 3 },
+  // An iPhone-width viewport: the same 16 px text is a bigger share of the width, so it stays
+  // legible inside a reel's card.
+  phone: { viewport: { width: 390, height: 844 }, scale: 3 },
 } as const;
 export type Aspect = keyof typeof ASPECTS;
 
