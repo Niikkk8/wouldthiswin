@@ -74,3 +74,6 @@ next-env.d.ts
 # agent scratch and local tooling
 .agent/
 .claude/
+
+# eval reports (npm run eval)
+/evals/out/

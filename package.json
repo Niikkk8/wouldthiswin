@@ -12,7 +12,8 @@
     "test": "vitest run",
     "judges": "node --import tsx scripts/process-judges.ts",
     "typecheck": "tsc --noEmit",
-    "stats": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/stats.ts"
+    "stats": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/stats.ts",
+    "eval": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx evals/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
