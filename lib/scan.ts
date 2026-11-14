@@ -197,9 +197,9 @@ export async function demoSignal(
 }
 
 /** The deterministic checks over a snapshot of the repo. A failure leaves no findings, never a guess. */
-type CheckResult = { findings: Finding[]; depth: AiDepth; pretrained: boolean };
+export type CheckResult = { findings: Finding[]; depth: AiDepth; pretrained: boolean };
 
-async function deterministicChecks(
+export async function deterministicChecks(
   raw: RawRepoData,
   devpost: Devpost | null,
   window: EventWindow | null,

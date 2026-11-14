@@ -615,6 +615,17 @@ export const copy = {
       "questions-hackathon-judges-ask": "25 questions hackathon judges ask",
     },
   },
+  // A CLI scan's report, /r/[id].
+  publicReport: {
+    metaTitle: "Repo check",
+    eyebrow: "Repo check",
+    commit: "At commit {sha}",
+    cta: "Get grilled on this repo",
+    findings: "{n} things to fix",
+    none: "The checks found nothing to fix. The judges will still have questions.",
+    claims: "{n} claims the judges would check",
+    claimsNote: "Not verified yet: a full session checks each one against the code.",
+  },
   // An event's page, /e/[slug].
   events: {
     eyebrow: "Event",

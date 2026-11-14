@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,13 @@ import { cn } from "cn";
 /** "Challenge a friend" isn't built yet: the link stays in the code, off the page. */
 const SHOW_VERSUS = false;
 
+const noop = () => () => {};
+
+function readPrefill(): string {
+  const given = new URLSearchParams(window.location.search).get("repo");
+  return given && parseRepoUrl(`github.com/${given}`) ? `github.com/${given}` : "";
+}
+
 /** Linking to `/#repo` lands on the hero form with the field focused. */
 export const REPO_FOCUS = "repo";
 
@@ -40,7 +47,11 @@ export function RepoForm({
 }) {
   const ids = { repo: id, note: `${id}-note`, demo: `${id}-demo`, demoNote: `${id}-demo-note` };
   const router = useRouter();
-  const [repo, setRepo] = useState("");
+  // A link from a repo check (/r/[id]) arrives with ?repo=owner/name: it fills the field until
+  // the visitor types.
+  const prefill = useSyncExternalStore(noop, () => (id === REPO_FOCUS ? readPrefill() : ""), () => "");
+  const [typed, setRepo] = useState<string | null>(null);
+  const repo = typed ?? prefill;
   const [invalid, setInvalid] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
   const [demo, setDemo] = useState("");
