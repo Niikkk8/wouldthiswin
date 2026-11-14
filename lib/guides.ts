@@ -25,7 +25,8 @@ export type GuideMeta = {
 type Env = Record<string, string | undefined>;
 
 /** A draft exists only outside production, so it can be read and edited before it's published. */
-export const visible = (g: Pick<GuideMeta, "draft">, env: Env = process.env) => !g.draft || env.NODE_ENV !== "production";
+export const visible = (g: Pick<GuideMeta, "draft">, env: Env = process.env) =>
+  !g.draft || env.NODE_ENV !== "production";
 
 export type Guide = GuideMeta & { slug: string };
 
@@ -42,9 +43,14 @@ export function guideSlugs(): string[] {
 }
 
 /** One guide's body and metadata. Null for a slug with no file. */
-export async function loadGuide(slug: string): Promise<{ meta: Guide; Body: ComponentType } | null> {
+export async function loadGuide(
+  slug: string,
+): Promise<{ meta: Guide; Body: ComponentType } | null> {
   if (!guideSlugs().includes(slug)) return null;
-  const mod = (await import(`@/content/guides/${slug}.mdx`)) as { default: ComponentType; meta: GuideMeta };
+  const mod = (await import(`@/content/guides/${slug}.mdx`)) as {
+    default: ComponentType;
+    meta: GuideMeta;
+  };
   return { meta: { ...mod.meta, slug }, Body: mod.default };
 }
 
@@ -56,7 +62,9 @@ export async function allGuides(): Promise<Guide[]> {
 
 /** The guides a guide links to next, in its own order, skipping drafts in production and missing slugs. */
 export async function relatedGuides(meta: Guide): Promise<Guide[]> {
-  const found = await Promise.all((meta.related ?? []).map(async (s) => (await loadGuide(s))?.meta ?? null));
+  const found = await Promise.all(
+    (meta.related ?? []).map(async (s) => (await loadGuide(s))?.meta ?? null),
+  );
   return found.filter((g): g is Guide => !!g && visible(g));
 }
 
@@ -64,5 +72,10 @@ export const guidePath = (slug: string) => `/guides/${slug}`;
 
 /** "7 November 2026". */
 export function formatDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }

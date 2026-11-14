@@ -13,13 +13,24 @@ const E = copy.events;
 
 /** "15 November 2026, 12:00 UTC". Shown in UTC so the server and every visitor agree. */
 const utc = (iso: string) =>
-  new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC";
+  new Date(iso).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }) + " UTC";
 
 export async function generateMetadata({ params }: PageProps<"/e/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const event = eventBySlug(slug);
   if (!event) return { robots: { index: false, follow: false } };
-  return pageMeta({ title: fill(E.metaTitle, { name: event.name }), description: fill(E.metaDescription, { name: event.name }), path: `/e/${slug}` });
+  return pageMeta({
+    title: fill(E.metaTitle, { name: event.name }),
+    description: fill(E.metaDescription, { name: event.name }),
+    path: `/e/${slug}`,
+  });
 }
 
 export default function EventPage({ params }: PageProps<"/e/[slug]">) {
@@ -39,10 +50,17 @@ function JudgedOn({ event }: { event: EventPreset }) {
       </h2>
       <ul className="mt-4 border-t border-border">
         {event.rubric.criteria.map((c) => (
-          <li key={c.key} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1 border-b border-border py-4">
+          <li
+            key={c.key}
+            className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1 border-b border-border py-4"
+          >
             <p className="text-[17px] font-bold">{c.name}</p>
-            <p className="font-mono text-[14px] text-text-muted tabular-nums">{Math.round((c.weight / total) * 100)}%</p>
-            <p className="col-span-2 text-[15px] leading-snug text-pretty text-text-muted">{c.description}</p>
+            <p className="font-mono text-[14px] text-text-muted tabular-nums">
+              {Math.round((c.weight / total) * 100)}%
+            </p>
+            <p className="col-span-2 text-[15px] leading-snug text-pretty text-text-muted">
+              {c.description}
+            </p>
           </li>
         ))}
       </ul>
@@ -59,11 +77,18 @@ async function Event({ params }: { params: PageProps<"/e/[slug]">["params"] }) {
       <SiteHeader />
       <main id="main" tabIndex={-1} className="page-x flex-1 pt-8 pb-16 lg:pt-12 lg:pb-20">
         <p className="label-mono uppercase">{E.eyebrow}</p>
-        <h1 className="mt-3 max-w-[960px] text-[40px] leading-[0.95] font-black tracking-[-0.04em] text-balance break-words lg:text-act">{event.name}</h1>
+        <h1 className="mt-3 max-w-[960px] text-[40px] leading-[0.95] font-black tracking-[-0.04em] text-balance break-words lg:text-act">
+          {event.name}
+        </h1>
         <p className="mt-5 font-mono text-[15px] text-text-muted">
           {E.deadline} {event.endsAt ? utc(event.endsAt) : event.deadlineText}
         </p>
-        <a href={event.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block font-mono text-[14px] text-text-subtle underline decoration-1 underline-offset-4 hover:text-text">
+        <a
+          href={event.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block font-mono text-[14px] text-text-subtle underline decoration-1 underline-offset-4 hover:text-text"
+        >
           {E.site}
         </a>
         <p className="mt-8 max-w-[620px] text-[19px] leading-[1.45] text-text-muted">{E.lede}</p>

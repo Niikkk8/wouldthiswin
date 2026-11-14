@@ -27,7 +27,11 @@ export function CopyButton({
   return (
     <button
       type="button"
-      className={cn(buttonVariants({ variant: "secondary" }), "h-10 shrink-0 gap-2 px-3 text-[14px]", className)}
+      className={cn(
+        buttonVariants({ variant: "secondary" }),
+        "h-10 shrink-0 gap-2 px-3 text-[14px]",
+        className,
+      )}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(getValue ? getValue() : value);
@@ -40,7 +44,11 @@ export function CopyButton({
       }}
       aria-label={`${idle}: ${label}`}
     >
-      {copied ? <Check aria-hidden size={16} strokeWidth={1.75} /> : <Copy aria-hidden size={16} strokeWidth={1.75} />}
+      {copied ? (
+        <Check aria-hidden size={16} strokeWidth={1.75} />
+      ) : (
+        <Copy aria-hidden size={16} strokeWidth={1.75} />
+      )}
       <span aria-live="polite">{copied ? text.acts.share.copied : idle}</span>
     </button>
   );

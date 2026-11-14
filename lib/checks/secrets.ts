@@ -11,14 +11,29 @@ type Pattern = { name: string; re: RegExp; minEntropy?: number };
 // Each pattern is the provider's documented key shape. Placeholders ("sk-your-key-here")
 // fail the entropy test, which real keys pass easily.
 const PATTERNS: Pattern[] = [
-  { name: "Anthropic API key", re: /\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{40,}/g, minEntropy: 4 },
-  { name: "OpenAI API key", re: /\bsk-(?:proj-|svcacct-)?(?!ant-)[A-Za-z0-9_-]{32,}/g, minEntropy: 4 },
+  {
+    name: "Anthropic API key",
+    re: /\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{40,}/g,
+    minEntropy: 4,
+  },
+  {
+    name: "OpenAI API key",
+    re: /\bsk-(?:proj-|svcacct-)?(?!ant-)[A-Za-z0-9_-]{32,}/g,
+    minEntropy: 4,
+  },
   { name: "Groq API key", re: /\bgsk_[A-Za-z0-9]{40,}/g, minEntropy: 4 },
   { name: "Google API key", re: /\bAIza[0-9A-Za-z_-]{35}\b/g, minEntropy: 4 },
   { name: "AWS access key", re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g, minEntropy: 3 },
   { name: "Stripe live key", re: /\b(?:sk|rk)_live_[0-9a-zA-Z]{20,}/g, minEntropy: 4 },
-  { name: "GitHub token", re: /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{60,})/g, minEntropy: 4 },
-  { name: "Private key", re: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY-----/g },
+  {
+    name: "GitHub token",
+    re: /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{60,})/g,
+    minEntropy: 4,
+  },
+  {
+    name: "Private key",
+    re: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY-----/g,
+  },
 ];
 
 const JWT = /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}/g;
@@ -49,7 +64,9 @@ export function jwtRole(token: string): string | null {
   const payload = token.split(".")[1];
   if (!payload) return null;
   try {
-    const json = JSON.parse(Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8")) as { role?: unknown };
+    const json = JSON.parse(
+      Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
+    ) as { role?: unknown };
     return typeof json.role === "string" ? json.role : null;
   } catch {
     return null;
@@ -71,7 +88,8 @@ function hitsIn(path: string, text: string): Hit[] {
       }
     }
     for (const m of line.matchAll(JWT)) {
-      if (jwtRole(m[0]) === "service_role") hits.push({ name: "Supabase service-role key", path, line: i + 1, secret: m[0] });
+      if (jwtRole(m[0]) === "service_role")
+        hits.push({ name: "Supabase service-role key", path, line: i + 1, secret: m[0] });
     }
   });
   return hits;

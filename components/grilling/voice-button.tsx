@@ -13,7 +13,9 @@ const BARS = 5;
 
 /** Space bar push-to-talk works whenever focus isn't in a text field (where space types a space). */
 const typing = (el: Element | null) =>
-  el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && el.type !== "checkbox") || (el as HTMLElement | null)?.isContentEditable;
+  el instanceof HTMLTextAreaElement ||
+  (el instanceof HTMLInputElement && el.type !== "checkbox") ||
+  (el as HTMLElement | null)?.isContentEditable;
 
 /**
  * Answer out loud: tap to start and tap to stop, or hold and let go. Space does the same on a
@@ -146,7 +148,9 @@ export function VoiceButton({
       }}
       className={cn(
         "flex h-14 w-full touch-none items-center gap-3 rounded-control border px-4 text-left text-[15px] transition-colors duration-150 select-none disabled:opacity-60 lg:h-12 lg:w-auto",
-        recording ? "border-loss bg-loss/10 text-text" : "border-border-strong text-text-muted hover:text-text",
+        recording
+          ? "border-loss bg-loss/10 text-text"
+          : "border-border-strong text-text-muted hover:text-text",
       )}
     >
       {recording ? (
@@ -170,7 +174,9 @@ export function VoiceButton({
               />
             ))}
           </span>
-          <span className="font-mono text-[13px] tabular-nums text-text-muted">{fill(V.seconds, { s: elapsed })}</span>
+          <span className="font-mono text-[13px] tabular-nums text-text-muted">
+            {fill(V.seconds, { s: elapsed })}
+          </span>
         </>
       )}
     </button>

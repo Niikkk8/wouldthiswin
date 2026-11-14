@@ -24,7 +24,9 @@ export type StageKind = "scan" | "grilling" | "answered" | "deliberation" | "rev
 function useDemoRun(at: DemoAt) {
   const [initial] = useState(() => demoState(at));
   const [view, setView] = useState(() => toView(initial, Date.now()));
-  const [transport] = useState(() => demoTransport(initial, { onChange: (s) => setView(toView(s, Date.now())) }));
+  const [transport] = useState(() =>
+    demoTransport(initial, { onChange: (s) => setView(toView(s, Date.now())) }),
+  );
   const send = useCallback<Send>(
     async (a, opts) => {
       const r = await transport(DEMO_ID, a as DemoAction, opts?.onProgress);
@@ -36,7 +38,8 @@ function useDemoRun(at: DemoAt) {
 }
 
 /** The odds, pinned in the stage's corner on desktop and a plain bar above each block on a phone. */
-const ODDS_CLASS = "lg:top-6! lg:right-10! max-lg:static! max-lg:mx-0! max-lg:rounded-card max-lg:border";
+const ODDS_CLASS =
+  "lg:top-6! lg:right-10! max-lg:static! max-lg:mx-0! max-lg:rounded-card max-lg:border";
 
 function ScanStage({ still }: { still: boolean }) {
   const { view, send } = useDemoRun("scanned");
@@ -44,7 +47,15 @@ function ScanStage({ still }: { still: boolean }) {
   return (
     <>
       <OddsWidget events={view.events.slice(0, revealed)} className={ODDS_CLASS} />
-      <ScanAct view={view} send={send} revealed={revealed} onReveal={setRevealed} onNext={noop} onWaiting={noop} pending={false} />
+      <ScanAct
+        view={view}
+        send={send}
+        revealed={revealed}
+        onReveal={setRevealed}
+        onNext={noop}
+        onWaiting={noop}
+        pending={false}
+      />
     </>
   );
 }
@@ -55,7 +66,15 @@ function GrillingStage({ still, at }: { still: boolean; at: "grilling" | "answer
   return (
     <>
       <OddsWidget events={view.events.slice(0, revealed)} travel className={ODDS_CLASS} />
-      <GrillingAct view={view} send={send} revealed={revealed} onReveal={setRevealed} pending={false} autoAnswers={ANSWERS} frozen={still} />
+      <GrillingAct
+        view={view}
+        send={send}
+        revealed={revealed}
+        onReveal={setRevealed}
+        pending={false}
+        autoAnswers={ANSWERS}
+        frozen={still}
+      />
     </>
   );
 }

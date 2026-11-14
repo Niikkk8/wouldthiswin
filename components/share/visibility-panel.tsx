@@ -11,7 +11,15 @@ const V = copy.acts.share.visibility;
 const Reply = z.object({ shareable: z.boolean(), listed: z.boolean() });
 
 /** The owner's two opt-ins, both off until they turn them on: a public link, and the public board. */
-export function VisibilityPanel({ id, value, onChange }: { id: string; value: Visibility; onChange: (v: Visibility) => void }) {
+export function VisibilityPanel({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: Visibility;
+  onChange: (v: Visibility) => void;
+}) {
   const [saving, setSaving] = useState(false);
 
   async function save(change: Partial<Visibility>) {
@@ -46,7 +54,10 @@ export function VisibilityPanel({ id, value, onChange }: { id: string; value: Vi
         <label htmlFor={`vis-${key}`} className="text-[16px] font-semibold">
           {label}
         </label>
-        <p id={`vis-${key}-note`} className="mt-0.5 text-[14px] leading-snug text-pretty text-text-subtle">
+        <p
+          id={`vis-${key}-note`}
+          className="mt-0.5 text-[14px] leading-snug text-pretty text-text-subtle"
+        >
           {note}
         </p>
       </div>
@@ -54,7 +65,10 @@ export function VisibilityPanel({ id, value, onChange }: { id: string; value: Vi
   );
 
   return (
-    <section aria-labelledby="visibility" className="grid gap-4 rounded-panel border border-border bg-surface p-5">
+    <section
+      aria-labelledby="visibility"
+      className="grid gap-4 rounded-panel border border-border bg-surface p-5"
+    >
       <h2 id="visibility" className="label-mono uppercase">
         {V.heading}
       </h2>

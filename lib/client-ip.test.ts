@@ -2,8 +2,13 @@ import assert from "node:assert/strict";
 import { describe, test } from "vitest";
 import { UNKNOWN_IP, clientIp, limitKey } from "./client-ip";
 
-const req = (headers: Record<string, string>) => new Request("https://wouldthiswin.com/api/sessions", { headers });
-const spoofed = { "x-real-ip": "6.6.6.6", "x-forwarded-for": "7.7.7.7, 8.8.8.8", "x-test-ip": "9.9.9.9" };
+const req = (headers: Record<string, string>) =>
+  new Request("https://wouldthiswin.com/api/sessions", { headers });
+const spoofed = {
+  "x-real-ip": "6.6.6.6",
+  "x-forwarded-for": "7.7.7.7, 8.8.8.8",
+  "x-test-ip": "9.9.9.9",
+};
 
 describe("rate limit IP", () => {
   test("off Vercel, client-sent IP headers are ignored: everyone shares one bucket", () => {
@@ -16,12 +21,21 @@ describe("rate limit IP", () => {
   });
 
   test("on Vercel, the platform's x-real-ip is used", () => {
-    assert.equal(clientIp(req({ "x-real-ip": "203.0.113.5", "x-test-ip": "9.9.9.9" }), { VERCEL: "1" }), "203.0.113.5");
+    assert.equal(
+      clientIp(req({ "x-real-ip": "203.0.113.5", "x-test-ip": "9.9.9.9" }), { VERCEL: "1" }),
+      "203.0.113.5",
+    );
   });
 
   test("the test-only header works only when explicitly enabled, and never in production", () => {
-    assert.equal(clientIp(req(spoofed), { WTW_TEST_IP_HEADER: "1", NODE_ENV: "development" }), "9.9.9.9");
-    assert.equal(clientIp(req(spoofed), { WTW_TEST_IP_HEADER: "1", NODE_ENV: "production" }), UNKNOWN_IP);
+    assert.equal(
+      clientIp(req(spoofed), { WTW_TEST_IP_HEADER: "1", NODE_ENV: "development" }),
+      "9.9.9.9",
+    );
+    assert.equal(
+      clientIp(req(spoofed), { WTW_TEST_IP_HEADER: "1", NODE_ENV: "production" }),
+      UNKNOWN_IP,
+    );
     assert.equal(clientIp(req(spoofed), { NODE_ENV: "development" }), UNKNOWN_IP);
   });
 });

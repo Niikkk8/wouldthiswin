@@ -24,16 +24,26 @@ const STARTER_PAGES: [RegExp, string][] = [
 ];
 
 /** The starter's own public assets, still in the repo. */
-const STARTER_ASSETS = /^(public\/(next|vercel|vite|file|globe|window)\.svg|src\/assets\/react\.svg|src\/logo\.svg)$/;
+const STARTER_ASSETS =
+  /^(public\/(next|vercel|vite|file|globe|window)\.svg|src\/assets\/react\.svg|src\/logo\.svg)$/;
 
 const T = copy.checks.template;
 
 export function templateLeftovers(s: RepoSnapshot): Finding[] {
   const out: Finding[] = [];
-  const add = (f: Omit<Finding, "id" | "check" | "visibility">) => out.push({ ...f, id: `template-${out.length + 1}`, check: "template", visibility: "public" });
+  const add = (f: Omit<Finding, "id" | "check" | "visibility">) =>
+    out.push({ ...f, id: `template-${out.length + 1}`, check: "template", visibility: "public" });
 
   if (TEMPLATE_README.test(s.readme)) {
-    add({ outcome: "fail", severity: "major", title: T.readme, detail: T.readmeDetail, evidence: [{ kind: "file", path: "README.md" }], fix: T.readmeFix, effort: "30m" });
+    add({
+      outcome: "fail",
+      severity: "major",
+      title: T.readme,
+      detail: T.readmeDetail,
+      evidence: [{ kind: "file", path: "README.md" }],
+      fix: T.readmeFix,
+      effort: "30m",
+    });
   }
   for (const [path, text] of s.files) {
     const lines = text.split(/\r?\n/);

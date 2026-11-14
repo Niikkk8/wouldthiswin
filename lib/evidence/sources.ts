@@ -38,7 +38,9 @@ function section(html: string, id: string): string | null {
   const start = html.search(new RegExp(`id=["']${id}["']`, "i"));
   if (start < 0) return null;
   const rest = html.slice(start);
-  const end = rest.search(/<(section|div)[^>]+id=["'](built-with|app-team|software-header|gallery)["']/i);
+  const end = rest.search(
+    /<(section|div)[^>]+id=["'](built-with|app-team|software-header|gallery)["']/i,
+  );
   return rest.slice(0, end > 0 ? end : 20_000);
 }
 
@@ -52,26 +54,43 @@ export function parseDevpost(html: string): Devpost {
   const details = section(html, "app-details-left");
   const about = details ? text(details).slice(0, MAX_SOURCE_CHARS) : "";
   const builtSection = section(html, "built-with") ?? "";
-  const builtWith = [...builtSection.matchAll(/class=["'][^"']*cp-tag[^"']*["'][^>]*>([\s\S]*?)<\//gi)]
+  const builtWith = [
+    ...builtSection.matchAll(/class=["'][^"']*cp-tag[^"']*["'][^>]*>([\s\S]*?)<\//gi),
+  ]
     .map((m) => text(m[1]))
     .filter(Boolean);
-  const linksBlock = html.match(/<nav[^>]+class=["'][^"']*app-links[^"']*["'][\s\S]*?<\/nav>/i)?.[0] ?? "";
-  const links = [...linksBlock.matchAll(/href=["'](https?:\/\/[^"']+)["']/gi)].map((m) => decode(m[1]));
+  const linksBlock =
+    html.match(/<nav[^>]+class=["'][^"']*app-links[^"']*["'][\s\S]*?<\/nav>/i)?.[0] ?? "";
+  const links = [...linksBlock.matchAll(/href=["'](https?:\/\/[^"']+)["']/gi)].map((m) =>
+    decode(m[1]),
+  );
   return { about, builtWith: [...new Set(builtWith)], links: [...new Set(links)] };
 }
 
-export async function fetchDevpost(url: string, fetch: (u: string) => Promise<Page> = (u) => fetchPage(u, { allowHosts: DEVPOST_HOSTS })): Promise<Devpost | null> {
+export async function fetchDevpost(
+  url: string,
+  fetch: (u: string) => Promise<Page> = (u) => fetchPage(u, { allowHosts: DEVPOST_HOSTS }),
+): Promise<Devpost | null> {
   const page = await fetch(url);
   if (!page.ok || !page.body) return null;
   return parseDevpost(page.body);
 }
 
 /** The README, then Devpost, then the pasted text: every source with something in it. */
-export function claimSources(input: { readme: string; devpost: Devpost | null; submission: string | null }): ClaimSource[] {
+export function claimSources(input: {
+  readme: string;
+  devpost: Devpost | null;
+  submission: string | null;
+}): ClaimSource[] {
   const out: ClaimSource[] = [{ kind: "readme", text: input.readme.slice(0, MAX_SOURCE_CHARS) }];
   if (input.devpost && (input.devpost.about || input.devpost.builtWith.length)) {
-    const built = input.devpost.builtWith.length ? `\nBuilt with: ${input.devpost.builtWith.join(", ")}` : "";
-    out.push({ kind: "devpost", text: `${input.devpost.about}${built}`.trim().slice(0, MAX_SOURCE_CHARS) });
+    const built = input.devpost.builtWith.length
+      ? `\nBuilt with: ${input.devpost.builtWith.join(", ")}`
+      : "";
+    out.push({
+      kind: "devpost",
+      text: `${input.devpost.about}${built}`.trim().slice(0, MAX_SOURCE_CHARS),
+    });
   }
   const pasted = input.submission?.trim();
   if (pasted) out.push({ kind: "submission", text: pasted.slice(0, MAX_SUBMISSION_CHARS) });

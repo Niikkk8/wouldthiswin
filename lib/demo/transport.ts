@@ -54,18 +54,26 @@ export const DEMO_TIMINGS: DemoTimings = { scanStepMs: 420, thinkMs: 900, delibe
  */
 export function demoTransport(
   initial: SessionState,
-  { timings = DEMO_TIMINGS, onChange }: { timings?: DemoTimings; onChange?: (s: SessionState) => void } = {},
+  {
+    timings = DEMO_TIMINGS,
+    onChange,
+  }: { timings?: DemoTimings; onChange?: (s: SessionState) => void } = {},
 ) {
   let state = initial;
   const view = () => toView(state, Date.now());
   const apply = (r: Result): TransportResult => {
-    if (!r.ok) return { status: 409, body: { error: "stale", message: copy.errors.stale, view: view() } };
+    if (!r.ok)
+      return { status: 409, body: { error: "stale", message: copy.errors.stale, view: view() } };
     state = r.session;
     onChange?.(state);
     return { status: 200, body: { view: view() } };
   };
 
-  return async (_id: string, a: DemoAction, onProgress?: (p: ScanProgress) => void): Promise<TransportResult> => {
+  return async (
+    _id: string,
+    a: DemoAction,
+    onProgress?: (p: ScanProgress) => void,
+  ): Promise<TransportResult> => {
     switch (a.action) {
       case "scan":
         if (state.claims === null) {
@@ -86,7 +94,9 @@ export function demoTransport(
         if (accepted.status !== 200) return accepted;
         await wait(timings.thinkMs);
         const scored = DEMO_ANSWERS[a.question];
-        return apply(settleAnswer(state, a.question, { score: scored.score, reason: scored.reason }));
+        return apply(
+          settleAnswer(state, a.question, { score: scored.score, reason: scored.reason }),
+        );
       }
       case "lifeline":
         return apply(pullLifeline(state, a.question, Date.now()));

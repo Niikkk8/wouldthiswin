@@ -4,14 +4,24 @@ import { ID_RE } from "@/lib/db";
 import { errorText, log } from "@/lib/log";
 import { MAX_ANSWER_LENGTH, MAX_QUESTIONS, uploadRefusal } from "@/lib/session";
 import { addStepTiming, loadSession, ownerHash } from "@/lib/session-store";
-import { MAX_AUDIO_BYTES, TranscribeError, audioType, cleanTranscript, transcribe } from "@/lib/transcribe";
+import {
+  MAX_AUDIO_BYTES,
+  TranscribeError,
+  audioType,
+  cleanTranscript,
+  transcribe,
+} from "@/lib/transcribe";
 
 // Whisper on a 90-second clip takes a few seconds; leave room for a slow upload.
 export const maxDuration = 30;
 
 const Fields = z.object({
   session: z.string().regex(ID_RE),
-  question: z.coerce.number().int().min(0).max(MAX_QUESTIONS - 1),
+  question: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_QUESTIONS - 1),
 });
 
 /**

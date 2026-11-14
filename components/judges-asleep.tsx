@@ -35,7 +35,10 @@ export function JudgesAsleep({ info, className }: { info: AsleepInfo; className?
     <section
       aria-labelledby="asleep"
       role="status"
-      className={cn("flex max-w-[676px] flex-col gap-5 rounded-panel border border-border bg-surface p-5 sm:flex-row sm:p-6", className)}
+      className={cn(
+        "flex max-w-[676px] flex-col gap-5 rounded-panel border border-border bg-surface p-5 sm:flex-row sm:p-6",
+        className,
+      )}
     >
       <div className="w-[128px] shrink-0 overflow-hidden rounded-card border border-border">
         <JudgePortrait judge="tired" size={128} dozing label={false} />
@@ -53,13 +56,19 @@ export function JudgesAsleep({ info, className }: { info: AsleepInfo; className?
         </p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           {info.lastReview && (
-            <Link href={`/s/${info.lastReview.id}`} className={buttonVariants({ className: "w-full sm:w-auto" })}>
+            <Link
+              href={`/s/${info.lastReview.id}`}
+              className={buttonVariants({ className: "w-full sm:w-auto" })}
+            >
               {A.shareLast}
             </Link>
           )}
           <Link
             href="/guides"
-            className={buttonVariants({ variant: info.lastReview ? "secondary" : "primary", className: "w-full sm:w-auto" })}
+            className={buttonVariants({
+              variant: info.lastReview ? "secondary" : "primary",
+              className: "w-full sm:w-auto",
+            })}
           >
             {A.guides}
           </Link>

@@ -13,7 +13,15 @@ import { useReducedMotion } from "@/lib/use-reduced-motion";
  * The question, word by word at 60ms a word. The caught phrase comes in last, in red, and
  * its underline draws in after it. `onTyped` fires the moment the last word has landed.
  */
-export function QuestionText({ text, caught, onTyped }: { text: string; caught: string | null; onTyped: () => void }) {
+export function QuestionText({
+  text,
+  caught,
+  onTyped,
+}: {
+  text: string;
+  caught: string | null;
+  onTyped: () => void;
+}) {
   const reduce = useReducedMotion();
   const at = caught ? text.indexOf(caught) : -1;
   const parts =
@@ -48,7 +56,14 @@ export function QuestionText({ text, caught, onTyped }: { text: string; caught: 
 
   // Plain words go in reading order; the caught words wait until all of them are in, then
   // their underline draws.
-  type Token = { text: string; caught: boolean; delay: number; underline: number; bridge: boolean; last?: boolean };
+  type Token = {
+    text: string;
+    caught: boolean;
+    delay: number;
+    underline: number;
+    bridge: boolean;
+    last?: boolean;
+  };
   const raw = parts.flatMap((p) => words(p.text).map((w) => ({ text: w, caught: p.caught })));
   const isWord = (t?: { text: string }) => !!t && !/^\s+$/.test(t.text);
   const plainCount = raw.filter((t) => isWord(t) && !t.caught).length;
@@ -90,7 +105,10 @@ export function QuestionText({ text, caught, onTyped }: { text: string; caught: 
               <motion.span
                 key={ti}
                 // A token wider than the line (a long file name) may break inside itself.
-                className={cn("relative inline-block max-w-full whitespace-normal [overflow-wrap:anywhere]", t.caught && "text-loss")}
+                className={cn(
+                  "relative inline-block max-w-full whitespace-normal [overflow-wrap:anywhere]",
+                  t.caught && "text-loss",
+                )}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: WORD_IN_MS / 1000, ease: EASE, delay: t.delay / 1000 }}
@@ -119,4 +137,3 @@ export function QuestionText({ text, caught, onTyped }: { text: string; caught: 
 }
 
 const words = (s: string) => s.split(/(\s+)/).filter(Boolean);
-

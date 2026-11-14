@@ -7,7 +7,15 @@ import { repoBadgeMarkdown, repoBadgePath } from "@/lib/site";
 const B = copy.acts.share;
 
 /** The README badge for this repo, always its latest shareable verdict, with markdown to copy. */
-export function BadgeSnippet({ repo, id, className }: { repo: string; id: string; className?: string }) {
+export function BadgeSnippet({
+  repo,
+  id,
+  className,
+}: {
+  repo: string;
+  id: string;
+  className?: string;
+}) {
   const md = repoBadgeMarkdown(repo, id);
   return (
     <section aria-labelledby="badge" className={className}>

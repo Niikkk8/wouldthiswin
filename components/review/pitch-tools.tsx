@@ -32,7 +32,11 @@ export function PitchTools({ pitch, repo }: { pitch: Pitch; repo: string }) {
           {P.heading}
         </h2>
         <p className="mt-1 text-[14px] text-text-subtle">{P.note}</p>
-        <div role="tablist" aria-label={P.heading} className="mt-4 inline-flex rounded-control border border-border-strong p-1">
+        <div
+          role="tablist"
+          aria-label={P.heading}
+          className="mt-4 inline-flex rounded-control border border-border-strong p-1"
+        >
           {(["readme", "submission"] as const).map((t) => (
             <button
               key={t}
@@ -48,7 +52,9 @@ export function PitchTools({ pitch, repo }: { pitch: Pitch; repo: string }) {
         </div>
       </header>
       <div role="tabpanel" className="px-5 py-4">
-        <pre className="max-h-[420px] overflow-auto rounded-control bg-bg p-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-text-muted">{text}</pre>
+        <pre className="max-h-[420px] overflow-auto rounded-control bg-bg p-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-text-muted">
+          {text}
+        </pre>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <CopyButton value={text} label={P.tabs[tab]} idle={P.copy} />
           <button
@@ -59,7 +65,11 @@ export function PitchTools({ pitch, repo }: { pitch: Pitch; repo: string }) {
             <Download aria-hidden size={16} strokeWidth={1.75} />
             {P.download}
           </button>
-          {tab === "submission" && <span className="label-mono ml-1 tabular-nums">{fill(P.words, { n: pitch.words })}</span>}
+          {tab === "submission" && (
+            <span className="label-mono ml-1 tabular-nums">
+              {fill(P.words, { n: pitch.words })}
+            </span>
+          )}
         </div>
         {pitch.leftOut.length > 0 && (
           <div className="mt-5">

@@ -27,24 +27,52 @@ const signals = (over: Partial<ScanSignals> = {}): ScanSignals => ({
 describe("findings", () => {
   test("every finding cites something", () => {
     const fs = findingsOf({
-      claims: [claim({}), claim({ status: "unbacked", file: null, searched: ["package.json"], missing: "an SMS provider" }), claim({ status: "unclear", file: null })],
+      claims: [
+        claim({}),
+        claim({
+          status: "unbacked",
+          file: null,
+          searched: ["package.json"],
+          missing: "an SMS provider",
+        }),
+        claim({ status: "unclear", file: null }),
+      ],
       signals: signals({ demo: { status: "none", url: null }, bulkFirstCommit: true }),
     });
     assert.ok(fs.every((f) => f.evidence.length > 0));
-    assert.deepEqual(fs.map((f) => f.id), ["claim-1", "claim-2", "claim-3", "demo", "commits"]);
+    assert.deepEqual(
+      fs.map((f) => f.id),
+      ["claim-1", "claim-2", "claim-3", "demo", "commits"],
+    );
   });
 
   test("a missing core claim is a blocker; a mocked one is major; unclear is minor", () => {
     const [missing, mocked, unclear] = findingsOf({
-      claims: [claim({ status: "unbacked", searched: ["a.ts"] }), claim({ status: "mocked" }), claim({ status: "unclear" })],
+      claims: [
+        claim({ status: "unbacked", searched: ["a.ts"] }),
+        claim({ status: "mocked" }),
+        claim({ status: "unclear" }),
+      ],
       signals: null,
     });
-    assert.deepEqual([missing.severity, mocked.severity, unclear.severity], ["blocker", "major", "minor"]);
-    assert.equal(findingsOf({ claims: [claim({ status: "unbacked", weight: "minor", searched: ["a.ts"] })], signals: null })[0].severity, "major");
+    assert.deepEqual(
+      [missing.severity, mocked.severity, unclear.severity],
+      ["blocker", "major", "minor"],
+    );
+    assert.equal(
+      findingsOf({
+        claims: [claim({ status: "unbacked", weight: "minor", searched: ["a.ts"] })],
+        signals: null,
+      })[0].severity,
+      "major",
+    );
   });
 
   test("passes have no fix; problems have one line", () => {
-    const [pass, fail] = findingsOf({ claims: [claim({}), claim({ status: "mocked" })], signals: null });
+    const [pass, fail] = findingsOf({
+      claims: [claim({}), claim({ status: "mocked" })],
+      signals: null,
+    });
     assert.equal(pass.fix, null);
     assert.match(fail.fix ?? "", /lib\/sms\.ts/);
   });
@@ -63,18 +91,31 @@ describe("evidence links", () => {
 
   test("files link to the exact commit and line", () => {
     assert.equal(
-      evidenceHref({ kind: "file", path: "lib/sms.ts", startLine: 12, endLine: 14 }, "team/app", sha),
+      evidenceHref(
+        { kind: "file", path: "lib/sms.ts", startLine: 12, endLine: 14 },
+        "team/app",
+        sha,
+      ),
       `https://github.com/team/app/blob/${sha}/lib/sms.ts#L12-L14`,
     );
-    assert.equal(evidenceLabel({ kind: "file", path: "lib/sms.ts", startLine: 12, endLine: 12 }), "lib/sms.ts:12");
+    assert.equal(
+      evidenceLabel({ kind: "file", path: "lib/sms.ts", startLine: 12, endLine: 12 }),
+      "lib/sms.ts:12",
+    );
   });
 
   test("odd characters in paths are encoded, folders are kept", () => {
-    assert.equal(evidenceHref({ kind: "file", path: "src/my file#1.ts" }, "t/a", sha), `https://github.com/t/a/blob/${sha}/src/my%20file%231.ts`);
+    assert.equal(
+      evidenceHref({ kind: "file", path: "src/my file#1.ts" }, "t/a", sha),
+      `https://github.com/t/a/blob/${sha}/src/my%20file%231.ts`,
+    );
   });
 
   test("commits link to the commit; a check's own words have no link", () => {
-    assert.equal(evidenceHref({ kind: "commit", sha }, "t/a", undefined), `https://github.com/t/a/commit/${sha}`);
+    assert.equal(
+      evidenceHref({ kind: "commit", sha }, "t/a", undefined),
+      `https://github.com/t/a/commit/${sha}`,
+    );
     assert.equal(evidenceLabel({ kind: "commit", sha }), "bbbbbbb");
     assert.equal(evidenceHref({ kind: "check", detail: "x" }, "t/a", sha), null);
   });
@@ -83,11 +124,19 @@ describe("evidence links", () => {
 describe("agent-checked claims", () => {
   test("a partly-there claim cites the agent's line ranges and has its own fix", () => {
     const [f] = findingsOf({
-      claims: [claim({ status: "unclear", verdict: "partial", citations: [{ path: "src/predict.ts", start: 2, end: 4 }] })],
+      claims: [
+        claim({
+          status: "unclear",
+          verdict: "partial",
+          citations: [{ path: "src/predict.ts", start: 2, end: 4 }],
+        }),
+      ],
       signals: null,
     });
     assert.equal(f.severity, "major");
-    assert.deepEqual(f.evidence, [{ kind: "file", path: "src/predict.ts", startLine: 2, endLine: 4 }]);
+    assert.deepEqual(f.evidence, [
+      { kind: "file", path: "src/predict.ts", startLine: 2, endLine: 4 },
+    ]);
     assert.match(f.fix ?? "", /stand-ins/);
   });
 });

@@ -5,7 +5,13 @@ import { BACKOFF_MS, MAX_RETRIES, SwampedError, withRetry } from "./anthropic-re
 import { SESSION_BUDGET, overBudget } from "./budget";
 import { GitHubError, toGitHubError } from "./github";
 
-const apiError = (status: number) => Anthropic.APIError.generate(status, { error: { type: "x", message: "busy" } }, "busy", new Headers());
+const apiError = (status: number) =>
+  Anthropic.APIError.generate(
+    status,
+    { error: { type: "x", message: "busy" } },
+    "busy",
+    new Headers(),
+  );
 const quiet = <T>(fn: () => Promise<T>) => {
   const { warn, error } = console;
   console.warn = console.error = () => {};
@@ -18,19 +24,36 @@ test("429 and 529 are retried up to 3 times with growing waits, then the panel i
     const waits: number[] = [];
     await quiet(() =>
       assert.rejects(
-        withRetry(async () => { calls++; throw apiError(status); }, "t", async (ms) => { waits.push(ms); }),
+        withRetry(
+          async () => {
+            calls++;
+            throw apiError(status);
+          },
+          "t",
+          async (ms) => {
+            waits.push(ms);
+          },
+        ),
         (e) => e instanceof SwampedError && e.status === status,
       ),
     );
     assert.equal(calls, MAX_RETRIES + 1);
     assert.equal(waits.length, MAX_RETRIES);
-    waits.forEach((w, i) => assert.ok(w >= BACKOFF_MS[i] && w < BACKOFF_MS[i] + 200, `wait ${i}: ${w}`));
+    waits.forEach((w, i) =>
+      assert.ok(w >= BACKOFF_MS[i] && w < BACKOFF_MS[i] + 200, `wait ${i}: ${w}`),
+    );
   }
 });
 
 test("a busy call that recovers returns its result", async () => {
   let calls = 0;
-  const out = await quiet(() => withRetry(async () => (++calls < 3 ? Promise.reject(apiError(529)) : "ok"), "t", async () => {}));
+  const out = await quiet(() =>
+    withRetry(
+      async () => (++calls < 3 ? Promise.reject(apiError(529)) : "ok"),
+      "t",
+      async () => {},
+    ),
+  );
   assert.equal(out, "ok");
   assert.equal(calls, 3);
 });
@@ -38,7 +61,17 @@ test("a busy call that recovers returns its result", async () => {
 test("other errors are not retried", async () => {
   for (const err of [apiError(400), apiError(500), new Error("network")]) {
     let calls = 0;
-    await assert.rejects(withRetry(async () => { calls++; throw err; }, "t", async () => {}), (e) => e === err);
+    await assert.rejects(
+      withRetry(
+        async () => {
+          calls++;
+          throw err;
+        },
+        "t",
+        async () => {},
+      ),
+      (e) => e === err,
+    );
     assert.equal(calls, 1);
   }
 });
@@ -47,7 +80,10 @@ test("a rejected GitHub token is its own error, not 'GitHub is down'", async () 
   await quiet(async () => {
     assert.equal(toGitHubError({ status: 401, message: "Bad credentials" }).code, "githubAuth");
     assert.equal(toGitHubError({ status: 403, response: { headers: {} } }).code, "githubAuth");
-    assert.equal(toGitHubError({ status: 403, response: { headers: { "x-ratelimit-remaining": "0" } } }).code, "githubDown");
+    assert.equal(
+      toGitHubError({ status: 403, response: { headers: { "x-ratelimit-remaining": "0" } } }).code,
+      "githubDown",
+    );
     assert.equal(toGitHubError({ status: 404 }).code, "notFound");
     assert.equal(toGitHubError({ status: 502 }).code, "githubDown");
     assert.equal(toGitHubError(new GitHubError("emptyRepo")).code, "emptyRepo");

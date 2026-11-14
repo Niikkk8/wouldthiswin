@@ -16,7 +16,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/og/[id]/[format]">)
   const format = file.replace(/\.png$/, "");
   if (!ID_RE.test(id) || !isFormat(format)) return new Response("Not found", { status: 404 });
   const found = await loadReviewForImage(id).catch(() => null);
-  if (!found) return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } });
+  if (!found)
+    return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } });
   const fonts = await ogFonts();
   return new ImageResponse(<ShareCard r={found.review} format={format} />, {
     ...SHARE_FORMATS[format],

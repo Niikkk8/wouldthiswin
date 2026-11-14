@@ -13,7 +13,9 @@
     "judges": "node --import tsx scripts/process-judges.ts",
     "typecheck": "tsc --noEmit",
     "stats": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/stats.ts",
-    "eval": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx evals/run.ts"
+    "eval": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx evals/run.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
@@ -46,6 +48,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
+    "knip": "^6.45.1",
+    "prettier": "^3.10.1",
     "sharp": "^0.35.5",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",

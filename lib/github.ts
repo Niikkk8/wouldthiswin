@@ -1,6 +1,7 @@
 import { Octokit } from "@octokit/rest";
 import { parseRepoUrl, type RepoRef } from "./repo-url";
 import { SOURCE_CHARS, isReadablePath, readableText, type Source } from "./sources";
+import { log } from "./log";
 
 export { parseRepoUrl, type RepoRef };
 
@@ -91,15 +92,12 @@ export function toGitHubError(err: unknown): GitHubError {
   if (e?.status === 409) return new GitHubError("emptyRepo");
   const rateLimited = e?.response?.headers?.["x-ratelimit-remaining"] === "0";
   if (e?.status === 401 || (e?.status === 403 && !rateLimited)) {
-    console.error(
-      JSON.stringify({
-        event: "github.token_rejected",
-        severity: "CRITICAL",
-        status: e.status,
-        error: err instanceof Error ? err.message : String(err),
-        fix: "GITHUB_TOKEN is invalid, expired or lacks access. Every session fails until it's replaced in Vercel env vars.",
-      }),
-    );
+    log.error("github.token_rejected", {
+      severity: "CRITICAL",
+      status: e.status,
+      error: err instanceof Error ? err.message : String(err),
+      fix: "GITHUB_TOKEN is invalid, expired or lacks access. Every session fails until it's replaced in Vercel env vars.",
+    });
     return new GitHubError("githubAuth", err instanceof Error ? err.message : String(err));
   }
   // Rate limits, timeouts, 5xx: all "GitHub isn't answering right now".
@@ -283,7 +281,9 @@ export async function fetchRepoData(
       treeEntriesTruncated: shallow.length > TREE_MAX_ENTRIES || headTree.data.truncated,
       headFilePaths: headBlobs,
       headFileSizes: Object.fromEntries(
-        headTree.data.tree.filter((e) => e.type === "blob" && e.path && typeof e.size === "number").map((e) => [e.path as string, e.size as number]),
+        headTree.data.tree
+          .filter((e) => e.type === "blob" && e.path && typeof e.size === "number")
+          .map((e) => [e.path as string, e.size as number]),
       ),
       headTreeTruncated: headTree.data.truncated,
       commits,
@@ -325,16 +325,23 @@ export async function fetchSources(
       onFile(path, "start", true);
       try {
         const res = await orNull(
-          gh.repos.getContent({ owner: ref.owner, repo: ref.repo, path, ref: sha, mediaType: { format: "raw" } }),
+          gh.repos.getContent({
+            owner: ref.owner,
+            repo: ref.repo,
+            path,
+            ref: sha,
+            mediaType: { format: "raw" },
+          }),
         );
         const data: unknown = res?.data;
         const raw = typeof data === "string" ? data : null;
         const text = raw === null ? null : readableText(raw);
         const truncated = raw !== null && raw.length > SOURCE_CHARS;
-        results[i] = text === null ? null : { path, text, ...(truncated ? { truncated: true } : {}) };
+        results[i] =
+          text === null ? null : { path, text, ...(truncated ? { truncated: true } : {}) };
       } catch (err) {
         // One unreadable file shouldn't sink the scan; it just isn't read.
-        console.warn(JSON.stringify({ event: "scan.source", path, error: String(err) }));
+        log.warn("scan.source", { path, error: String(err) });
       }
       onFile(path, "done", results[i] !== null);
     }
@@ -403,10 +410,23 @@ export async function fetchCompare(
  * One file's text at a commit, for the verification agent. Null for anything missing,
  * binary, minified or generated: those are never shown to the model.
  */
-export async function readFileAt(ref: RepoRef, sha: string, path: string, token: string | undefined = process.env.GITHUB_TOKEN): Promise<string | null> {
+export async function readFileAt(
+  ref: RepoRef,
+  sha: string,
+  path: string,
+  token: string | undefined = process.env.GITHUB_TOKEN,
+): Promise<string | null> {
   if (!isReadablePath(path)) return null;
   try {
-    const res = await orNull(client(token).repos.getContent({ owner: ref.owner, repo: ref.repo, path, ref: sha, mediaType: { format: "raw" } }));
+    const res = await orNull(
+      client(token).repos.getContent({
+        owner: ref.owner,
+        repo: ref.repo,
+        path,
+        ref: sha,
+        mediaType: { format: "raw" },
+      }),
+    );
     const data: unknown = res?.data;
     if (typeof data !== "string") return null;
     return readableText(data) === null ? null : data;
@@ -421,20 +441,44 @@ const MAX_CHECK_FILE = 300 * 1024;
  * A file's raw text for the deterministic checks, env files included (the secret check needs
  * them). It never reaches a model or the database: only redacted findings leave the check.
  */
-export async function readRawAt(ref: RepoRef, sha: string, path: string, token: string | undefined = process.env.GITHUB_TOKEN): Promise<string | null> {
+export async function readRawAt(
+  ref: RepoRef,
+  sha: string,
+  path: string,
+  token: string | undefined = process.env.GITHUB_TOKEN,
+): Promise<string | null> {
   try {
-    const res = await orNull(client(token).repos.getContent({ owner: ref.owner, repo: ref.repo, path, ref: sha, mediaType: { format: "raw" } }));
+    const res = await orNull(
+      client(token).repos.getContent({
+        owner: ref.owner,
+        repo: ref.repo,
+        path,
+        ref: sha,
+        mediaType: { format: "raw" },
+      }),
+    );
     const data: unknown = res?.data;
-    return typeof data === "string" && data.length <= MAX_CHECK_FILE && !data.includes("\u0000") ? data : null;
+    return typeof data === "string" && data.length <= MAX_CHECK_FILE && !data.includes("\u0000")
+      ? data
+      : null;
   } catch {
     return null;
   }
 }
 
 /** The commits that touched one path, newest first, at most 10. Deleted files still have history. */
-export async function commitsTouching(ref: RepoRef, path: string, token: string | undefined = process.env.GITHUB_TOKEN): Promise<string[]> {
+export async function commitsTouching(
+  ref: RepoRef,
+  path: string,
+  token: string | undefined = process.env.GITHUB_TOKEN,
+): Promise<string[]> {
   try {
-    const { data } = await client(token).repos.listCommits({ owner: ref.owner, repo: ref.repo, path, per_page: 10 });
+    const { data } = await client(token).repos.listCommits({
+      owner: ref.owner,
+      repo: ref.repo,
+      path,
+      per_page: 10,
+    });
     return data.map((c) => c.sha);
   } catch {
     return [];

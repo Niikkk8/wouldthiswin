@@ -36,7 +36,17 @@ import { ActionBar } from "./action-bar";
 
 const S = copy.acts.share;
 
-function Field({ label, note, value, children }: { label: string; note: string; value: string; children?: React.ReactNode }) {
+function Field({
+  label,
+  note,
+  value,
+  children,
+}: {
+  label: string;
+  note: string;
+  value: string;
+  children?: React.ReactNode;
+}) {
   return (
     <section className="min-w-0">
       <h2 className="label-mono uppercase">{label}</h2>
@@ -76,9 +86,22 @@ function useFit(format: PostFormat) {
 }
 
 /** The image people will post: the real PNG, or for the sample, the same card drawn in the page. */
-function Preview({ review, format, sample }: { review: Review; format: PostFormat; sample: boolean }) {
+function Preview({
+  review,
+  format,
+  sample,
+}: {
+  review: Review;
+  format: PostFormat;
+  sample: boolean;
+}) {
   const { ref, w, h } = useFit(format);
-  const alt = fill(S.imageAlt, { repo: review.repo, odds: review.odds, tier: copy.tiers[review.tier], oneLiner: review.oneLiner });
+  const alt = fill(S.imageAlt, {
+    repo: review.repo,
+    odds: review.odds,
+    tier: copy.tiers[review.tier],
+    oneLiner: review.oneLiner,
+  });
   return (
     <div ref={ref} className="mt-4 w-full">
       {w > 0 &&
@@ -102,9 +125,19 @@ function Preview({ review, format, sample }: { review: Review; format: PostForma
   );
 }
 
-function FormatPicker({ format, onChange }: { format: PostFormat; onChange: (f: PostFormat) => void }) {
+function FormatPicker({
+  format,
+  onChange,
+}: {
+  format: PostFormat;
+  onChange: (f: PostFormat) => void;
+}) {
   return (
-    <div role="group" aria-label={S.formatsLabel} className="inline-flex rounded-control border border-border-strong p-1">
+    <div
+      role="group"
+      aria-label={S.formatsLabel}
+      className="inline-flex rounded-control border border-border-strong p-1"
+    >
       {POST_FORMATS.map((f) => (
         <button
           key={f}
@@ -157,7 +190,15 @@ function downloadFile(file: File) {
  * session the images are drawn from the fixture and nothing links to a review that doesn't
  * exist. `phone` is the page the QR code opens: the same screen for whoever holds the link.
  */
-export function ShareScreen({ review: r, demo = false, phone = false }: { review: Review; demo?: boolean; phone?: boolean }) {
+export function ShareScreen({
+  review: r,
+  demo = false,
+  phone = false,
+}: {
+  review: Review;
+  demo?: boolean;
+  phone?: boolean;
+}) {
   const reduce = useReducedMotion();
   const desktop = useDesktop();
   const [format, setFormat] = useState<PostFormat>("landscape");
@@ -166,7 +207,11 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
   const shared = visibility.shareable;
   const getFile = useImageFiles(r, !demo && !desktop, format);
   const caption = shared ? captionFor(r) : shareText(r);
-  const origin = useSyncExternalStore(noSubscribe, () => window.location.origin, () => SITE_URL);
+  const origin = useSyncExternalStore(
+    noSubscribe,
+    () => window.location.origin,
+    () => SITE_URL,
+  );
 
   const shareImage = async () => {
     logShare(r.id, { kind: "share_image", format });
@@ -200,7 +245,11 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
         >
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
             <FormatPicker format={format} onChange={setFormat} />
-            {demo ? <SampleTag>{copy.demo.sampleImages}</SampleTag> : <p className="label-mono">{S.formatNotes[format]}</p>}
+            {demo ? (
+              <SampleTag>{copy.demo.sampleImages}</SampleTag>
+            ) : (
+              <p className="label-mono">{S.formatNotes[format]}</p>
+            )}
           </div>
           <Preview review={r} format={format} sample={demo} />
         </motion.section>
@@ -238,7 +287,10 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
                       download={imageFileName(r, f)}
                       onClick={() => logShare(r.id, { kind: "download", format: f })}
                       aria-label={fill(S.downloadFormat, { format: S.formats[f] })}
-                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "gap-1.5 px-3 text-[14px]")}
+                      className={cn(
+                        buttonVariants({ variant: "secondary", size: "sm" }),
+                        "gap-1.5 px-3 text-[14px]",
+                      )}
                     >
                       <Download aria-hidden size={16} strokeWidth={1.75} />
                       {S.formats[f]}
@@ -253,7 +305,11 @@ export function ShareScreen({ review: r, demo = false, phone = false }: { review
                   {caption}
                 </p>
                 <div className="mt-2">
-                  <CopyButton value={caption} label={S.captionLabel} onCopied={() => logShare(r.id, { kind: "caption_copied" })} />
+                  <CopyButton
+                    value={caption}
+                    label={S.captionLabel}
+                    onCopied={() => logShare(r.id, { kind: "caption_copied" })}
+                  />
                 </div>
               </section>
 

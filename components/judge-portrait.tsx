@@ -101,7 +101,15 @@ export function JudgePortrait({
  * 40px the 80px crop is drawn at half size, so on a 2x screen every art pixel is exactly one
  * device pixel, and on a 1x screen nearest-neighbour keeps every pixel it shows sharp.
  */
-export function JudgeHead({ judge, size = AVATAR_SIZE, className }: { judge: Judge; size?: number; className?: string }) {
+export function JudgeHead({
+  judge,
+  size = AVATAR_SIZE,
+  className,
+}: {
+  judge: Judge;
+  size?: number;
+  className?: string;
+}) {
   const crop = HEAD_CROP[judge];
   const scale = size / crop.size;
   return (

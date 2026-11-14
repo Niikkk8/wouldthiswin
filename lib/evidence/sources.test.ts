@@ -20,8 +20,14 @@ const HTML = `<html><head><title>PulseBoard | Devpost</title><script>var x = "<d
 
 describe("Devpost URLs", () => {
   test("only devpost.com project pages", () => {
-    assert.equal(parseDevpostUrl("devpost.com/software/pulseboard"), "https://devpost.com/software/pulseboard");
-    assert.equal(parseDevpostUrl("https://devpost.com/software/pulseboard/"), "https://devpost.com/software/pulseboard");
+    assert.equal(
+      parseDevpostUrl("devpost.com/software/pulseboard"),
+      "https://devpost.com/software/pulseboard",
+    );
+    assert.equal(
+      parseDevpostUrl("https://devpost.com/software/pulseboard/"),
+      "https://devpost.com/software/pulseboard",
+    );
     assert.equal(parseDevpostUrl("https://evil.com/software/pulseboard"), null);
     assert.equal(parseDevpostUrl("https://devpost.com.evil.com/software/x"), null);
     assert.equal(parseDevpostUrl("https://devpost.com/hackathons"), null);
@@ -33,7 +39,10 @@ describe("parsing a Devpost page", () => {
   const d = parseDevpost(HTML);
 
   test("the write-up, without scripts or markup", () => {
-    assert.match(d.about, /predicts crowd density in real time using a custom ML model & live camera feeds/);
+    assert.match(
+      d.about,
+      /predicts crowd density in real time using a custom ML model & live camera feeds/,
+    );
     assert.doesNotMatch(d.about, /<|var x/);
   });
 
@@ -42,26 +51,57 @@ describe("parsing a Devpost page", () => {
   });
 
   test("try-it-out links", () => {
-    assert.deepEqual(d.links, ["https://pulseboard.vercel.app", "https://github.com/team/pulseboard"]);
+    assert.deepEqual(d.links, [
+      "https://pulseboard.vercel.app",
+      "https://github.com/team/pulseboard",
+    ]);
   });
 
   test("a page without those sections parses to nothing, not to guesses", () => {
-    assert.deepEqual(parseDevpost("<html><body>Not found</body></html>"), { about: "", builtWith: [], links: [] });
+    assert.deepEqual(parseDevpost("<html><body>Not found</body></html>"), {
+      about: "",
+      builtWith: [],
+      links: [],
+    });
   });
 
   test("a failed fetch is null", async () => {
-    const page = (ok: boolean): Page => ({ ok, status: ok ? 200 : 404, finalUrl: null, contentType: "text/html", body: ok ? HTML : "", truncated: false, reason: null });
-    assert.equal(await fetchDevpost("https://devpost.com/software/x", async () => page(false)), null);
-    assert.deepEqual((await fetchDevpost("https://devpost.com/software/x", async () => page(true)))?.builtWith, ["next.js", "python"]);
+    const page = (ok: boolean): Page => ({
+      ok,
+      status: ok ? 200 : 404,
+      finalUrl: null,
+      contentType: "text/html",
+      body: ok ? HTML : "",
+      truncated: false,
+      reason: null,
+    });
+    assert.equal(
+      await fetchDevpost("https://devpost.com/software/x", async () => page(false)),
+      null,
+    );
+    assert.deepEqual(
+      (await fetchDevpost("https://devpost.com/software/x", async () => page(true)))?.builtWith,
+      ["next.js", "python"],
+    );
   });
 });
 
 describe("claim sources", () => {
   test("README always, then Devpost and pasted text when they have something", () => {
-    const s = claimSources({ readme: "# Hi", devpost: parseDevpost(HTML), submission: "  We built it in 36 hours.  " });
-    assert.deepEqual(s.map((x) => x.kind), ["readme", "devpost", "submission"]);
+    const s = claimSources({
+      readme: "# Hi",
+      devpost: parseDevpost(HTML),
+      submission: "  We built it in 36 hours.  ",
+    });
+    assert.deepEqual(
+      s.map((x) => x.kind),
+      ["readme", "devpost", "submission"],
+    );
     assert.match(s[1].text, /Built with: next\.js, python$/);
     assert.equal(s[2].text, "We built it in 36 hours.");
-    assert.deepEqual(claimSources({ readme: "# Hi", devpost: null, submission: " " }).map((x) => x.kind), ["readme"]);
+    assert.deepEqual(
+      claimSources({ readme: "# Hi", devpost: null, submission: " " }).map((x) => x.kind),
+      ["readme"],
+    );
   });
 });

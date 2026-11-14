@@ -4,7 +4,11 @@ import { SiteHeader } from "@/components/site-header";
 import { copy, fill } from "@/lib/copy";
 import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = pageMeta({ title: copy.seo.privacy.title, description: copy.privacy.lede, path: "/privacy" });
+export const metadata: Metadata = pageMeta({
+  title: copy.seo.privacy.title,
+  description: copy.privacy.lede,
+  path: "/privacy",
+});
 
 const UPDATED = "9 November 2026";
 
@@ -14,8 +18,12 @@ export default function PrivacyPage() {
       <SiteHeader />
       <main id="main" tabIndex={-1} className="page-x flex-1 pt-10 pb-20 lg:pt-14">
         <article className="max-w-[720px]">
-          <h1 className="text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act">{copy.privacy.title}</h1>
-          <p className="mt-6 text-[19px] leading-[1.45] text-text-muted lg:text-[22px]">{copy.privacy.lede}</p>
+          <h1 className="text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act">
+            {copy.privacy.title}
+          </h1>
+          <p className="mt-6 text-[19px] leading-[1.45] text-text-muted lg:text-[22px]">
+            {copy.privacy.lede}
+          </p>
           {copy.privacy.sections.map((s) => (
             <section key={s.heading} className="mt-12">
               <h2 className="text-[22px] font-extrabold tracking-[-0.02em]">{s.heading}</h2>

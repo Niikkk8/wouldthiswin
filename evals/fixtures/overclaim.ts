@@ -13,12 +13,16 @@ npm run dev
   files: {
     "package.json": '{ "scripts": { "dev": "next dev" }, "dependencies": { "next": "16" } }',
     "package-lock.json": "{}",
-    "lib/predict.ts": 'import data from "../data/crowd.json";\nexport const predict = () => Math.round(Math.random() * 100);',
+    "lib/predict.ts":
+      'import data from "../data/crowd.json";\nexport const predict = () => Math.round(Math.random() * 100);',
     "data/crowd.json": "[]",
     LICENSE: "MIT",
     "lib/predict.test.ts": "test('x', () => {});",
     ".github/workflows/ci.yml": "on: push",
   },
-  claims: [claim("Predicts density with our custom ML model", "ai"), claim("Streams crowd data in real time", "performance")],
+  claims: [
+    claim("Predicts density with our custom ML model", "ai"),
+    claim("Streams crowd data in real time", "performance"),
+  ],
   expected: ["ai", "readme"],
 };

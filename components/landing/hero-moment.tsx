@@ -25,8 +25,19 @@ const question = (j: Judge) => DEMO_SCAN.questions.find((q) => q.judge === j)!.t
 
 // The sample's odds: the SMS claim isn't in the code (50 → 31), then the clinic pays (31 → 36).
 const sms = DEMO_SCAN.claims.find((c) => c.claim.startsWith("SMS"))!;
-const DROP = makeEvent([], { act: 1, kind: "claim", status: "unbacked", rawDelta: -19, reason: sms.label });
-const PAYS = makeEvent([DROP], { act: 2, kind: "answer", rawDelta: 5, reason: copy.landing.moment.paysReason });
+const DROP = makeEvent([], {
+  act: 1,
+  kind: "claim",
+  status: "unbacked",
+  rawDelta: -19,
+  reason: sms.label,
+});
+const PAYS = makeEvent([DROP], {
+  act: 2,
+  kind: "answer",
+  rawDelta: 5,
+  reason: copy.landing.moment.paysReason,
+});
 
 type Moment = {
   judge: Judge;
@@ -42,9 +53,27 @@ type Moment = {
 };
 
 const MOMENTS: Moment[] = [
-  { judge: "engineer", askAt: 300, pose: { kind: "drop", at: 2500 }, event: { at: 2500, events: [DROP] }, before: [] },
-  { judge: "investor", askAt: 300, pose: { kind: "gain", at: 2300 }, event: { at: 2300, events: [DROP, PAYS] }, before: [DROP] },
-  { judge: "tired", askAt: 2500, dozeUntil: 1700, pose: { kind: "gain", at: 1700, until: 2500 }, before: [DROP, PAYS] },
+  {
+    judge: "engineer",
+    askAt: 300,
+    pose: { kind: "drop", at: 2500 },
+    event: { at: 2500, events: [DROP] },
+    before: [],
+  },
+  {
+    judge: "investor",
+    askAt: 300,
+    pose: { kind: "gain", at: 2300 },
+    event: { at: 2300, events: [DROP, PAYS] },
+    before: [DROP],
+  },
+  {
+    judge: "tired",
+    askAt: 2500,
+    dozeUntil: 1700,
+    pose: { kind: "gain", at: 1700, until: 2500 },
+    before: [DROP, PAYS],
+  },
 ];
 const LOOP_MS = MOMENTS.length * MOMENT_MS;
 /** Reduced motion: moment 1, after the odds have dropped. */
@@ -89,7 +118,9 @@ function useLoopClock(run: boolean, box: React.RefObject<HTMLElement | null>): n
       }, TICK_MS);
     };
     const whenIdle = () => {
-      idle = ric ? window.requestIdleCallback(begin, { timeout: 2000 }) : (setTimeout(begin, 600) as unknown as number);
+      idle = ric
+        ? window.requestIdleCallback(begin, { timeout: 2000 })
+        : (setTimeout(begin, 600) as unknown as number);
     };
     if (document.readyState === "complete") whenIdle();
     else window.addEventListener("load", whenIdle, { once: true });
@@ -127,13 +158,18 @@ export function HeroMoment({ className }: { className?: string }) {
   const asking = local >= m.askAt;
   const shown = Math.min(words.length, Math.max(0, Math.floor((local - m.askAt) / WORD_MS) + 1));
   const talking = asking && local < m.askAt + words.length * WORD_MS + 150;
-  const pose = m.pose && local >= m.pose.at && local < (m.pose.until ?? Infinity) ? m.pose.kind : null;
+  const pose =
+    m.pose && local >= m.pose.at && local < (m.pose.until ?? Infinity) ? m.pose.kind : null;
   const dozing = m.dozeUntil !== undefined && local < m.dozeUntil;
   const events = m.event && local >= m.event.at ? m.event.events : m.before;
   const others = ORDER.filter((j) => j !== m.judge);
 
   return (
-    <figure ref={box} className={cn("w-full max-w-[544px] xl:max-w-[448px] 2xl:max-w-[544px]", className)} aria-label={copy.landing.moment.describe}>
+    <figure
+      ref={box}
+      className={cn("w-full max-w-[544px] xl:max-w-[448px] 2xl:max-w-[544px]", className)}
+      aria-label={copy.landing.moment.describe}
+    >
       <div aria-hidden>
         <SampleTag>{copy.landing.moment.label}</SampleTag>
 
@@ -153,7 +189,13 @@ export function HeroMoment({ className }: { className?: string }) {
                   <p className="label-mono">{copy.judges[m.judge].name}</p>
                   <p className="mt-1 text-[17px] leading-snug font-bold">
                     {words.map((w, i) => (
-                      <span key={i} className={cn("transition-colors duration-150", i < shown ? "text-text" : "text-text-subtle/40")}>
+                      <span
+                        key={i}
+                        className={cn(
+                          "transition-colors duration-150",
+                          i < shown ? "text-text" : "text-text-subtle/40",
+                        )}
+                      >
                         {w}{" "}
                       </span>
                     ))}
@@ -173,15 +215,38 @@ export function HeroMoment({ className }: { className?: string }) {
         <ul className="mt-4 flex items-end gap-2 sm:gap-4 xl:gap-2 2xl:gap-4">
           <li className="min-w-0">
             <div className="overflow-hidden rounded-card border border-border-strong">
-              <JudgePortrait key={`s-${m.judge}`} judge={m.judge} size={128} talking={talking} pose={pose} dozing={dozing} label={false} className="sm:hidden" />
-              <JudgePortrait key={`l-${m.judge}`} judge={m.judge} size={256} talking={talking} pose={pose} dozing={dozing} label={false} className="max-sm:hidden" />
+              <JudgePortrait
+                key={`s-${m.judge}`}
+                judge={m.judge}
+                size={128}
+                talking={talking}
+                pose={pose}
+                dozing={dozing}
+                label={false}
+                className="sm:hidden"
+              />
+              <JudgePortrait
+                key={`l-${m.judge}`}
+                judge={m.judge}
+                size={256}
+                talking={talking}
+                pose={pose}
+                dozing={dozing}
+                label={false}
+                className="max-sm:hidden"
+              />
             </div>
           </li>
           {others.map((j) => (
             <li key={j} className="min-w-0 opacity-80">
               {/* Narrow windows trim the shoulders, never the face, where the row would crowd the text. */}
               <div className="w-[96px] overflow-hidden rounded-card border border-border sm:w-auto xl:w-[88px] 2xl:w-auto">
-                <JudgePortrait judge={j} size={128} label={false} className="-mx-4 sm:mx-0 xl:-mx-5 2xl:mx-0" />
+                <JudgePortrait
+                  judge={j}
+                  size={128}
+                  label={false}
+                  className="-mx-4 sm:mx-0 xl:-mx-5 2xl:mx-0"
+                />
               </div>
             </li>
           ))}

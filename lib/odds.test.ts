@@ -107,8 +107,18 @@ describe("odds", () => {
 
   test("events chain and store the delta actually applied", () => {
     const events: OddsEvent[] = [];
-    events.push(makeEvent(events, { act: 1, kind: "claim", status: "unbacked", rawDelta: -19, reason: "a" }));
-    assert.deepEqual(events[0], { act: 1, kind: "claim", status: "unbacked", delta: -19, reason: "a", before: 50, after: 31 });
+    events.push(
+      makeEvent(events, { act: 1, kind: "claim", status: "unbacked", rawDelta: -19, reason: "a" }),
+    );
+    assert.deepEqual(events[0], {
+      act: 1,
+      kind: "claim",
+      status: "unbacked",
+      delta: -19,
+      reason: "a",
+      before: 50,
+      after: 31,
+    });
     events.push(makeEvent(events, { act: 2, kind: "answer", rawDelta: 5, reason: "b" }));
     assert.equal(events[1].before, 31);
     assert.equal(events[1].after, 36);
@@ -118,7 +128,10 @@ describe("odds", () => {
   test("a delta past the floor is recorded as what it moved", () => {
     let events: OddsEvent[] = [];
     for (let i = 0; i < 3; i++) {
-      events = [...events, makeEvent(events, { act: 1, kind: "claim", rawDelta: -19, reason: "x" })];
+      events = [
+        ...events,
+        makeEvent(events, { act: 1, kind: "claim", rawDelta: -19, reason: "x" }),
+      ];
     }
     // 50 -> 31 -> 12 -> 1 (not -7)
     assert.equal(events[2].after, 1);
@@ -128,7 +141,10 @@ describe("odds", () => {
   test("never above 99", () => {
     let events: OddsEvent[] = [];
     for (let i = 0; i < 10; i++) {
-      events = [...events, makeEvent(events, { act: 2, kind: "answer", rawDelta: 12, reason: "x" })];
+      events = [
+        ...events,
+        makeEvent(events, { act: 2, kind: "answer", rawDelta: 12, reason: "x" }),
+      ];
     }
     assert.equal(currentOdds(events), 99);
   });

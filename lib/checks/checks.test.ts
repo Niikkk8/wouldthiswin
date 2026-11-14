@@ -23,42 +23,77 @@ const KEYS = {
   github: join("gh", "p_", RANDOM, "abcd"),
 };
 const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
-const jwt = (role: string) => join("eyJ", b64({ alg: "HS256" }).slice(3), ".", b64({ iss: "supabase", role }), ".", "s1gnatureS1gnatureS1gnature");
+const jwt = (role: string) =>
+  join(
+    "eyJ",
+    b64({ alg: "HS256" }).slice(3),
+    ".",
+    b64({ iss: "supabase", role }),
+    ".",
+    "s1gnatureS1gnatureS1gnature",
+  );
 const pem = join("-----BEGIN ", "RSA ", "PRIVATE KEY-----");
 
 describe("check 1: secrets in the tree", () => {
   test("every provider's key shape is caught, with a redacted prefix and path:line", () => {
-    const text = Object.values(KEYS).map((k, i) => `KEY_${i}=${k}`).join("\n");
+    const text = Object.values(KEYS)
+      .map((k, i) => `KEY_${i}=${k}`)
+      .join("\n");
     const found = secretsInTree(snapshot({ files: new Map([["src/config.ts", text]]) }));
     assert.equal(found.length, Object.keys(KEYS).length);
     for (const f of found) {
       assert.equal(f.visibility, "private");
       assert.equal(f.severity, "blocker");
-      assert.ok(!Object.values(KEYS).some((k) => f.detail.includes(k)), "the key itself is never kept");
+      assert.ok(
+        !Object.values(KEYS).some((k) => f.detail.includes(k)),
+        "the key itself is never kept",
+      );
     }
     assert.match(found[0].detail, /at src\/config\.ts:1/);
   });
 
   test("a Supabase JWT counts only with the service_role claim; private keys always", () => {
-    const files = new Map([["lib/db.ts", `const anon = "${jwt("anon")}";\nconst admin = "${jwt("service_role")}";\n${pem}`]]);
+    const files = new Map([
+      [
+        "lib/db.ts",
+        `const anon = "${jwt("anon")}";\nconst admin = "${jwt("service_role")}";\n${pem}`,
+      ],
+    ]);
     const found = secretsInTree(snapshot({ files }));
-    assert.deepEqual(found.map((f) => f.title), ["Supabase service-role key in the repo", "Private key in the repo"]);
+    assert.deepEqual(
+      found.map((f) => f.title),
+      ["Supabase service-role key in the repo", "Private key in the repo"],
+    );
     assert.equal(jwtRole(jwt("service_role")), "service_role");
   });
 
   test("placeholders aren't keys", () => {
-    const files = new Map([[".env.example", join("OPENAI_API_KEY=sk", "-your-openai-api-key-goes-here-xxxxxx\nAWS=AK", "IAXXXXXXXXXXXXXXXX")]]);
+    const files = new Map([
+      [
+        ".env.example",
+        join(
+          "OPENAI_API_KEY=sk",
+          "-your-openai-api-key-goes-here-xxxxxx\nAWS=AK",
+          "IAXXXXXXXXXXXXXXXX",
+        ),
+      ],
+    ]);
     assert.deepEqual(secretsInTree(snapshot({ files })), []);
     assert.ok(entropy("xxxxxxxxxxxxxxxx") < 1);
   });
 
   test("a committed .env is a finding even unread; templates aren't", () => {
-    const found = secretsInTree(snapshot({ tree: [".env", ".env.local", ".env.example", "server/.env.production"] }));
-    assert.deepEqual(found.map((f) => f.evidence[0]), [
-      { kind: "file", path: ".env" },
-      { kind: "file", path: ".env.local" },
-      { kind: "file", path: "server/.env.production" },
-    ]);
+    const found = secretsInTree(
+      snapshot({ tree: [".env", ".env.local", ".env.example", "server/.env.production"] }),
+    );
+    assert.deepEqual(
+      found.map((f) => f.evidence[0]),
+      [
+        { kind: "file", path: ".env" },
+        { kind: "file", path: ".env.local" },
+        { kind: "file", path: "server/.env.production" },
+      ],
+    );
   });
 
   test("redaction keeps a few characters at most", () => {
@@ -69,7 +104,15 @@ describe("check 1: secrets in the tree", () => {
 
 describe("check 2: secrets in history", () => {
   test("an env file any commit touched is flagged at its oldest commit, even if deleted", () => {
-    const found = secretsInHistory(snapshot({ envHistory: { ".env": ["c".repeat(40), "b".repeat(40)], ".env.example": ["d".repeat(40)], ".env.local": [] } }));
+    const found = secretsInHistory(
+      snapshot({
+        envHistory: {
+          ".env": ["c".repeat(40), "b".repeat(40)],
+          ".env.example": ["d".repeat(40)],
+          ".env.local": [],
+        },
+      }),
+    );
     assert.equal(found.length, 1);
     assert.match(found[0].detail, /at bbbbbbb/);
     assert.equal(found[0].visibility, "private");
@@ -83,45 +126,93 @@ describe("check 3: template leftovers", () => {
       ["index.html", "<head>\n<title>Vite + React + TS</title>"],
       ["app/page.tsx", "<p>Get started by editing app/page.tsx</p>"],
     ]);
-    const found = templateLeftovers(snapshot({ readme: "This is a [Next.js](https://nextjs.org) project bootstrapped with `create-next-app`.", files, tree: ["public/next.svg", "public/vercel.svg"] }));
-    assert.deepEqual(found.map((f) => f.title), [
-      "The README is still the starter template's",
-      "The page title is still Create Next App",
-      "The page title is still Vite starter",
-      "An untouched create-next-app starter page",
-      "The starter's placeholder images are still here",
-    ]);
-    assert.deepEqual(found[1].evidence[0], { kind: "file", path: "app/layout.tsx", startLine: 2, endLine: 2 });
+    const found = templateLeftovers(
+      snapshot({
+        readme:
+          "This is a [Next.js](https://nextjs.org) project bootstrapped with `create-next-app`.",
+        files,
+        tree: ["public/next.svg", "public/vercel.svg"],
+      }),
+    );
+    assert.deepEqual(
+      found.map((f) => f.title),
+      [
+        "The README is still the starter template's",
+        "The page title is still Create Next App",
+        "The page title is still Vite starter",
+        "An untouched create-next-app starter page",
+        "The starter's placeholder images are still here",
+      ],
+    );
+    assert.deepEqual(found[1].evidence[0], {
+      kind: "file",
+      path: "app/layout.tsx",
+      startLine: 2,
+      endLine: 2,
+    });
   });
 
   test("a project's own README and title are clean", () => {
     const files = new Map([["app/layout.tsx", 'export const metadata = { title: "PulseBoard" };']]);
-    assert.deepEqual(templateLeftovers(snapshot({ readme: "# PulseBoard\nCrowd analytics for stadiums.", files })), []);
+    assert.deepEqual(
+      templateLeftovers(snapshot({ readme: "# PulseBoard\nCrowd analytics for stadiums.", files })),
+      [],
+    );
   });
 });
 
 describe("check 4: setup", () => {
   test("env vars read in code but missing from .env.example", () => {
     const files = new Map([
-      ["src/a.ts", "const k = process.env.OPENAI_API_KEY;\nconst p = process.env.PORT;\nconst u = import.meta.env.VITE_API_URL;"],
+      [
+        "src/a.ts",
+        "const k = process.env.OPENAI_API_KEY;\nconst p = process.env.PORT;\nconst u = import.meta.env.VITE_API_URL;",
+      ],
       ["api/main.py", 'key = os.environ["GROQ_KEY"]\nx = os.getenv("DB_URL")'],
       [".env.example", "OPENAI_API_KEY=\n"],
     ]);
-    assert.deepEqual([...envReads(files).keys()], ["OPENAI_API_KEY", "VITE_API_URL", "GROQ_KEY", "DB_URL"]);
-    const [f] = setupReproducibility(snapshot({ files, readme: "npm install\nnpm run dev", tree: ["package.json", "package-lock.json"] }));
+    assert.deepEqual(
+      [...envReads(files).keys()],
+      ["OPENAI_API_KEY", "VITE_API_URL", "GROQ_KEY", "DB_URL"],
+    );
+    const [f] = setupReproducibility(
+      snapshot({
+        files,
+        readme: "npm install\nnpm run dev",
+        tree: ["package.json", "package-lock.json"],
+      }),
+    );
     assert.equal(f.title, "3 env vars aren't in .env.example");
     assert.match(f.detail, /VITE_API_URL, GROQ_KEY, DB_URL/);
   });
 
   test("no lockfile, no steps, and a README script that doesn't exist", () => {
     const files = new Map([["package.json", '{ "scripts": { "dev": "next dev" } }']]);
-    const found = setupReproducibility(snapshot({ tree: ["package.json"], files, readme: "Run `npm run seed` first." }));
-    assert.deepEqual(found.map((f) => f.title), ["No lockfile", "The README doesn't say how to run it", "The README runs seed, which package.json doesn't have"]);
+    const found = setupReproducibility(
+      snapshot({ tree: ["package.json"], files, readme: "Run `npm run seed` first." }),
+    );
+    assert.deepEqual(
+      found.map((f) => f.title),
+      [
+        "No lockfile",
+        "The README doesn't say how to run it",
+        "The README runs seed, which package.json doesn't have",
+      ],
+    );
   });
 
   test("a runnable repo is clean", () => {
     const files = new Map([["package.json", '{ "scripts": { "dev": "next dev" } }']]);
-    assert.deepEqual(setupReproducibility(snapshot({ tree: ["package.json", "pnpm-lock.yaml"], files, readme: "pnpm install\npnpm dev" })), []);
+    assert.deepEqual(
+      setupReproducibility(
+        snapshot({
+          tree: ["package.json", "pnpm-lock.yaml"],
+          files,
+          readme: "pnpm install\npnpm dev",
+        }),
+      ),
+      [],
+    );
   });
 });
 
@@ -160,31 +251,73 @@ npm install && npm run dev`;
 
 describe("check 6: hygiene", () => {
   test("no tests, CI or license; big files; committed node_modules", () => {
-    const found = hygiene(snapshot({ tree: ["src/a.ts", "node_modules/x/i.js", "assets/video.mp4"], sizes: { "assets/video.mp4": 5 * 1024 * 1024, "node_modules/x/i.js": 9 * 1024 * 1024 } }));
-    assert.deepEqual(found.map((f) => f.title), ["No tests", "No CI", "No license", "1 files over 1 MB", "Dependencies or build output are committed"]);
+    const found = hygiene(
+      snapshot({
+        tree: ["src/a.ts", "node_modules/x/i.js", "assets/video.mp4"],
+        sizes: { "assets/video.mp4": 5 * 1024 * 1024, "node_modules/x/i.js": 9 * 1024 * 1024 },
+      }),
+    );
+    assert.deepEqual(
+      found.map((f) => f.title),
+      [
+        "No tests",
+        "No CI",
+        "No license",
+        "1 files over 1 MB",
+        "Dependencies or build output are committed",
+      ],
+    );
     assert.match(found[3].detail, /assets\/video\.mp4 \(5\.0 MB\)/);
   });
 
   test("a tidy repo is clean", () => {
-    assert.deepEqual(hygiene(snapshot({ tree: ["src/a.test.ts", ".github/workflows/ci.yml", "LICENSE"] })), []);
+    assert.deepEqual(
+      hygiene(snapshot({ tree: ["src/a.test.ts", ".github/workflows/ci.yml", "LICENSE"] })),
+      [],
+    );
   });
 });
 
 describe("all checks", () => {
   test("a clean repo yields only the README pass", () => {
-    const found = runChecks(snapshot({ tree: ["LICENSE", "src/a.test.ts", ".github/workflows/ci.yml"], readme: "" }));
-    assert.deepEqual(found.map((f) => f.check), ["setup", "readme"]);
+    const found = runChecks(
+      snapshot({ tree: ["LICENSE", "src/a.test.ts", ".github/workflows/ci.yml"], readme: "" }),
+    );
+    assert.deepEqual(
+      found.map((f) => f.check),
+      ["setup", "readme"],
+    );
   });
 });
 
 describe("collecting the snapshot", () => {
   test("env files first, then the usual suspects, then code shallowest first; nothing vendored or huge", () => {
-    const tree = ["src/deep/x/y.ts", "src/a.ts", ".env", "app/layout.tsx", "node_modules/z/i.js", "big.json", "logo.png", "package.json"];
-    assert.deepEqual(pickCheckFiles(tree, { "big.json": 5 * 1024 * 1024 }), [".env", "app/layout.tsx", "package.json", "src/a.ts", "src/deep/x/y.ts"]);
+    const tree = [
+      "src/deep/x/y.ts",
+      "src/a.ts",
+      ".env",
+      "app/layout.tsx",
+      "node_modules/z/i.js",
+      "big.json",
+      "logo.png",
+      "package.json",
+    ];
+    assert.deepEqual(pickCheckFiles(tree, { "big.json": 5 * 1024 * 1024 }), [
+      ".env",
+      "app/layout.tsx",
+      "package.json",
+      "src/a.ts",
+      "src/deep/x/y.ts",
+    ]);
   });
 
   test("history is traced for the usual env files even when they're gone", () => {
-    assert.deepEqual(envPathsToTrace(["server/.env"]), [".env", ".env.local", ".env.production", "server/.env"]);
+    assert.deepEqual(envPathsToTrace(["server/.env"]), [
+      ".env",
+      ".env.local",
+      ".env.production",
+      "server/.env",
+    ]);
   });
 
   test("the snapshot keeps only what could be read", async () => {

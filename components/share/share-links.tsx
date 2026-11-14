@@ -18,8 +18,20 @@ type Shared = Pick<Review, "id" | "repo" | "odds" | "readyToWin">;
  * Every way to post a shareable verdict: X, LinkedIn, WhatsApp, the link itself, and the
  * phone's own share sheet where there is one. `onShare` hears which one was used.
  */
-export function ShareLinks({ review, onShare, className }: { review: Shared; onShare?: (kind: "x" | "linkedin" | "whatsapp" | "link" | "native") => void; className?: string }) {
-  const canShare = useSyncExternalStore(noop, () => typeof navigator.share === "function", () => false);
+export function ShareLinks({
+  review,
+  onShare,
+  className,
+}: {
+  review: Shared;
+  onShare?: (kind: "x" | "linkedin" | "whatsapp" | "link" | "native") => void;
+  className?: string;
+}) {
+  const canShare = useSyncExternalStore(
+    noop,
+    () => typeof navigator.share === "function",
+    () => false,
+  );
   const link = reviewUrl(review.id);
   const out = cn(buttonVariants({ variant: "secondary", size: "sm" }), "gap-2 px-4 text-[15px]");
   return (
@@ -41,19 +53,43 @@ export function ShareLinks({ review, onShare, className }: { review: Shared; onS
           {S.shareSheet}
         </button>
       )}
-      <a href={postToXUrl(review)} target="_blank" rel="noopener noreferrer" className={out} onClick={() => onShare?.("x")}>
+      <a
+        href={postToXUrl(review)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={out}
+        onClick={() => onShare?.("x")}
+      >
         {S.postX}
         <ExternalLink aria-hidden size={15} strokeWidth={1.75} />
       </a>
-      <a href={linkedInUrl(review.id)} target="_blank" rel="noopener noreferrer" className={out} onClick={() => onShare?.("linkedin")}>
+      <a
+        href={linkedInUrl(review.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={out}
+        onClick={() => onShare?.("linkedin")}
+      >
         {S.postLinkedIn}
         <ExternalLink aria-hidden size={15} strokeWidth={1.75} />
       </a>
-      <a href={whatsAppUrl(review)} target="_blank" rel="noopener noreferrer" className={out} onClick={() => onShare?.("whatsapp")}>
+      <a
+        href={whatsAppUrl(review)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={out}
+        onClick={() => onShare?.("whatsapp")}
+      >
         {S.postWhatsApp}
         <ExternalLink aria-hidden size={15} strokeWidth={1.75} />
       </a>
-      <CopyButton value={link} label={S.link} idle={S.copyLink} className="h-12 px-4 text-[15px]" onCopied={() => onShare?.("link")} />
+      <CopyButton
+        value={link}
+        label={S.link}
+        idle={S.copyLink}
+        className="h-12 px-4 text-[15px]"
+        onCopied={() => onShare?.("link")}
+      />
     </div>
   );
 }

@@ -7,7 +7,15 @@ import type { Evidence, Finding } from "../findings";
 import type { Claim } from "../session";
 import type { RepoSnapshot } from "./types";
 
-export const AI_LEVELS = ["none", "wrapper", "chain", "rag", "agents", "fine_tuned", "custom_trained"] as const;
+export const AI_LEVELS = [
+  "none",
+  "wrapper",
+  "chain",
+  "rag",
+  "agents",
+  "fine_tuned",
+  "custom_trained",
+] as const;
 export type AiLevel = (typeof AI_LEVELS)[number];
 
 type Signal = { level: AiLevel; re: RegExp };
@@ -15,12 +23,30 @@ type Signal = { level: AiLevel; re: RegExp };
 // Line-level signals, strongest first within each level. Matching any line of code is
 // evidence; nothing here is a guess from the README.
 const SIGNALS: Signal[] = [
-  { level: "custom_trained", re: /\b(model\.fit\(|trainer\.train\(|optimizer\.step\(\)|loss\.backward\(\)|torch\.save\(|keras\.models\.Sequential\(|nn\.Module\b)/ },
-  { level: "fine_tuned", re: /\b(fine_tuning\.jobs\.create|FineTuningJob|peft\b|LoraConfig\(|SFTTrainer\(|["']ft:[\w-]+:)/ },
-  { level: "agents", re: /\b(tool_choice|tools\s*:\s*\[|function_call|AgentExecutor|create_react_agent|createReactAgent|langgraph|crewai|autogen|@tool\b|betaZodTool|tool_runner|toolRunner)/i },
-  { level: "rag", re: /\b(embeddings?\.create|createEmbedding|OpenAIEmbeddings|embed_documents|embedQuery|similarity_search|pinecone|chromadb|weaviate|qdrant|pgvector|faiss|vectorstore|VectorStore)/i },
-  { level: "chain", re: /\b(LLMChain|RunnableSequence|\.pipe\(\s*(prompt|llm|model)|SequentialChain|ChatPromptTemplate)/ },
-  { level: "wrapper", re: /\b(chat\.completions\.create|messages\.create|generateContent|generateText|streamText|completions\.create|ChatOpenAI\(|ChatAnthropic\(|InferenceClient|pipeline\(\s*["'](text|sentiment|summari|translation|question))/ },
+  {
+    level: "custom_trained",
+    re: /\b(model\.fit\(|trainer\.train\(|optimizer\.step\(\)|loss\.backward\(\)|torch\.save\(|keras\.models\.Sequential\(|nn\.Module\b)/,
+  },
+  {
+    level: "fine_tuned",
+    re: /\b(fine_tuning\.jobs\.create|FineTuningJob|peft\b|LoraConfig\(|SFTTrainer\(|["']ft:[\w-]+:)/,
+  },
+  {
+    level: "agents",
+    re: /\b(tool_choice|tools\s*:\s*\[|function_call|AgentExecutor|create_react_agent|createReactAgent|langgraph|crewai|autogen|@tool\b|betaZodTool|tool_runner|toolRunner)/i,
+  },
+  {
+    level: "rag",
+    re: /\b(embeddings?\.create|createEmbedding|OpenAIEmbeddings|embed_documents|embedQuery|similarity_search|pinecone|chromadb|weaviate|qdrant|pgvector|faiss|vectorstore|VectorStore)/i,
+  },
+  {
+    level: "chain",
+    re: /\b(LLMChain|RunnableSequence|\.pipe\(\s*(prompt|llm|model)|SequentialChain|ChatPromptTemplate)/,
+  },
+  {
+    level: "wrapper",
+    re: /\b(chat\.completions\.create|messages\.create|generateContent|generateText|streamText|completions\.create|ChatOpenAI\(|ChatAnthropic\(|InferenceClient|pipeline\(\s*["'](text|sentiment|summari|translation|question))/,
+  },
 ];
 
 /** Loading a published model counts as using one, not as training one. */
@@ -46,11 +72,17 @@ export function aiDepth(s: Pick<RepoSnapshot, "files">): AiDepth {
   return { level, evidence: found.get(level) ?? [] };
 }
 
-export const usesPretrained = (s: Pick<RepoSnapshot, "files">) => [...s.files.values()].some((t) => PRETRAINED.test(t));
+export const usesPretrained = (s: Pick<RepoSnapshot, "files">) =>
+  [...s.files.values()].some((t) => PRETRAINED.test(t));
 
 /** What an AI claim says about depth: a model of their own, a fine-tune, or RAG or agents. */
 function claimedLevel(text: string): AiLevel | null {
-  if (/\b(custom|own|proprietary|in-house|novel|trained (our|a|the)|built (our|a) (ml |ai )?model|deep learning model)\b/i.test(text)) return "custom_trained";
+  if (
+    /\b(custom|own|proprietary|in-house|novel|trained (our|a|the)|built (our|a) (ml |ai )?model|deep learning model)\b/i.test(
+      text,
+    )
+  )
+    return "custom_trained";
   if (/\bfine[- ]?tun/i.test(text)) return "fine_tuned";
   if (/\b(agent|agentic|autonomous|tool use)\b/i.test(text)) return "agents";
   if (/\b(rag|retrieval|vector (db|database|search|store)|embeddings?)\b/i.test(text)) return "rag";
@@ -59,7 +91,11 @@ function claimedLevel(text: string): AiLevel | null {
 
 const A = copy.checks.ai;
 
-export function aiDepthFindings(depth: AiDepth, claims: readonly Claim[], pretrained: boolean): Finding[] {
+export function aiDepthFindings(
+  depth: AiDepth,
+  claims: readonly Claim[],
+  pretrained: boolean,
+): Finding[] {
   const out: Finding[] = [];
   if (depth.level !== "none") {
     out.push({
@@ -79,7 +115,12 @@ export function aiDepthFindings(depth: AiDepth, claims: readonly Claim[], pretra
     if (c.category && c.category !== "ai") return;
     const claimed = claimedLevel(c.claim);
     if (!claimed || AI_LEVELS.indexOf(claimed) <= AI_LEVELS.indexOf(depth.level)) return;
-    const found = depth.level === "none" ? A.foundNone : pretrained && claimed === "custom_trained" ? A.foundPretrained : A.levels[depth.level];
+    const found =
+      depth.level === "none"
+        ? A.foundNone
+        : pretrained && claimed === "custom_trained"
+          ? A.foundPretrained
+          : A.levels[depth.level];
     out.push({
       id: `ai-overstated-${i + 1}`,
       check: "ai",

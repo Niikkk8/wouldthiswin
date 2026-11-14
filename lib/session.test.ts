@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, test } from "vitest";
-import { LIFELINE_MS, SUBMIT_GRACE_MS, UPLOAD_GRACE_MS, WINDOW_MS, clockStart, deadlineOf } from "./deadline";
+import {
+  LIFELINE_MS,
+  SUBMIT_GRACE_MS,
+  UPLOAD_GRACE_MS,
+  WINDOW_MS,
+  clockStart,
+  deadlineOf,
+} from "./deadline";
 import { LIFELINE_DELTA, SILENCE_SCORE } from "./odds";
 import {
   type Claim,
@@ -27,9 +34,36 @@ import {
 const T0 = 1_800_000_000_000;
 
 const claims: Claim[] = [
-  { claim: "Live queue updates", status: "backed", weight: "core", file: "lib/queue.ts", evidence: "e", label: "Live updates backed", missing: null, searched: [] },
-  { claim: "SMS alerts", status: "unbacked", weight: "core", file: null, evidence: "e", label: "SMS claim unbacked", missing: "SMS provider", searched: ["package.json"] },
-  { claim: "Any hospital", status: "unclear", weight: "core", file: "config/hospital.ts", evidence: "e", label: "One hardcoded hospital", missing: null, searched: [] },
+  {
+    claim: "Live queue updates",
+    status: "backed",
+    weight: "core",
+    file: "lib/queue.ts",
+    evidence: "e",
+    label: "Live updates backed",
+    missing: null,
+    searched: [],
+  },
+  {
+    claim: "SMS alerts",
+    status: "unbacked",
+    weight: "core",
+    file: null,
+    evidence: "e",
+    label: "SMS claim unbacked",
+    missing: "SMS provider",
+    searched: ["package.json"],
+  },
+  {
+    claim: "Any hospital",
+    status: "unclear",
+    weight: "core",
+    file: "config/hospital.ts",
+    evidence: "e",
+    label: "One hardcoded hospital",
+    missing: null,
+    searched: [],
+  },
 ];
 
 const questions = [
@@ -40,7 +74,13 @@ const questions = [
 
 const noSignals: ScanSignals = { demo: { status: "none", url: null }, bulkFirstCommit: false };
 const files = ["lib/queue.ts", "config/hospital.ts", "package.json"];
-const scan = (c = claims, signals = noSignals) => ({ claims: c, questions, signals, files, sources: [] });
+const scan = (c = claims, signals = noSignals) => ({
+  claims: c,
+  questions,
+  signals,
+  files,
+  sources: [],
+});
 
 const panel: Panel = {
   chat: [],
@@ -90,7 +130,10 @@ describe("scan", () => {
     const s = unwrap(
       applyScan(
         newSession("abc", "r"),
-        scan(claims, { demo: { status: "loads", url: "https://x.vercel.app" }, bulkFirstCommit: true }),
+        scan(claims, {
+          demo: { status: "loads", url: "https://x.vercel.app" },
+          bulkFirstCommit: true,
+        }),
       ),
     );
     assert.deepEqual(
@@ -108,9 +151,15 @@ describe("scan", () => {
 
   test("a dead demo link costs 8; no link adds no event", () => {
     const dead = unwrap(
-      applyScan(newSession("abc", "r"), scan([], { demo: { status: "dead", url: "https://x" }, bulkFirstCommit: false })),
+      applyScan(
+        newSession("abc", "r"),
+        scan([], { demo: { status: "dead", url: "https://x" }, bulkFirstCommit: false }),
+      ),
     );
-    assert.deepEqual(dead.events.map((e) => [e.kind, e.delta]), [["demo", -8]]);
+    assert.deepEqual(
+      dead.events.map((e) => [e.kind, e.delta]),
+      [["demo", -8]],
+    );
     const none = unwrap(applyScan(newSession("abc", "r"), scan([])));
     assert.equal(none.events.length, 0);
   });
@@ -118,34 +167,62 @@ describe("scan", () => {
   test("a long README can't farm points: the scan adds at most 20", () => {
     const backed = Array.from({ length: 6 }, () => claims[0]);
     const s = unwrap(
-      applyScan(newSession("abc", "r"), scan(backed, { demo: { status: "loads", url: "https://x.vercel.app" }, bulkFirstCommit: false })),
+      applyScan(
+        newSession("abc", "r"),
+        scan(backed, {
+          demo: { status: "loads", url: "https://x.vercel.app" },
+          bulkFirstCommit: false,
+        }),
+      ),
     );
-    assert.deepEqual(s.events.map((e) => e.delta), [6, 6, 6, 2, 0, 0, 0]);
+    assert.deepEqual(
+      s.events.map((e) => e.delta),
+      [6, 6, 6, 2, 0, 0, 0],
+    );
     assert.equal(s.events.at(-1)!.after, 70);
   });
 
   test("the scan takes at most 30", () => {
     const unbacked = Array.from({ length: 3 }, () => claims[1]);
     const s = unwrap(
-      applyScan(newSession("abc", "r"), scan(unbacked, { demo: { status: "dead", url: "https://x" }, bulkFirstCommit: true })),
+      applyScan(
+        newSession("abc", "r"),
+        scan(unbacked, { demo: { status: "dead", url: "https://x" }, bulkFirstCommit: true }),
+      ),
     );
-    assert.deepEqual(s.events.map((e) => e.delta), [-19, -11, 0, 0, 0]);
+    assert.deepEqual(
+      s.events.map((e) => e.delta),
+      [-19, -11, 0, 0, 0],
+    );
     assert.equal(s.events.at(-1)!.after, 20);
   });
 
   test("a gain after hitting the floor still counts", () => {
     const s = unwrap(applyScan(newSession("abc", "r"), scan([claims[1], claims[1], claims[0]])));
-    assert.deepEqual(s.events.map((e) => [e.delta, e.after]), [[-19, 31], [-11, 20], [6, 26]]);
+    assert.deepEqual(
+      s.events.map((e) => [e.delta, e.after]),
+      [
+        [-19, 31],
+        [-11, 20],
+        [6, 26],
+      ],
+    );
   });
 
   test("a demo video that resolves adds 4", () => {
     const s = unwrap(
       applyScan(
         newSession("abc", "r"),
-        scan([], { demo: { status: "video", url: "https://youtu.be/abcdefghijk", provided: true }, bulkFirstCommit: false }),
+        scan([], {
+          demo: { status: "video", url: "https://youtu.be/abcdefghijk", provided: true },
+          bulkFirstCommit: false,
+        }),
       ),
     );
-    assert.deepEqual(s.events.map((e) => [e.kind, e.delta, e.reason]), [["demo", 4, "Demo video resolves"]]);
+    assert.deepEqual(
+      s.events.map((e) => [e.kind, e.delta, e.reason]),
+      [["demo", 4, "Demo video resolves"]],
+    );
   });
 
   test("runs once", () => {
@@ -169,7 +246,10 @@ describe("act order", () => {
   });
 
   test("the scan can't be left before it has run", () => {
-    assert.deepEqual(advance(newSession("abc", "r"), "scan"), { ok: false, error: "actIncomplete" });
+    assert.deepEqual(advance(newSession("abc", "r"), "scan"), {
+      ok: false,
+      error: "actIncomplete",
+    });
   });
 
   test("the grilling can't be left with questions unanswered", () => {
@@ -195,7 +275,10 @@ describe("act order", () => {
 
 /** The first question's buzzer: a quick fact from the Tired Judge, issued at T0. */
 const buzzer = (extendedTime = false, lifeline = false) =>
-  deadlineOf({ text: questions[0].text, caught: null, kind: "fact", issuedAt: T0, lifeline }, { extendedTime });
+  deadlineOf(
+    { text: questions[0].text, caught: null, kind: "fact", issuedAt: T0, lifeline },
+    { extendedTime },
+  );
 
 describe("answers", () => {
   test("a late answer is scored as silence", () => {
@@ -228,7 +311,9 @@ describe("answers", () => {
   test("a recording started before the buzzer earns the upload grace", () => {
     let s = unwrap(issueQuestion(grilling(), 0, T0));
     s = unwrap(startRecording(s, 0, buzzer() - 1_000));
-    s = unwrap(acceptAnswer(s, 0, "Said it out loud.", buzzer() + UPLOAD_GRACE_MS + SUBMIT_GRACE_MS));
+    s = unwrap(
+      acceptAnswer(s, 0, "Said it out loud.", buzzer() + UPLOAD_GRACE_MS + SUBMIT_GRACE_MS),
+    );
     assert.equal(s.answers[0].silent, false);
   });
 
@@ -265,13 +350,19 @@ describe("answers", () => {
   test("a duplicate answer is rejected", () => {
     let s = unwrap(issueQuestion(grilling(), 0, T0));
     s = unwrap(acceptAnswer(s, 0, "First.", T0 + 1_000));
-    assert.deepEqual(acceptAnswer(s, 0, "Second.", T0 + 2_000), { ok: false, error: "alreadyAnswered" });
+    assert.deepEqual(acceptAnswer(s, 0, "Second.", T0 + 2_000), {
+      ok: false,
+      error: "alreadyAnswered",
+    });
     assert.equal(s.answers.length, 1);
   });
 
   test("a duplicate score is rejected", () => {
     const s = answer(grilling(), 0, "First.", T0);
-    assert.deepEqual(settleAnswer(s, 0, { score: 12, reason: "again" }), { ok: false, error: "alreadyScored" });
+    assert.deepEqual(settleAnswer(s, 0, { score: 12, reason: "again" }), {
+      ok: false,
+      error: "alreadyScored",
+    });
   });
 
   test("a question must be shown before it can be answered", () => {
@@ -346,7 +437,9 @@ describe("verdict", () => {
   });
 
   test("ready to win at 55 or more with every core claim found or unclear", () => {
-    let s = unwrap(advance(unwrap(applyScan(newSession("abc", "r"), scan([claims[0], claims[2]]))), "scan"));
+    let s = unwrap(
+      advance(unwrap(applyScan(newSession("abc", "r"), scan([claims[0], claims[2]]))), "scan"),
+    );
     s = answer(s, 0, "a", T0, 6);
     assert.deepEqual(verdictOf(s), { odds: 60, tier: "top3", readyToWin: true });
   });
@@ -418,9 +511,27 @@ describe("a re-review", () => {
       commits: 3,
       filesChanged: 2,
       fixes: [
-        { fix: "Send a real text from notify.ts", status: "addressed" as const, file: "server/notify.ts", quote: "q", note: "n" },
-        { fix: "Put the demo link at the top", status: "partly" as const, file: "README.md", quote: "q", note: "n" },
-        { fix: "Load hospitals from the database", status: "untouched" as const, file: null, quote: null, note: "n" },
+        {
+          fix: "Send a real text from notify.ts",
+          status: "addressed" as const,
+          file: "server/notify.ts",
+          quote: "q",
+          note: "n",
+        },
+        {
+          fix: "Put the demo link at the top",
+          status: "partly" as const,
+          file: "README.md",
+          quote: "q",
+          note: "n",
+        },
+        {
+          fix: "Load hospitals from the database",
+          status: "untouched" as const,
+          file: null,
+          quote: null,
+          note: "n",
+        },
       ],
     };
     const s = unwrap(applyScan(newSession("abc", "r"), scan(backed, { ...noSignals, iteration })));
@@ -454,9 +565,14 @@ describe("follow-ups", () => {
   test("a vague answer brings one follow-up from the same judge, asked next, as a quick fact", () => {
     let s = unwrap(issueQuestion(grilling(), 0, T0));
     s = unwrap(acceptAnswer(s, 0, "It's AI.", T0 + 1_000));
-    s = unwrap(settleAnswer(s, 0, { score: -5, reason: "vague", followUp: "Which model, in which file?" }));
+    s = unwrap(
+      settleAnswer(s, 0, { score: -5, reason: "vague", followUp: "Which model, in which file?" }),
+    );
     assert.equal(s.questions.length, 4);
-    assert.deepEqual([s.questions[1].judge, s.questions[1].text, s.questions[1].kind, s.questions[1].followUpOf], ["tired", "Which model, in which file?", "fact", 0]);
+    assert.deepEqual(
+      [s.questions[1].judge, s.questions[1].text, s.questions[1].kind, s.questions[1].followUpOf],
+      ["tired", "Which model, in which file?", "fact", 0],
+    );
     assert.equal(s.questions[2].judge, "investor");
     assert.equal(toView(unwrap(issueQuestion(s, 1, T0 + 2_000)), T0).questions[1].followUp, true);
   });

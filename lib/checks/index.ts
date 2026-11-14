@@ -19,6 +19,9 @@ export const CHECKS = {
 
 export type CheckName = keyof typeof CHECKS;
 
-export function runChecks(s: RepoSnapshot, only: readonly CheckName[] = Object.keys(CHECKS) as CheckName[]): Finding[] {
+export function runChecks(
+  s: RepoSnapshot,
+  only: readonly CheckName[] = Object.keys(CHECKS) as CheckName[],
+): Finding[] {
   return only.flatMap((name) => CHECKS[name](s));
 }

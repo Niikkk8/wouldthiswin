@@ -2,7 +2,15 @@
 // a QR code. Every number comes from the real odds engine; the fixture only stands in for
 // the model's output and the repo. The odds go 50 → 34 (scan) → 39 → 41 → 37 (answers).
 
-import { advance, applyPanel, applyScan, acceptAnswer, issueQuestion, newSession, settleAnswer } from "../session";
+import {
+  advance,
+  applyPanel,
+  applyScan,
+  acceptAnswer,
+  issueQuestion,
+  newSession,
+  settleAnswer,
+} from "../session";
 import type { Panel, Scan, SessionState } from "../session";
 
 export const DEMO_ID = "samplerun2";
@@ -94,7 +102,10 @@ export const DEMO_SCAN: Scan = {
       kind: "fact",
     },
   ],
-  signals: { demo: { status: "loads", url: "https://queueless.vercel.app/" }, bulkFirstCommit: false },
+  signals: {
+    demo: { status: "loads", url: "https://queueless.vercel.app/" },
+    bulkFirstCommit: false,
+  },
   files: [
     "README.md",
     "package.json",
@@ -136,36 +147,84 @@ export const DEMO_ANSWERS = [
 export const DEMO_PANEL: Panel = {
   chat: [
     { judge: "tired", text: "the qr code thing. which one was that again." },
-    { judge: "engineer", text: "queue.ts is real. notify.ts logs \"turn close\" and stops. The SMS is a TODO." },
-    { judge: "investor", text: "Clinics paying per location is a real model. Two maybes is not traction." },
-    { judge: "engineer", text: "Credit for saying it straight. Most teams pretend the TODO isn't there." },
+    {
+      judge: "engineer",
+      text: 'queue.ts is real. notify.ts logs "turn close" and stops. The SMS is a TODO.',
+    },
+    {
+      judge: "investor",
+      text: "Clinics paying per location is a real model. Two maybes is not traction.",
+    },
+    {
+      judge: "engineer",
+      text: "Credit for saying it straight. Most teams pretend the TODO isn't there.",
+    },
     { judge: "tired", text: "they explained the stack when i asked what it is. classic." },
   ],
   oneLiner: "the one that put the waiting room on a QR code",
   strongAnswers: [
-    ["Name the SMS provider you'd wire in, and where: onTurnClose in server/notify.ts.", "Say what's real today: the QR join and the live queue."],
-    ["Name the buyer: the clinic, per location.", "Give a price a clinic manager would sign off on."],
-    ["One sentence: a clinic's waiting room on a QR code.", "Say who it's for before how it's built."],
+    [
+      "Name the SMS provider you'd wire in, and where: onTurnClose in server/notify.ts.",
+      "Say what's real today: the QR join and the live queue.",
+    ],
+    [
+      "Name the buyer: the clinic, per location.",
+      "Give a price a clinic manager would sign off on.",
+    ],
+    [
+      "One sentence: a clinic's waiting room on a QR code.",
+      "Say who it's for before how it's built.",
+    ],
   ],
   // Weighted to 5.1 of 10: a middling sheet, so the rubric leaves the odds at 37.
   criteria: [
-    { key: "technical", score: 4, reason: "Joining the queue is real; the SMS alert and offline mode aren't in the code yet.", findings: ["claim-1", "claim-2"], source: "panel" },
-    { key: "demo", score: 7, reason: "The demo loads and the QR join works on it.", findings: ["demo"], source: "panel" },
-    { key: "impact", score: 5, reason: "Clinics paying per location is a real buyer, but there's no pilot yet.", findings: [], source: "panel" },
-    { key: "pitch", score: 4, reason: "Asked what it is, they described the stack instead of the waiting room.", findings: [], source: "panel" },
-    { key: "defense", score: 6, reason: "They owned the missing SMS and said what they'd wire next.", findings: ["claim-2"], source: "panel" },
+    {
+      key: "technical",
+      score: 4,
+      reason: "Joining the queue is real; the SMS alert and offline mode aren't in the code yet.",
+      findings: ["claim-1", "claim-2"],
+      source: "panel",
+    },
+    {
+      key: "demo",
+      score: 7,
+      reason: "The demo loads and the QR join works on it.",
+      findings: ["demo"],
+      source: "panel",
+    },
+    {
+      key: "impact",
+      score: 5,
+      reason: "Clinics paying per location is a real buyer, but there's no pilot yet.",
+      findings: [],
+      source: "panel",
+    },
+    {
+      key: "pitch",
+      score: 4,
+      reason: "Asked what it is, they described the stack instead of the waiting room.",
+      findings: [],
+      source: "panel",
+    },
+    {
+      key: "defense",
+      score: 6,
+      reason: "They owned the missing SMS and said what they'd wire next.",
+      findings: ["claim-2"],
+      source: "panel",
+    },
   ],
   fixes: [
     "Wire Twilio into onTurnClose in server/notify.ts and demo a real text.",
     "Replace the flat six minutes in estimateWait with the clinic's real pace.",
-    "Cut \"works offline\" from the README until there's a service worker.",
+    'Cut "works offline" from the README until there\'s a service worker.',
   ],
   reviews: {
     engineer: {
       status: "changesRequested",
       comment: {
         file: "server/notify.ts",
-        excerpt: "  // TODO: send the SMS\n  console.log(\"turn close\", ticket.id);",
+        excerpt: '  // TODO: send the SMS\n  console.log("turn close", ticket.id);',
         startLine: 3,
         body: "The headline feature is a log line. Send one real text before the demo.",
       },
@@ -199,7 +258,16 @@ function must(r: ReturnType<typeof applyScan>): SessionState {
 }
 
 /** The sample session at each point it can be shown from. */
-export type DemoAt = "start" | "scanned" | "grilling" | "asking" | "answered" | "deliberation" | "deliberated" | "verdict" | "share";
+export type DemoAt =
+  | "start"
+  | "scanned"
+  | "grilling"
+  | "asking"
+  | "answered"
+  | "deliberation"
+  | "deliberated"
+  | "verdict"
+  | "share";
 
 export function demoState(at: DemoAt, now = Date.now()): SessionState {
   let s = newSession(DEMO_ID, DEMO_REPO);

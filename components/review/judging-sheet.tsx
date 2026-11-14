@@ -46,7 +46,13 @@ export function JudgingSheet({ sheet }: { sheet: Criterion[] }) {
                       key={i}
                       className={cn(
                         "h-2 w-4 rounded-full",
-                        i < c.score ? (c.score >= 4 ? "bg-gain" : c.score === 3 ? "bg-unclear" : "bg-loss") : "bg-border-strong",
+                        i < c.score
+                          ? c.score >= 4
+                            ? "bg-gain"
+                            : c.score === 3
+                              ? "bg-unclear"
+                              : "bg-loss"
+                          : "bg-border-strong",
                       )}
                     />
                   ))}
@@ -63,4 +69,3 @@ export function JudgingSheet({ sheet }: { sheet: Criterion[] }) {
     </section>
   );
 }
-

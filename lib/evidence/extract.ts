@@ -14,7 +14,16 @@ import type { ClaimSource, SourceKind } from "./sources";
 export const MAX_CLAIMS = 15;
 /** The first claims, by judge impact, carry the most weight in the odds. */
 export const CORE_CLAIMS = 6;
-export const CATEGORIES = ["feature", "ai", "data", "stack", "performance", "deployment", "security", "team"] as const;
+export const CATEGORIES = [
+  "feature",
+  "ai",
+  "data",
+  "stack",
+  "performance",
+  "deployment",
+  "security",
+  "team",
+] as const;
 export type ClaimCategory = (typeof CATEGORIES)[number];
 
 export type ExtractedClaim = {
@@ -49,8 +58,13 @@ For each:
 
 const esc = escapeDelimiters;
 
-export function buildExtractPrompt(sources: readonly ClaimSource[]): { system: string; user: string } {
-  const blocks = sources.map((s) => `<untrusted_source kind="${s.kind}">\n${esc(s.text)}\n</untrusted_source>`);
+export function buildExtractPrompt(sources: readonly ClaimSource[]): {
+  system: string;
+  user: string;
+} {
+  const blocks = sources.map(
+    (s) => `<untrusted_source kind="${s.kind}">\n${esc(s.text)}\n</untrusted_source>`,
+  );
   return { system: SYSTEM, user: [...blocks, "List the claims."].join("\n\n") };
 }
 
@@ -60,7 +74,10 @@ const squash = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
  * Keeps a claim only if its span is found, whitespace-insensitively, in the source it names;
  * drops duplicates and anything past 15. The first CORE_CLAIMS are core.
  */
-export function validateExtract(output: unknown, sources: readonly ClaimSource[]): { ok: true; claims: ExtractedClaim[]; dropped: number } | { ok: false; reason: string } {
+export function validateExtract(
+  output: unknown,
+  sources: readonly ClaimSource[],
+): { ok: true; claims: ExtractedClaim[]; dropped: number } | { ok: false; reason: string } {
   const top = z.object({ claims: z.array(z.unknown()) }).safeParse(output);
   if (!top.success) return { ok: false, reason: "shape" };
   const byKind = new Map(sources.map((s) => [s.kind, squash(s.text)]));
@@ -73,7 +90,17 @@ export function validateExtract(output: unknown, sources: readonly ClaimSource[]
     const span = c.success ? c.data.span.trim() : "";
     const source = c.success ? byKind.get(c.data.source) : undefined;
     const key = squash(text);
-    if (!c.success || !text || text.length > 120 || !span || span.length > 200 || !source || !source.includes(squash(span)) || seen.has(key) || claims.length >= MAX_CLAIMS) {
+    if (
+      !c.success ||
+      !text ||
+      text.length > 120 ||
+      !span ||
+      span.length > 200 ||
+      !source ||
+      !source.includes(squash(span)) ||
+      seen.has(key) ||
+      claims.length >= MAX_CLAIMS
+    ) {
       dropped++;
       continue;
     }
@@ -104,10 +131,22 @@ export type ExtractCall = (system: string, user: string) => Promise<Anthropic.Me
 
 const format = zodOutputFormat(ExtractOutput);
 const defaultCall: ExtractCall = (system, user) =>
-  createMessage({ model: HAIKU, step: "claims.extract", system, user, maxTokens: 6000, format, timeoutMs: 30_000 });
+  createMessage({
+    model: HAIKU,
+    step: "claims.extract",
+    system,
+    user,
+    maxTokens: 6000,
+    format,
+    timeoutMs: 30_000,
+  });
 
 /** One call, one retry on bad output. Tokens from every attempt count. */
-export async function extractClaims(sources: readonly ClaimSource[], usage: Usage, call: ExtractCall = defaultCall): Promise<ExtractedClaim[]> {
+export async function extractClaims(
+  sources: readonly ClaimSource[],
+  usage: Usage,
+  call: ExtractCall = defaultCall,
+): Promise<ExtractedClaim[]> {
   const { system, user } = buildExtractPrompt(sources);
   let last = "unknown";
   for (let attempt = 1; attempt <= 2; attempt++) {

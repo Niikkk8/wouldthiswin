@@ -3,7 +3,12 @@
 
 import type { ActName } from "./session";
 
-export type SessionRow = { id: string; created_at: string; act: ActName; shareable: boolean | null };
+export type SessionRow = {
+  id: string;
+  created_at: string;
+  act: ActName;
+  shareable: boolean | null;
+};
 
 export type UsageRow = {
   session_id: string | null;
@@ -22,7 +27,12 @@ export type Stats = {
   byStep: { step: string; calls: number; usd: number; avgMs: number }[];
   /** Share of prompt tokens served from the prompt cache, 0 to 1. */
   cacheHitRate: number;
-  funnel: { started: number; finishedGrilling: number; reachedVerdict: number; madeShareable: number };
+  funnel: {
+    started: number;
+    finishedGrilling: number;
+    reachedVerdict: number;
+    madeShareable: number;
+  };
 };
 
 const PAST_GRILLING: readonly ActName[] = ["deliberation", "verdict", "share"];
@@ -62,7 +72,9 @@ export function computeStats(sessions: readonly SessionRow[], usage: readonly Us
   const total = costs.reduce((a, b) => a + b, 0);
 
   return {
-    perDay: [...days].sort(([a], [b]) => a.localeCompare(b)).map(([day, n]) => ({ day, sessions: n })),
+    perDay: [...days]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, n]) => ({ day, sessions: n })),
     cost: {
       sessions: costs.length,
       avgUsd: round(costs.length ? total / costs.length : 0),
@@ -70,7 +82,12 @@ export function computeStats(sessions: readonly SessionRow[], usage: readonly Us
       totalUsd: round(total),
     },
     byStep: [...steps]
-      .map(([step, s]) => ({ step, calls: s.calls, usd: round(s.usd), avgMs: Math.round(s.ms / s.calls) }))
+      .map(([step, s]) => ({
+        step,
+        calls: s.calls,
+        usd: round(s.usd),
+        avgMs: Math.round(s.ms / s.calls),
+      }))
       .sort((a, b) => b.usd - a.usd || a.step.localeCompare(b.step)),
     cacheHitRate: prompt ? round(cached / prompt, 4) : 0,
     funnel: {

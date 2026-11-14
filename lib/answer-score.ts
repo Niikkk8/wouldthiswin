@@ -69,7 +69,12 @@ const VOICES: Record<Judge, string> = {
   engineer: `The Engineer: technical, unimpressed by buzzwords, names files. Reactions in the spirit of "${EXAMPLE_REACTIONS.engineer[0]}" or "${EXAMPLE_REACTIONS.engineer[1]}"`,
 };
 
-const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").split(/\s+/).filter(Boolean);
+const words = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
 const EXAMPLE_TRIGRAMS = new Set(
   Object.values(EXAMPLE_REACTIONS)
     .flat()
@@ -161,7 +166,8 @@ const INJECTION = [
 
 // Reactions describe the evidence. Verdict words and attacks on the person aren't shown.
 // "Try again" too: there is no second try, so it promises something the room can't give.
-const HARSH = /\btry again\b|\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bscam(mer)?\b|\bdishonest\b|\bidiots?\b|\bstupid\b/i;
+const HARSH =
+  /\btry again\b|\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bscam(mer)?\b|\bdishonest\b|\bidiots?\b|\bstupid\b/i;
 
 export function looksLikeInjection(answer: string): boolean {
   return INJECTION.some((re) => re.test(answer));
@@ -170,27 +176,47 @@ export function looksLikeInjection(answer: string): boolean {
 /** One line, plain, short. Null if there's nothing usable. */
 export function cleanReason(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
-  let r = raw.replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  let r = raw
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
   // Quotes, and stray JSON punctuation the model sometimes leaves on the end ("try again.}").
   r = r.replace(/^["'“”{}[\]`]+|["'“”{}[\]`,]+$/g, "").trim();
   if (!r) return null;
   if (r.split(" ").length > MAX_REACTION_WORDS) return null;
   if (r.length > MAX_REASON) {
     const cut = r.slice(0, MAX_REASON);
-    r = cut.slice(0, cut.lastIndexOf(" ") > 40 ? cut.lastIndexOf(" ") : MAX_REASON).replace(/[,;:.\s]+$/, "") + "…";
+    r =
+      cut
+        .slice(0, cut.lastIndexOf(" ") > 40 ? cut.lastIndexOf(" ") : MAX_REASON)
+        .replace(/[,;:.\s]+$/, "") + "…";
   }
   return r;
 }
 
 /** `score` is the odds delta code computed from the rating; `followUp` is set only for a vague answer. */
-export type Scored = { score: number; reason: string; followUp: string | null; usage: Usage; source: "model" | "fallback" };
+export type Scored = {
+  score: number;
+  reason: string;
+  followUp: string | null;
+  usage: Usage;
+  source: "model" | "fallback";
+};
 
 type Call = (system: string, user: string) => Promise<Anthropic.Message>;
 
 const outputFormat = zodOutputFormat(AnswerOutput);
 
 const defaultCall: Call = (system, user) =>
-  createMessage({ model: MODEL, step: "answer", system, user, maxTokens: MAX_TOKENS, format: outputFormat, timeoutMs: 15_000 });
+  createMessage({
+    model: MODEL,
+    step: "answer",
+    system,
+    user,
+    maxTokens: MAX_TOKENS,
+    format: outputFormat,
+    timeoutMs: 15_000,
+  });
 
 /**
  * Scores one answer: one call, one retry on bad output. If the model can't be reached or
@@ -233,14 +259,28 @@ export async function scoreAnswer(input: AnswerInput, call: Call = defaultCall):
     }
     result = { score: ratingDelta(parsed.score), reason, followUp };
   }
-  if (!result && scoreOnly !== null) result = { ...scoreOnly, reason: copy.acts.grilling.noted[input.judge] };
+  if (!result && scoreOnly !== null)
+    result = { ...scoreOnly, reason: copy.acts.grilling.noted[input.judge] };
 
   if (injected) {
     // Whatever the model made of it, an answer that tries to steer the scorer can't gain,
     // and it doesn't earn a second question either.
     const score = Math.min(result?.score ?? INJECTION_CAP, INJECTION_CAP);
-    return { score, reason: copy.acts.grilling.injection[input.judge], followUp: null, usage, source: result ? "model" : "fallback" };
+    return {
+      score,
+      reason: copy.acts.grilling.injection[input.judge],
+      followUp: null,
+      usage,
+      source: result ? "model" : "fallback",
+    };
   }
-  if (!result) return { score: 0, reason: copy.acts.grilling.unscored, followUp: null, usage, source: "fallback" };
+  if (!result)
+    return {
+      score: 0,
+      reason: copy.acts.grilling.unscored,
+      followUp: null,
+      usage,
+      source: "fallback",
+    };
   return { ...result, usage, source: "model" };
 }

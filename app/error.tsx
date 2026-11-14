@@ -8,7 +8,13 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 
 /** A page that threw. The session itself is saved on the server, so "Try again" resumes it. */
-export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   useEffect(() => {
     console.error(error);
   }, [error]);

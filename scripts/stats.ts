@@ -49,11 +49,15 @@ async function main() {
   for (const d of s.perDay) out.write(`  ${d.day}  ${d.sessions}\n`);
 
   out.write(`\nCost per session (${s.cost.sessions} sessions with model calls)\n`);
-  out.write(`  average ${usd(s.cost.avgUsd)}   p95 ${usd(s.cost.p95Usd)}   total ${usd(s.cost.totalUsd)}\n`);
+  out.write(
+    `  average ${usd(s.cost.avgUsd)}   p95 ${usd(s.cost.p95Usd)}   total ${usd(s.cost.totalUsd)}\n`,
+  );
 
   out.write(`\nCost by step\n`);
   for (const st of s.byStep) {
-    out.write(`  ${st.step.padEnd(18)} ${String(st.calls).padStart(6)} calls  ${usd(st.usd).padStart(10)}  avg ${st.avgMs} ms\n`);
+    out.write(
+      `  ${st.step.padEnd(18)} ${String(st.calls).padStart(6)} calls  ${usd(st.usd).padStart(10)}  avg ${st.avgMs} ms\n`,
+    );
   }
 
   out.write(`\nPrompt cache hit rate  ${(s.cacheHitRate * 100).toFixed(1)}%\n`);
@@ -61,7 +65,9 @@ async function main() {
   const f = s.funnel;
   out.write(`\nFunnel\n`);
   out.write(`  started            ${f.started}\n`);
-  out.write(`  finished grilling  ${f.finishedGrilling}  (${pct(f.finishedGrilling, f.started)})\n`);
+  out.write(
+    `  finished grilling  ${f.finishedGrilling}  (${pct(f.finishedGrilling, f.started)})\n`,
+  );
   out.write(`  reached verdict    ${f.reachedVerdict}  (${pct(f.reachedVerdict, f.started)})\n`);
   out.write(`  made shareable     ${f.madeShareable}  (${pct(f.madeShareable, f.started)})\n`);
 }

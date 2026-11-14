@@ -11,7 +11,12 @@ import type { Answer, Judge, Question, ScanSignals } from "./session";
 export type CriterionKey = "technical" | "demo" | "impact" | "pitch" | "defense" | "iteration";
 
 /** `basis` names what the score came from, so the sheet never shows a number without a reason. */
-export type Criterion = { key: CriterionKey; score: number; basis: BasisKey; values?: Record<string, number> };
+export type Criterion = {
+  key: CriterionKey;
+  score: number;
+  basis: BasisKey;
+  values?: Record<string, number>;
+};
 
 export type BasisKey =
   | "claims"
@@ -33,7 +38,9 @@ const CLAIM_POINTS: Record<ClaimStatus, number> = { backed: 5, unclear: 3, mocke
 const WEIGHT: Record<ClaimWeight, number> = { core: 2, minor: 1 };
 
 /** Core claims count double. No checkable claims is a 2: the README gave the judges nothing to check. */
-export function technicalScore(claims: readonly { status: ClaimStatus; weight: ClaimWeight }[]): number {
+export function technicalScore(
+  claims: readonly { status: ClaimStatus; weight: ClaimWeight }[],
+): number {
   if (!claims.length) return 2;
   let sum = 0;
   let total = 0;
@@ -44,7 +51,12 @@ export function technicalScore(claims: readonly { status: ClaimStatus; weight: C
   return Math.round(sum / total);
 }
 
-const DEMO_SCORE: Record<ScanSignals["demo"]["status"], number> = { loads: 5, video: 4, none: 2, dead: 1 };
+const DEMO_SCORE: Record<ScanSignals["demo"]["status"], number> = {
+  loads: 5,
+  video: 4,
+  none: 2,
+  dead: 1,
+};
 
 /** An answer's score (-12..+12) on the 1-5 line. Silence is a 1. */
 export function answerScore(score: number | null, silent: boolean): number {
@@ -59,7 +71,10 @@ export function answerScore(score: number | null, silent: boolean): number {
 /** Done is worth 1, started half. Three of three done is a 5; none of them a 1. */
 export function iterationScore(it: Iteration): number {
   if (!it.fixes.length) return 3;
-  const done = it.fixes.reduce((n, f) => n + (f.status === "addressed" ? 1 : f.status === "partly" ? 0.5 : 0), 0);
+  const done = it.fixes.reduce(
+    (n, f) => n + (f.status === "addressed" ? 1 : f.status === "partly" ? 0.5 : 0),
+    0,
+  );
   return 1 + Math.round((done / it.fixes.length) * (SCALE - 1));
 }
 
@@ -80,23 +95,43 @@ export function sheetOf(s: {
   const backed = claims.filter((c) => c.status === "backed").length;
   const sheet: Criterion[] = [
     claims.length
-      ? { key: "technical", score: technicalScore(claims), basis: "claims", values: { backed, total: claims.length } }
+      ? {
+          key: "technical",
+          score: technicalScore(claims),
+          basis: "claims",
+          values: { backed, total: claims.length },
+        }
       : { key: "technical", score: technicalScore(claims), basis: "noClaims" },
   ];
   const demo = s.signals?.demo.status ?? "none";
-  const demoBasis = { loads: "demoLoads", video: "demoVideo", none: "demoNone", dead: "demoDead" } as const;
+  const demoBasis = {
+    loads: "demoLoads",
+    video: "demoVideo",
+    none: "demoNone",
+    dead: "demoDead",
+  } as const;
   sheet.push({ key: "demo", score: DEMO_SCORE[demo], basis: demoBasis[demo] });
   for (const [key, judge] of ANSWER_LINES) {
     const i = s.questions.findIndex((q) => q.judge === judge);
     const a = i >= 0 ? s.answers[i] : undefined;
     if (!a) sheet.push({ key, score: 1, basis: "notAsked" });
-    else sheet.push({ key, score: answerScore(a.score, a.silent), basis: a.silent ? "silent" : "answer" });
+    else
+      sheet.push({
+        key,
+        score: answerScore(a.score, a.silent),
+        basis: a.silent ? "silent" : "answer",
+      });
   }
   const it = s.signals?.iteration;
   if (it) {
     const done = it.fixes.filter((f) => f.status === "addressed").length;
     const started = it.fixes.filter((f) => f.status === "partly").length;
-    sheet.push({ key: "iteration", score: iterationScore(it), basis: "fixes", values: { done, started, total: it.fixes.length } });
+    sheet.push({
+      key: "iteration",
+      score: iterationScore(it),
+      basis: "fixes",
+      values: { done, started, total: it.fixes.length },
+    });
   }
   return sheet;
 }
@@ -111,11 +146,37 @@ export type Rubric = { criteria: readonly RubricCriterion[] };
 
 export const DEFAULT_RUBRIC: Rubric = {
   criteria: [
-    { key: "technical", name: "Technical execution", weight: 30, description: "Does the code do what the README says, with real implementations rather than stand-ins?" },
-    { key: "demo", name: "Working demo", weight: 20, description: "A live demo or a video that shows it running." },
-    { key: "impact", name: "Impact", weight: 20, description: "A named user with a real problem, and who pays for the fix." },
-    { key: "pitch", name: "Pitch", weight: 15, description: "Can the team say what it is, and for whom, in one sentence?" },
-    { key: "defense", name: "Defending the build", weight: 15, description: "Answers about the code are specific and match the repo." },
+    {
+      key: "technical",
+      name: "Technical execution",
+      weight: 30,
+      description:
+        "Does the code do what the README says, with real implementations rather than stand-ins?",
+    },
+    {
+      key: "demo",
+      name: "Working demo",
+      weight: 20,
+      description: "A live demo or a video that shows it running.",
+    },
+    {
+      key: "impact",
+      name: "Impact",
+      weight: 20,
+      description: "A named user with a real problem, and who pays for the fix.",
+    },
+    {
+      key: "pitch",
+      name: "Pitch",
+      weight: 15,
+      description: "Can the team say what it is, and for whom, in one sentence?",
+    },
+    {
+      key: "defense",
+      name: "Defending the build",
+      weight: 15,
+      description: "Answers about the code are specific and match the repo.",
+    },
   ],
 };
 
@@ -149,14 +210,19 @@ export function canonicalKey(name: string, rubric: Rubric): string | null {
 
 const MAX_REASON = 200;
 const MAX_CITED = 4;
-const HARSH_REASON = /\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bcheat(ed|ing)?\b|\bdishonest\b|\blazy\b/i;
+const HARSH_REASON =
+  /\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bcheat(ed|ing)?\b|\bdishonest\b|\blazy\b/i;
 
 /**
  * The panel's criterion scores, checked: every criterion in the rubric scored once, each score
  * clamped to 0..10 and rounded, each reason one plain line, each cited finding one that exists.
  * Null if any criterion is missing or unusable, so the caller can retry or fall back.
  */
-export function validateCriteria(raw: unknown, rubric: Rubric, findingIds: ReadonlySet<string>): ScoredCriterion[] | null {
+export function validateCriteria(
+  raw: unknown,
+  rubric: Rubric,
+  findingIds: ReadonlySet<string>,
+): ScoredCriterion[] | null {
   const list = z.array(z.unknown()).safeParse(raw);
   if (!list.success) return null;
   const byKey = new Map<string, ScoredCriterion>();
@@ -165,12 +231,22 @@ export function validateCriteria(raw: unknown, rubric: Rubric, findingIds: Reado
     if (!c.success || !Number.isFinite(c.data.score)) continue;
     const key = canonicalKey(c.data.criterion, rubric);
     const reason = c.data.reason.replace(/\s+/g, " ").trim();
-    if (!key || byKey.has(key) || !reason || reason.length > MAX_REASON || HARSH_REASON.test(reason)) continue;
+    if (
+      !key ||
+      byKey.has(key) ||
+      !reason ||
+      reason.length > MAX_REASON ||
+      HARSH_REASON.test(reason)
+    )
+      continue;
     byKey.set(key, {
       key,
       score: Math.min(CRITERION_MAX, Math.max(0, Math.round(c.data.score))),
       reason,
-      findings: [...new Set(c.data.findings.filter((id) => findingIds.has(id)))].slice(0, MAX_CITED),
+      findings: [...new Set(c.data.findings.filter((id) => findingIds.has(id)))].slice(
+        0,
+        MAX_CITED,
+      ),
       source: "panel",
     });
   }
@@ -182,10 +258,16 @@ export function validateCriteria(raw: unknown, rubric: Rubric, findingIds: Reado
  * When the panel's scores can't be used after a retry: the fixed-rule judging sheet's 1..5
  * becomes 0..10, and criteria the sheet doesn't cover sit at the midpoint.
  */
-export function fallbackCriteria(rubric: Rubric, sheet: readonly Criterion[], reason: string): ScoredCriterion[] {
+export function fallbackCriteria(
+  rubric: Rubric,
+  sheet: readonly Criterion[],
+  reason: string,
+): ScoredCriterion[] {
   return rubric.criteria.map((c) => {
     const line = sheet.find((x) => x.key === c.key);
-    const score = line ? Math.round(((line.score - 1) / (SCALE - 1)) * CRITERION_MAX) : CRITERION_MAX / 2;
+    const score = line
+      ? Math.round(((line.score - 1) / (SCALE - 1)) * CRITERION_MAX)
+      : CRITERION_MAX / 2;
     return { key: c.key, score, reason, findings: [], source: "rules" };
   });
 }

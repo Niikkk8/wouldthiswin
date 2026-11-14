@@ -32,16 +32,24 @@ describe("fix items", () => {
       "team/app",
       SHA,
     );
-    assert.deepEqual(items.map((i) => i.id), ["demo", "claim-2", "claim-1"]);
+    assert.deepEqual(
+      items.map((i) => i.id),
+      ["demo", "claim-2", "claim-1"],
+    );
   });
 
   test("evidence links point at the scanned commit", () => {
     const [item] = fixItems([finding({})], "team/app", SHA);
-    assert.deepEqual(item.evidence, [{ label: "lib/sms.ts:4", href: `https://github.com/team/app/blob/${SHA}/lib/sms.ts#L4` }]);
+    assert.deepEqual(item.evidence, [
+      { label: "lib/sms.ts:4", href: `https://github.com/team/app/blob/${SHA}/lib/sms.ts#L4` },
+    ]);
   });
 
   test("nothing to fix is an empty list, not an invented one", () => {
-    assert.deepEqual(fixItems([finding({ outcome: "pass", severity: null, fix: null, effort: null })], "t/a", SHA), []);
+    assert.deepEqual(
+      fixItems([finding({ outcome: "pass", severity: null, fix: null, effort: null })], "t/a", SHA),
+      [],
+    );
   });
 });
 
@@ -52,7 +60,10 @@ describe("markdown", () => {
       itemMarkdown(item),
       `- [ ] **SMS alerts** (Major, 2 h): Wire up Twilio. (evidence: [lib/sms.ts:4](https://github.com/team/app/blob/${SHA}/lib/sms.ts#L4))`,
     );
-    assert.match(checklistMarkdown([item], "team/app"), /^## Fix before you submit: team\/app\n\n- \[ \]/);
+    assert.match(
+      checklistMarkdown([item], "team/app"),
+      /^## Fix before you submit: team\/app\n\n- \[ \]/,
+    );
   });
 });
 
@@ -62,12 +73,21 @@ describe("GitHub issue link", () => {
     const url = new URL(issueUrl(item, "team/app", "abcdefghjk"));
     assert.equal(url.origin + url.pathname, "https://github.com/team/app/issues/new");
     assert.equal(url.searchParams.get("title"), "SMS alerts");
-    assert.match(url.searchParams.get("body") ?? "", /Wire up Twilio\.[\s\S]*lib\/sms\.ts:4[\s\S]*\/s\/abcdefghjk/);
+    assert.match(
+      url.searchParams.get("body") ?? "",
+      /Wire up Twilio\.[\s\S]*lib\/sms\.ts:4[\s\S]*\/s\/abcdefghjk/,
+    );
   });
 
   test("a huge body falls back to the fix alone", () => {
-    const many = Array.from({ length: 200 }, (_, i) => ({ kind: "file" as const, path: `src/very/long/path/number/${i}/file.ts` }));
+    const many = Array.from({ length: 200 }, (_, i) => ({
+      kind: "file" as const,
+      path: `src/very/long/path/number/${i}/file.ts`,
+    }));
     const [item] = fixItems([finding({ evidence: many })], "team/app", SHA);
-    assert.equal(new URL(issueUrl(item, "team/app", "abcdefghjk")).searchParams.get("body"), "Wire up Twilio.");
+    assert.equal(
+      new URL(issueUrl(item, "team/app", "abcdefghjk")).searchParams.get("body"),
+      "Wire up Twilio.",
+    );
   });
 });

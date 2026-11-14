@@ -66,7 +66,10 @@ describe("the clock", () => {
 
   test("the lifeline adds 30 seconds, extended or not", () => {
     assert.equal(deadlineOf(q({ lifeline: true }), NORMAL) - deadlineOf(q(), NORMAL), LIFELINE_MS);
-    assert.equal(deadlineOf(q({ lifeline: true }), EXTENDED) - deadlineOf(q(), EXTENDED), LIFELINE_MS);
+    assert.equal(
+      deadlineOf(q({ lifeline: true }), EXTENDED) - deadlineOf(q(), EXTENDED),
+      LIFELINE_MS,
+    );
   });
 });
 
@@ -141,7 +144,11 @@ describe("what the client sees", () => {
 
   test("counts down once the clock starts, and stops at zero", () => {
     const start = clockStart(q());
-    assert.deepEqual(clockView(q(), NORMAL, start + 5_000), { readMs: 0, remainingMs: 40_000, windowMs: 45_000 });
+    assert.deepEqual(clockView(q(), NORMAL, start + 5_000), {
+      readMs: 0,
+      remainingMs: 40_000,
+      windowMs: 45_000,
+    });
     assert.equal(clockView(q(), NORMAL, start + 999_999).remainingMs, 0);
   });
 

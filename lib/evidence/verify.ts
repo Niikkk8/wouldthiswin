@@ -30,7 +30,8 @@ export const AGENT_TIME_MS = 25_000;
 type Env = Record<string, string | undefined>;
 
 /** Sonnet unless CLAIM_AGENT_MODEL says haiku. */
-export const agentModel = (env: Env = process.env) => (env.CLAIM_AGENT_MODEL?.toLowerCase() === "haiku" ? HAIKU : SONNET);
+export const agentModel = (env: Env = process.env) =>
+  env.CLAIM_AGENT_MODEL?.toLowerCase() === "haiku" ? HAIKU : SONNET;
 
 const Output = z.object({
   verdicts: z.array(
@@ -59,33 +60,57 @@ Then answer, per claim id:
 - citations: the exact lines you read that show it: path and start/end line numbers as the tools printed them, at most 40 lines each. Required for supported, partial and unsupported.`;
 
 export function buildVerifyPrompt(claims: readonly ExtractedClaim[]): string {
-  const list = claims.map((c) => `${c.id} [${c.weight}, ${c.category}]: ${escapeDelimiters(c.text)}`).join("\n");
+  const list = claims
+    .map((c) => `${c.id} [${c.weight}, ${c.category}]: ${escapeDelimiters(c.text)}`)
+    .join("\n");
   return `<untrusted_claims>\n${list}\n</untrusted_claims>\n\nVerify each claim, then answer.`;
 }
 
-const HARSH = /\bliars?\b|\blying\b|\bfraud\b|\bfake[ds]?\b|\bcheat(ed|ing)?\b|\bdishonest\b|\blazy\b/i;
+const HARSH =
+  /\bliars?\b|\blying\b|\bfraud\b|\bfake[ds]?\b|\bcheat(ed|ing)?\b|\bdishonest\b|\blazy\b/i;
 
 /**
  * Checks the agent's answer against what it saw. A citation counts only for a file it read
  * and lines it was shown; a verdict that needs citations and has none is "can't verify".
  */
-export function validateVerdicts(output: unknown, claims: readonly ExtractedClaim[], tools: Pick<ToolSession, "files" | "wasShown">): Verdict[] {
+export function validateVerdicts(
+  output: unknown,
+  claims: readonly ExtractedClaim[],
+  tools: Pick<ToolSession, "files" | "wasShown">,
+): Verdict[] {
   const parsed = Output.safeParse(output);
   const byId = new Map<string, z.infer<typeof Output>["verdicts"][number]>();
   if (parsed.success) for (const v of parsed.data.verdicts) if (!byId.has(v.id)) byId.set(v.id, v);
   return claims.map((c): Verdict => {
     const v = byId.get(c.id);
-    const cantVerify = (reason: string): Verdict => ({ id: c.id, status: "cant_verify", reason, citations: [] });
+    const cantVerify = (reason: string): Verdict => ({
+      id: c.id,
+      status: "cant_verify",
+      reason,
+      citations: [],
+    });
     if (!v || v.status === "cant_verify") return cantVerify(copy.evidence.notChecked);
     const citations = v.citations
-      .map((x) => ({ path: x.path.replace(/^\.?\/+/, ""), start: Math.floor(x.start), end: Math.floor(x.end) }))
-      .filter((x) => tools.files.has(x.path) && x.end - x.start < MAX_CITATION_LINES && tools.wasShown(x.path, x.start, x.end));
+      .map((x) => ({
+        path: x.path.replace(/^\.?\/+/, ""),
+        start: Math.floor(x.start),
+        end: Math.floor(x.end),
+      }))
+      .filter(
+        (x) =>
+          tools.files.has(x.path) &&
+          x.end - x.start < MAX_CITATION_LINES &&
+          tools.wasShown(x.path, x.start, x.end),
+      );
     if (!citations.length) return cantVerify(copy.evidence.noLines);
     const reason = v.reason.replace(/\s+/g, " ").trim();
     return {
       id: c.id,
       status: v.status,
-      reason: reason && reason.length <= MAX_REASON && !HARSH.test(reason) ? reason : copy.evidence.checked,
+      reason:
+        reason && reason.length <= MAX_REASON && !HARSH.test(reason)
+          ? reason
+          : copy.evidence.checked,
       citations: citations.slice(0, 3),
     };
   });
@@ -125,7 +150,13 @@ export async function verifyClaims(
   claims: readonly ExtractedClaim[],
   repo: RepoReader,
   usage: Usage,
-  opts: { step?: AgentStep; model?: string; timeMs?: number; now?: () => number; onRead?: (path: string) => void } = {},
+  opts: {
+    step?: AgentStep;
+    model?: string;
+    timeMs?: number;
+    now?: () => number;
+    onRead?: (path: string) => void;
+  } = {},
 ): Promise<{ verdicts: Verdict[]; tools: ToolSession }> {
   const now = opts.now ?? Date.now;
   const deadline = now() + (opts.timeMs ?? AGENT_TIME_MS);
@@ -148,7 +179,10 @@ export async function verifyClaims(
     recordCall(usage, "claims.verify", res.model || model, res, now() - started);
     if (res.stop_reason === "refusal") return giveUp();
     if (res.stop_reason !== "tool_use") {
-      const text = res.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text).join("");
+      const text = res.content
+        .filter((b): b is Anthropic.TextBlock => b.type === "text")
+        .map((b) => b.text)
+        .join("");
       let json: unknown = null;
       try {
         json = JSON.parse(text);
@@ -161,12 +195,15 @@ export async function verifyClaims(
     const results = await Promise.all(
       calls.map(async (b): Promise<Anthropic.ToolResultBlockParam> => {
         const out = await tools.run(b.name, b.input);
-        if (b.name === "read_file" && typeof (b.input as { path?: unknown }).path === "string") opts.onRead?.((b.input as { path: string }).path);
+        if (b.name === "read_file" && typeof (b.input as { path?: unknown }).path === "string")
+          opts.onRead?.((b.input as { path: string }).path);
         return { type: "tool_result", tool_use_id: b.id, content: out };
       }),
     );
     messages.push({ role: "assistant", content: res.content });
-    const nudge: Anthropic.TextBlockParam[] = tools.exhausted ? [{ type: "text", text: copy.evidence.answerNow }] : [];
+    const nudge: Anthropic.TextBlockParam[] = tools.exhausted
+      ? [{ type: "text", text: copy.evidence.answerNow }]
+      : [];
     messages.push({ role: "user", content: [...results, ...nudge] });
   }
   return giveUp();

@@ -23,7 +23,13 @@ import { fetchPage } from "./demo-check";
 import { runChecks } from "./checks";
 import type { Finding } from "./findings";
 import { commitsTouching, readFileAt, readRawAt, type RawRepoData } from "./github";
-import { QuestionsError, buildQuestionsPrompt, routeFindings, writeQuestions, type WrittenQuestion } from "./grill/questions";
+import {
+  QuestionsError,
+  buildQuestionsPrompt,
+  routeFindings,
+  writeQuestions,
+  type WrittenQuestion,
+} from "./grill/questions";
 import { findingsOf } from "./findings";
 import { log } from "./log";
 import { pitchFacts } from "./pitch";
@@ -54,7 +60,13 @@ export class ScanError extends Error {
 export type PreviousRound = { fixes: readonly string[] };
 
 /** What the team added beyond the repo. */
-export type SubmissionInput = { devpostUrl: string | null; text: string | null; start?: string | null; end?: string | null; tracks?: string[] };
+export type SubmissionInput = {
+  devpostUrl: string | null;
+  text: string | null;
+  start?: string | null;
+  end?: string | null;
+  tracks?: string[];
+};
 
 /** The steps of the scan, swappable in tests. */
 export type ScanDeps = {
@@ -65,7 +77,10 @@ export type ScanDeps = {
     usage: Usage,
     onRead: (path: string) => void,
   ) => Promise<{ verdicts: Verdict[]; files: ReadonlyMap<string, string> }>;
-  questions: (prompt: { system: string; user: string; routed?: Record<string, string[]> }, usage: Usage) => Promise<WrittenQuestion[]>;
+  questions: (
+    prompt: { system: string; user: string; routed?: Record<string, string[]> },
+    usage: Usage,
+  ) => Promise<WrittenQuestion[]>;
   devpost: (url: string) => Promise<Devpost | null>;
   read: (raw: RawRepoData, path: string) => Promise<string | null>;
 };
@@ -81,7 +96,13 @@ const realDeps: ScanDeps = {
   read: (raw, path) => readFileAt(raw.ref, raw.latestSha, path),
 };
 
-export type ScanModelResult = { claims: Claim[]; questions: WrittenQuestion[]; sources: Source[]; findings: Finding[]; usage: Usage };
+export type ScanModelResult = {
+  claims: Claim[];
+  questions: WrittenQuestion[];
+  sources: Source[];
+  findings: Finding[];
+  usage: Usage;
+};
 
 /** Claims, verification, questions. A failed extraction or question call fails the scan; a failed check doesn't. */
 export async function runScanModel(
@@ -102,13 +123,23 @@ export async function runScanModel(
   const emit = opts.emit ?? noEmit;
   const usage = newUsage();
   const wrap = (err: unknown): never => {
-    const swamped = err instanceof SwampedError || ((err instanceof ExtractError || err instanceof QuestionsError) && err.swamped);
+    const swamped =
+      err instanceof SwampedError ||
+      ((err instanceof ExtractError || err instanceof QuestionsError) && err.swamped);
     throw new ScanError(err instanceof Error ? err.message : String(err), usage, swamped);
   };
 
   const devpost =
-    opts.devpost !== undefined ? opts.devpost : opts.submission?.devpostUrl ? await deps.devpost(opts.submission.devpostUrl).catch(() => null) : null;
-  const sources = claimSources({ readme: raw.readmeFull, devpost, submission: opts.submission?.text ?? null });
+    opts.devpost !== undefined
+      ? opts.devpost
+      : opts.submission?.devpostUrl
+        ? await deps.devpost(opts.submission.devpostUrl).catch(() => null)
+        : null;
+  const sources = claimSources({
+    readme: raw.readmeFull,
+    devpost,
+    submission: opts.submission?.text ?? null,
+  });
   const extracted = await deps.extract(sources, usage).catch(wrap);
   emit({ type: "claims", claims: extracted.map((c) => c.text) });
 
@@ -128,7 +159,9 @@ export async function runScanModel(
 
   // The AI-depth findings need the claims, so they come last.
   const checks = opts.checks ? await opts.checks : null;
-  const findings = checks ? [...checks.findings, ...aiDepthFindings(checks.depth, claims, checks.pretrained)] : [];
+  const findings = checks
+    ? [...checks.findings, ...aiDepthFindings(checks.depth, claims, checks.pretrained)]
+    : [];
   const routed = routeFindings([...findingsOf({ claims, signals: null }), ...findings]);
   const prompt = buildQuestionsPrompt({
     repo: raw.meta.fullName,
@@ -140,14 +173,27 @@ export async function runScanModel(
   });
   const ids = Object.fromEntries(Object.entries(routed).map(([j, fs]) => [j, fs.map((f) => f.id)]));
   const questions = await deps.questions({ ...prompt, routed: ids }, usage).catch(wrap);
-  return { claims, questions, sources: sourcesFrom(checked.files, checked.verdicts), findings, usage };
+  return {
+    claims,
+    questions,
+    sources: sourcesFrom(checked.files, checked.verdicts),
+    findings,
+    usage,
+  };
 }
 
 /** Checks a demo link and records it the way the session stores it. */
-export async function demoSignal(url: string | null, provided: boolean): Promise<ScanSignals["demo"]> {
+export async function demoSignal(
+  url: string | null,
+  provided: boolean,
+): Promise<ScanSignals["demo"]> {
   const link = url ? parseDemoLink(url) : null;
   const status = await checkDemoLink(link);
-  return { status, url: status === "none" ? null : (link?.url ?? null), ...(provided ? { provided } : {}) };
+  return {
+    status,
+    url: status === "none" ? null : (link?.url ?? null),
+    ...(provided ? { provided } : {}),
+  };
 }
 
 /** The deterministic checks over a snapshot of the repo. A failure leaves no findings, never a guess. */
@@ -160,17 +206,33 @@ async function deterministicChecks(
   sponsors: { signatures: readonly SponsorSignature[]; entered: readonly string[] },
 ): Promise<CheckResult> {
   try {
-    const demos = demoCandidates({ readme: raw.readmeFull, homepage: raw.meta.homepage, devpostLinks: devpost?.links ?? [] });
+    const demos = demoCandidates({
+      readme: raw.readmeFull,
+      homepage: raw.meta.homepage,
+      devpostLinks: devpost?.links ?? [],
+    });
     const [snap, demo] = await Promise.all([
       collectSnapshot(
-        { repo: `${raw.ref.owner}/${raw.ref.repo}`, tree: raw.headFilePaths, sizes: raw.headFileSizes, readme: raw.readmeFull },
-        { read: (p) => readRawAt(raw.ref, raw.latestSha, p), commits: (p) => commitsTouching(raw.ref, p) },
+        {
+          repo: `${raw.ref.owner}/${raw.ref.repo}`,
+          tree: raw.headFilePaths,
+          sizes: raw.headFileSizes,
+          readme: raw.readmeFull,
+        },
+        {
+          read: (p) => readRawAt(raw.ref, raw.latestSha, p),
+          commits: (p) => commitsTouching(raw.ref, p),
+        },
       ),
       checkDemos(demos, (u) => fetchPage(u), raw.ref.repo),
     ]);
     const timeline = timelineFindings(raw.commits, window, readmeChecklist(raw.readmeFull).team);
     const tracks = sponsorFindings(trackReports(snap, sponsors.signatures), sponsors.entered);
-    return { findings: [...runChecks(snap), ...demo, ...timeline, ...tracks], depth: aiDepth(snap), pretrained: usesPretrained(snap) };
+    return {
+      findings: [...runChecks(snap), ...demo, ...timeline, ...tracks],
+      depth: aiDepth(snap),
+      pretrained: usesPretrained(snap),
+    };
   } catch (err) {
     log.warn("scan.checks.failed", { repo: raw.ref.url, error: String(err) });
     return { findings: [], depth: { level: "none", evidence: [] }, pretrained: false };
@@ -196,15 +258,24 @@ export async function scanRepo(
     sponsors?: readonly SponsorSignature[];
   } = {},
 ): Promise<{ scan: Scan; usage: Usage }> {
-  const devpost = opts.submission?.devpostUrl ? await fetchDevpost(opts.submission.devpostUrl).catch(() => null) : null;
-  const checks = deterministicChecks(raw, devpost, opts.window ?? null, { signatures: opts.sponsors ?? [], entered: opts.submission?.tracks ?? [] });
+  const devpost = opts.submission?.devpostUrl
+    ? await fetchDevpost(opts.submission.devpostUrl).catch(() => null)
+    : null;
+  const checks = deterministicChecks(raw, devpost, opts.window ?? null, {
+    signatures: opts.sponsors ?? [],
+    entered: opts.submission?.tracks ?? [],
+  });
   const [model, auto, given] = await Promise.all([
     runScanModel(raw, { ...opts, devpost, checks }),
     demoSignal(findDemoUrl(raw), false),
     opts.demoUrl ? demoSignal(opts.demoUrl, true) : Promise.resolve(null),
   ]);
   const { firstCommitAddedOver70Pct } = computeSignals(raw, null);
-  log.info("scan.validated", { repo: raw.ref.url, claims: model.claims.length, read: model.sources.length });
+  log.info("scan.validated", {
+    repo: raw.ref.url,
+    claims: model.claims.length,
+    read: model.sources.length,
+  });
   return {
     scan: {
       claims: model.claims,

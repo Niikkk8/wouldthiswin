@@ -5,8 +5,7 @@
 export type VideoProvider = "youtube" | "loom" | "vimeo" | "drive";
 
 export type DemoLink =
-  | { kind: "site"; url: string }
-  | { kind: "video"; url: string; provider: VideoProvider };
+  { kind: "site"; url: string } | { kind: "video"; url: string; provider: VideoProvider };
 
 const MAX_LENGTH = 500;
 
@@ -26,8 +25,12 @@ function videoProvider(u: URL): VideoProvider | null {
   switch (provider) {
     case "youtube":
       return u.hostname.toLowerCase() === "youtu.be"
-        ? /^\/[\w-]{6,}/.test(p) ? provider : null
-        : u.searchParams.get("v") || /^\/(shorts|embed|live)\/[\w-]{6,}/.test(p) ? provider : null;
+        ? /^\/[\w-]{6,}/.test(p)
+          ? provider
+          : null
+        : u.searchParams.get("v") || /^\/(shorts|embed|live)\/[\w-]{6,}/.test(p)
+          ? provider
+          : null;
     case "loom":
       return /^\/(share|embed)\/[\w-]+/.test(p) ? provider : null;
     case "vimeo":

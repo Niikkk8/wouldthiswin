@@ -18,13 +18,19 @@ const HEADERS = {
 export async function GET(_req: Request, ctx: RouteContext<"/api/badge/[owner]/[repo]">) {
   const { owner, repo } = await ctx.params;
   const ref = parseRepoUrl(`github.com/${owner}/${repo.replace(/\.svg$/i, "")}`);
-  if (!ref) return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } });
+  if (!ref)
+    return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } });
   try {
     const latest = await loadLatestShareable(`${ref.owner}/${ref.repo}`);
     const svg = latest ? badgeSvg(latest.odds, tierFor(latest.odds)) : notJudgedBadgeSvg();
     return new Response(svg, { headers: HEADERS });
   } catch (err) {
-    log.error("badge.repo", { repo: ref.url, error: err instanceof Error ? err.message : String(err) });
-    return new Response(notJudgedBadgeSvg(), { headers: { ...HEADERS, "cache-control": "public, max-age=300" } });
+    log.error("badge.repo", {
+      repo: ref.url,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return new Response(notJudgedBadgeSvg(), {
+      headers: { ...HEADERS, "cache-control": "public, max-age=300" },
+    });
   }
 }

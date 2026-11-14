@@ -8,7 +8,9 @@ const Asleep = z.object({
   resetAt: z.string().datetime(),
   lastReview: z.object({ id: z.string(), repo: z.string() }).nullable(),
 });
-export type AsleepInfo = z.infer<typeof Asleep> & { reason: "rateLimited" | "dailyCap" | "spendCap" };
+export type AsleepInfo = z.infer<typeof Asleep> & {
+  reason: "rateLimited" | "dailyCap" | "spendCap";
+};
 
 const Body = z.object({
   id: z.string().optional(),
@@ -51,7 +53,10 @@ export async function startSession(req: StartRequest): Promise<StartResult> {
   const body = parsed.success ? parsed.data : {};
   if (res.ok && body.id) return { kind: "started", id: body.id };
   if (body.asleep && body.error && CAPS.has(body.error)) {
-    return { kind: "asleep", asleep: { ...body.asleep, reason: body.error as AsleepInfo["reason"] } };
+    return {
+      kind: "asleep",
+      asleep: { ...body.asleep, reason: body.error as AsleepInfo["reason"] },
+    };
   }
   return { kind: "error", message: body.message ?? copy.errors.judgeFailed };
 }

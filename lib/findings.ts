@@ -46,14 +46,27 @@ function claimSeverity(c: Claim): Severity {
 
 function claimFinding(c: Claim, i: number): Finding {
   const id = `claim-${i + 1}`;
-  const cited: Evidence[] = (c.citations ?? []).map((x) => ({ kind: "file", path: x.path, startLine: x.start, endLine: x.end }));
+  const cited: Evidence[] = (c.citations ?? []).map((x) => ({
+    kind: "file",
+    path: x.path,
+    startLine: x.start,
+    endLine: x.end,
+  }));
   const fileEvidence: Evidence[] = cited.length
     ? cited
     : c.file
       ? [{ kind: "file", path: c.file, ...(c.line ? { startLine: c.line, endLine: c.line } : {}) }]
       : [];
-  const searched: Evidence[] = cited.length ? cited : c.searched.map((path) => ({ kind: "file", path }));
-  const base = { id, check: "claim", title: c.claim, detail: c.evidence, visibility: "public" as const };
+  const searched: Evidence[] = cited.length
+    ? cited
+    : c.searched.map((path) => ({ kind: "file", path }));
+  const base = {
+    id,
+    check: "claim",
+    title: c.claim,
+    detail: c.evidence,
+    visibility: "public" as const,
+  };
   if (c.verdict === "partial") {
     return {
       ...base,
@@ -66,7 +79,14 @@ function claimFinding(c: Claim, i: number): Finding {
   }
   switch (c.status) {
     case "backed":
-      return { ...base, outcome: "pass", severity: null, evidence: fileEvidence, fix: null, effort: null };
+      return {
+        ...base,
+        outcome: "pass",
+        severity: null,
+        evidence: fileEvidence,
+        fix: null,
+        effort: null,
+      };
     case "mocked":
       return {
         ...base,
@@ -98,17 +118,51 @@ function claimFinding(c: Claim, i: number): Finding {
 }
 
 function demoFinding(demo: ScanSignals["demo"]): Finding {
-  const url: Evidence[] = demo.url ? [{ kind: "url", url: demo.url }] : [{ kind: "check", detail: F.demoChecked }];
+  const url: Evidence[] = demo.url
+    ? [{ kind: "url", url: demo.url }]
+    : [{ kind: "check", detail: F.demoChecked }];
   const base = { id: "demo", check: "demo", evidence: url, visibility: "public" as const };
   switch (demo.status) {
     case "loads":
-      return { ...base, outcome: "pass", severity: null, title: copy.review.checks.demoLoads, detail: F.demoLoads, fix: null, effort: null };
+      return {
+        ...base,
+        outcome: "pass",
+        severity: null,
+        title: copy.review.checks.demoLoads,
+        detail: F.demoLoads,
+        fix: null,
+        effort: null,
+      };
     case "video":
-      return { ...base, outcome: "pass", severity: null, title: copy.review.checks.demoVideo, detail: F.demoVideo, fix: null, effort: null };
+      return {
+        ...base,
+        outcome: "pass",
+        severity: null,
+        title: copy.review.checks.demoVideo,
+        detail: F.demoVideo,
+        fix: null,
+        effort: null,
+      };
     case "dead":
-      return { ...base, outcome: "fail", severity: "blocker", title: copy.review.checks.demoDead, detail: F.demoDead, fix: F.fix.demoDead, effort: "30m" };
+      return {
+        ...base,
+        outcome: "fail",
+        severity: "blocker",
+        title: copy.review.checks.demoDead,
+        detail: F.demoDead,
+        fix: F.fix.demoDead,
+        effort: "30m",
+      };
     case "none":
-      return { ...base, outcome: "fail", severity: "major", title: copy.review.checks.demoNone, detail: copy.review.checks.demoNoneDetail, fix: F.fix.demoNone, effort: "2h" };
+      return {
+        ...base,
+        outcome: "fail",
+        severity: "major",
+        title: copy.review.checks.demoNone,
+        detail: copy.review.checks.demoNoneDetail,
+        fix: F.fix.demoNone,
+        effort: "2h",
+      };
   }
 }
 
@@ -127,7 +181,9 @@ export function findingsOf(s: Pick<SessionState, "claims" | "signals">): Finding
       severity: "minor",
       title: copy.review.checks.bulkCommit,
       detail: F.bulkCommit,
-      evidence: s.signals.commit ? [{ kind: "commit", sha: s.signals.commit }] : [{ kind: "check", detail: F.bulkCommitCheck }],
+      evidence: s.signals.commit
+        ? [{ kind: "commit", sha: s.signals.commit }]
+        : [{ kind: "check", detail: F.bulkCommitCheck }],
       fix: null,
       effort: null,
       visibility: "private",
@@ -136,7 +192,8 @@ export function findingsOf(s: Pick<SessionState, "claims" | "signals">): Finding
   return [...out, ...checks];
 }
 
-export const publicFindings = (fs: readonly Finding[]) => fs.filter((f) => f.visibility === "public");
+export const publicFindings = (fs: readonly Finding[]) =>
+  fs.filter((f) => f.visibility === "public");
 
 /** A link for one piece of evidence, pinned to the scanned commit. Null for a check's own words. */
 export function evidenceHref(e: Evidence, repo: string, commit: string | undefined): string | null {
@@ -147,7 +204,9 @@ export function evidenceHref(e: Evidence, repo: string, commit: string | undefin
       return `https://github.com/${repo}/commit/${e.sha}`;
     case "file": {
       const ref = commit ?? "HEAD";
-      const lines = e.startLine ? `#L${e.startLine}${e.endLine && e.endLine !== e.startLine ? `-L${e.endLine}` : ""}` : "";
+      const lines = e.startLine
+        ? `#L${e.startLine}${e.endLine && e.endLine !== e.startLine ? `-L${e.endLine}` : ""}`
+        : "";
       return `https://github.com/${repo}/blob/${ref}/${e.path.split("/").map(encodeURIComponent).join("/")}${lines}`;
     }
     case "check":
@@ -159,7 +218,9 @@ export function evidenceHref(e: Evidence, repo: string, commit: string | undefin
 export function evidenceLabel(e: Evidence): string {
   switch (e.kind) {
     case "file":
-      return e.startLine ? `${e.path}:${e.startLine}${e.endLine && e.endLine !== e.startLine ? `-${e.endLine}` : ""}` : e.path;
+      return e.startLine
+        ? `${e.path}:${e.startLine}${e.endLine && e.endLine !== e.startLine ? `-${e.endLine}` : ""}`
+        : e.path;
     case "url":
       return e.url.replace(/^https?:\/\//, "");
     case "commit":

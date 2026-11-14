@@ -1,5 +1,6 @@
 import { ID_RE, db } from "@/lib/db";
 import { MAX_EVENTS_PER_REVIEW, ShareEvent } from "@/lib/share-events";
+import { log } from "@/lib/log";
 
 const noContent = () => new Response(null, { status: 204 });
 
@@ -14,19 +15,27 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]/s
   const parsed = ShareEvent.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "badRequest" }, { status: 400 });
 
-  const { data: s, error } = await db().from("sessions").select("act").eq("id", id).maybeSingle<{ act: string }>();
+  const { data: s, error } = await db()
+    .from("sessions")
+    .select("act")
+    .eq("id", id)
+    .maybeSingle<{ act: string }>();
   if (error) {
-    console.error(JSON.stringify({ event: "share.lookup", id, error: error.message }));
+    log.error("share.lookup", { id, error: error.message });
     return noContent();
   }
-  if (!s || (s.act !== "verdict" && s.act !== "share")) return Response.json({ error: "notFound" }, { status: 404 });
+  if (!s || (s.act !== "verdict" && s.act !== "share"))
+    return Response.json({ error: "notFound" }, { status: 404 });
 
-  const { count } = await db().from("share_events").select("id", { count: "exact", head: true }).eq("session_id", id);
+  const { count } = await db()
+    .from("share_events")
+    .select("id", { count: "exact", head: true })
+    .eq("session_id", id);
   if ((count ?? 0) >= MAX_EVENTS_PER_REVIEW) return noContent();
 
   const { error: insertError } = await db()
     .from("share_events")
     .insert({ session_id: id, kind: parsed.data.kind, format: parsed.data.format ?? null });
-  if (insertError) console.error(JSON.stringify({ event: "share.log", id, error: insertError.message }));
+  if (insertError) log.error("share.log", { id, error: insertError.message });
   return noContent();
 }

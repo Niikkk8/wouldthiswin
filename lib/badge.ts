@@ -21,15 +21,21 @@ const NARROW = /[ilj.,:;'!|() ]/;
 const WIDE = /[mwMW%@]/;
 function textWidth(s: string): number {
   let w = 0;
-  for (const ch of s) w += NARROW.test(ch) ? 3.6 : WIDE.test(ch) ? 10 : /[A-Z0-9]/.test(ch) ? 7.2 : 6.4;
+  for (const ch of s)
+    w += NARROW.test(ch) ? 3.6 : WIDE.test(ch) ? 10 : /[A-Z0-9]/.test(ch) ? 7.2 : 6.4;
   return Math.ceil(w);
 }
 
-const escXml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const escXml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export function badgeSvg(odds: number, tier: Tier): string {
   // Dark text on the light tier colors, white on red: both pass AA at this size.
-  return draw(`${odds}% ${BADGE_TIER[tier]}`, BADGE_COLOR[tier], tier === "participating" ? "#fff" : "#0A0A0B");
+  return draw(
+    `${odds}% ${BADGE_TIER[tier]}`,
+    BADGE_COLOR[tier],
+    tier === "participating" ? "#fff" : "#0A0A0B",
+  );
 }
 
 /** For a repo with no shareable verdict yet: neutral grey, nothing claimed. */

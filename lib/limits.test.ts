@@ -11,11 +11,19 @@ describe("limits from the environment", () => {
 
   test("set values win; junk, blanks and negatives fall back", () => {
     assert.deepEqual(
-      limitsFromEnv({ MAX_SESSIONS_PER_USER_PER_DAY: "2", MAX_SESSIONS_PER_DAY: "40", DAILY_SPEND_LIMIT_USD: "2.5" }),
+      limitsFromEnv({
+        MAX_SESSIONS_PER_USER_PER_DAY: "2",
+        MAX_SESSIONS_PER_DAY: "40",
+        DAILY_SPEND_LIMIT_USD: "2.5",
+      }),
       { perUser: 2, perDay: 40, spendUsd: 2.5 },
     );
     assert.deepEqual(
-      limitsFromEnv({ MAX_SESSIONS_PER_USER_PER_DAY: "lots", MAX_SESSIONS_PER_DAY: " ", DAILY_SPEND_LIMIT_USD: "-1" }),
+      limitsFromEnv({
+        MAX_SESSIONS_PER_USER_PER_DAY: "lots",
+        MAX_SESSIONS_PER_DAY: " ",
+        DAILY_SPEND_LIMIT_USD: "-1",
+      }),
       L,
     );
   });
@@ -45,14 +53,26 @@ describe("caps", () => {
 
 describe("reset", () => {
   test("is the next UTC midnight, even late in the UTC day or across a month", () => {
-    assert.equal(nextReset(new Date("2026-11-14T23:59:59Z")).toISOString(), "2026-11-15T00:00:00.000Z");
-    assert.equal(nextReset(new Date("2026-11-30T05:00:00Z")).toISOString(), "2026-12-01T00:00:00.000Z");
-    assert.equal(nextReset(new Date("2026-11-14T00:00:00Z")).toISOString(), "2026-11-15T00:00:00.000Z");
+    assert.equal(
+      nextReset(new Date("2026-11-14T23:59:59Z")).toISOString(),
+      "2026-11-15T00:00:00.000Z",
+    );
+    assert.equal(
+      nextReset(new Date("2026-11-30T05:00:00Z")).toISOString(),
+      "2026-12-01T00:00:00.000Z",
+    );
+    assert.equal(
+      nextReset(new Date("2026-11-14T00:00:00Z")).toISOString(),
+      "2026-11-15T00:00:00.000Z",
+    );
   });
 
   test("the countdown rounds up to the minute and never goes negative", () => {
     const reset = new Date("2026-11-15T00:00:00Z");
-    assert.deepEqual(untilReset(new Date("2026-11-14T20:47:30Z"), reset), { hours: 3, minutes: 13 });
+    assert.deepEqual(untilReset(new Date("2026-11-14T20:47:30Z"), reset), {
+      hours: 3,
+      minutes: 13,
+    });
     assert.deepEqual(untilReset(new Date("2026-11-15T00:00:05Z"), reset), { hours: 0, minutes: 0 });
   });
 });

@@ -16,7 +16,15 @@ export const projectName = (repo: string) => repo.split("/").pop() ?? repo;
 export const Still = createContext(false);
 
 /** Fades and rises once; under reduced motion, a plain 200ms crossfade. */
-export function Rise({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
+export function Rise({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
   const reduce = useReducedMotion();
   const still = useContext(Still);
   if (still) return <div className={className}>{children}</div>;
@@ -65,4 +73,3 @@ export function Lines({ start, excerpt }: { start: number; excerpt: string }) {
     </pre>
   );
 }
-

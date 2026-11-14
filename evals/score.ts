@@ -8,7 +8,14 @@ import type { Finding } from "../lib/findings";
 import type { Fixture } from "./fixtures/types";
 
 export function snapshotOf(f: Fixture): RepoSnapshot {
-  return { repo: `eval/${f.name}`, tree: Object.keys(f.files), sizes: f.sizes ?? {}, files: new Map(Object.entries(f.files)), readme: f.readme, envHistory: {} };
+  return {
+    repo: `eval/${f.name}`,
+    tree: Object.keys(f.files),
+    sizes: f.sizes ?? {},
+    files: new Map(Object.entries(f.files)),
+    readme: f.readme,
+    envHistory: {},
+  };
 }
 
 export function findingsFor(f: Fixture): Finding[] {
@@ -17,12 +24,23 @@ export function findingsFor(f: Fixture): Finding[] {
 }
 
 /** The checks that reported a problem (anything but a pass). */
-export const fired = (fs: readonly Finding[]) => new Set(fs.filter((x) => x.outcome !== "pass").map((x) => x.check));
+export const fired = (fs: readonly Finding[]) =>
+  new Set(fs.filter((x) => x.outcome !== "pass").map((x) => x.check));
 
-export type CheckScore = { check: string; tp: number; fp: number; fn: number; precision: number | null; recall: number | null };
+export type CheckScore = {
+  check: string;
+  tp: number;
+  fp: number;
+  fn: number;
+  precision: number | null;
+  recall: number | null;
+};
 
 export function scoreChecks(fixtures: readonly Fixture[]): CheckScore[] {
-  const results = fixtures.map((f) => ({ expected: new Set(f.expected), got: fired(findingsFor(f)) }));
+  const results = fixtures.map((f) => ({
+    expected: new Set(f.expected),
+    got: fired(findingsFor(f)),
+  }));
   const checks = [...new Set(results.flatMap((r) => [...r.expected, ...r.got]))].sort();
   return checks.map((check) => {
     let tp = 0;
@@ -35,12 +53,22 @@ export function scoreChecks(fixtures: readonly Fixture[]): CheckScore[] {
       else if (g) fp++;
       else if (e) fn++;
     }
-    return { check, tp, fp, fn, precision: tp + fp ? tp / (tp + fp) : null, recall: tp + fn ? tp / (tp + fn) : null };
+    return {
+      check,
+      tp,
+      fp,
+      fn,
+      precision: tp + fp ? tp / (tp + fp) : null,
+      recall: tp + fn ? tp / (tp + fn) : null,
+    };
   });
 }
 
 /** Two fixtures produce the same findings, id for id and outcome for outcome. */
 export function sameFindings(a: Fixture, b: Fixture): boolean {
-  const key = (f: Fixture) => findingsFor(f).map((x) => `${x.id}:${x.outcome}:${x.severity}`).join("|");
+  const key = (f: Fixture) =>
+    findingsFor(f)
+      .map((x) => `${x.id}:${x.outcome}:${x.severity}`)
+      .join("|");
   return key(a) === key(b);
 }

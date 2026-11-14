@@ -11,7 +11,12 @@ export function SiteFooter() {
     <footer className="page-x flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-t border-border py-6">
       <p className="label-mono">
         {f.builtBy}{" "}
-        <a href={f.author.url} target="_blank" rel="noopener" className="text-text-muted underline underline-offset-4 hover:text-text">
+        <a
+          href={f.author.url}
+          target="_blank"
+          rel="noopener"
+          className="text-text-muted underline underline-offset-4 hover:text-text"
+        >
           {f.author.name}
         </a>
       </p>

@@ -47,7 +47,12 @@ export function RepoForm({
   const [demoInvalid, setDemoInvalid] = useState(false);
   const [pending, setPending] = useState(false);
   const [asleep, setAsleep] = useState<AsleepInfo | null>(null);
-  const [submission, setSubmission] = useState<SubmissionValue>({ devpost: "", text: "", start: "", end: "" });
+  const [submission, setSubmission] = useState<SubmissionValue>({
+    devpost: "",
+    text: "",
+    start: "",
+    end: "",
+  });
   const [devpostInvalid, setDevpostInvalid] = useState(false);
   const [entered, setEntered] = useState<string[]>([]);
   const input = useRef<HTMLInputElement>(null);
@@ -185,21 +190,23 @@ export function RepoForm({
           setDevpostInvalid(false);
         }}
       />
-      {tracks.length > 0 && <TrackPicker id={id} tracks={tracks} value={entered} onChange={setEntered} />}
+      {tracks.length > 0 && (
+        <TrackPicker id={id} tracks={tracks} value={entered} onChange={setEntered} />
+      )}
       <AccessibilityPrefs id={id} />
       {SHOW_VERSUS && (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-disabled
-            className="mt-7 cursor-not-allowed text-[16px] font-bold text-text-subtle underline decoration-1 underline-offset-[6px]"
-          >
-            {copy.landing.versus}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">{copy.landing.versusSoon}</TooltipContent>
-      </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-disabled
+              className="mt-7 cursor-not-allowed text-[16px] font-bold text-text-subtle underline decoration-1 underline-offset-[6px]"
+            >
+              {copy.landing.versus}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{copy.landing.versusSoon}</TooltipContent>
+        </Tooltip>
       )}
     </form>
   );

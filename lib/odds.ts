@@ -4,7 +4,7 @@
 export const START_ODDS = 50;
 export const MIN_ODDS = 1;
 export const MAX_ODDS = 99;
-export const ANSWER_MIN = -12;
+const ANSWER_MIN = -12;
 export const ANSWER_MAX = 12;
 /** A late or empty answer. Fixed in code; the model never sees it. */
 export const SILENCE_SCORE = ANSWER_MIN;
@@ -101,7 +101,13 @@ export function currentOdds(events: readonly OddsEvent[]): number {
 
 export function makeEvent(
   events: readonly OddsEvent[],
-  e: { act: OddsAct; kind: OddsEvent["kind"]; status?: ClaimStatus; rawDelta: number; reason: string },
+  e: {
+    act: OddsAct;
+    kind: OddsEvent["kind"];
+    status?: ClaimStatus;
+    rawDelta: number;
+    reason: string;
+  },
 ): OddsEvent {
   const before = currentOdds(events);
   const after = clampOdds(before + e.rawDelta);
@@ -130,11 +136,18 @@ export function tierFor(odds: number): Tier {
 export const READY_ODDS = 55;
 
 /** A core claim the code doesn't really deliver: missing, or faked with mock data. */
-export function anyCoreMissing(claims: readonly { status: ClaimStatus; weight: ClaimWeight }[]): boolean {
-  return claims.some((c) => c.weight === "core" && (c.status === "unbacked" || c.status === "mocked"));
+export function anyCoreMissing(
+  claims: readonly { status: ClaimStatus; weight: ClaimWeight }[],
+): boolean {
+  return claims.some(
+    (c) => c.weight === "core" && (c.status === "unbacked" || c.status === "mocked"),
+  );
 }
 
-export function readyToWin(odds: number, claims: readonly { status: ClaimStatus; weight: ClaimWeight }[]): boolean {
+export function readyToWin(
+  odds: number,
+  claims: readonly { status: ClaimStatus; weight: ClaimWeight }[],
+): boolean {
   return odds >= READY_ODDS && !anyCoreMissing(claims);
 }
 

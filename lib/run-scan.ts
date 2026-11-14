@@ -4,7 +4,14 @@
 
 import type { ErrorKey } from "./api";
 import { overBudget } from "./budget";
-import { fetchCompare, fetchRepoData, fetchSources, GitHubError, parseRepoUrl, type RawRepoData } from "./github";
+import {
+  fetchCompare,
+  fetchRepoData,
+  fetchSources,
+  GitHubError,
+  parseRepoUrl,
+  type RawRepoData,
+} from "./github";
 import { recheckFixes, type Iteration } from "./recheck";
 import { snapshotOf } from "./rejudge";
 import { mergeUsage, newUsage, type Usage } from "./model";
@@ -29,10 +36,15 @@ import {
 } from "./session-store";
 
 /** The event window: the preset's when the session is for an event, else what the team gave. */
-function windowFor(slug: string | null, submission: { start?: string | null; end?: string | null }) {
+function windowFor(
+  slug: string | null,
+  submission: { start?: string | null; end?: string | null },
+) {
   const event = eventBySlug(slug);
   if (event) return { start: event.startsAt, end: event.endsAt };
-  return submission.start || submission.end ? { start: submission.start ?? null, end: submission.end ?? null } : null;
+  return submission.start || submission.end
+    ? { start: submission.start ?? null, end: submission.end ?? null }
+    : null;
 }
 
 /** A scan that ends before any model call: nothing was spent on it. */
@@ -49,7 +61,11 @@ export type ScanOutcome =
   | { kind: "notFound" }
   | { kind: "failed"; error: ErrorKey };
 
-export async function runSessionScan(id: string, owner: string | null, emit: Emit = noEmit): Promise<ScanOutcome> {
+export async function runSessionScan(
+  id: string,
+  owner: string | null,
+  emit: Emit = noEmit,
+): Promise<ScanOutcome> {
   const loaded = await loadSession(id, owner);
   if (!loaded) return { kind: "notFound" };
   const { session, repoUrl, latestSha, demoUrl, spent, previousId } = loaded;
@@ -68,7 +84,13 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
     const eventContext = judgeContextFor(session.eventSlug);
     // Claims from a Devpost page or pasted text aren't in the repo, so neither is the cache key.
     const submission = await loadSubmission(id);
-    const cacheable = !previous && !eventContext && !submission.devpostUrl && !submission.text && !submission.start && !submission.end;
+    const cacheable =
+      !previous &&
+      !eventContext &&
+      !submission.devpostUrl &&
+      !submission.text &&
+      !submission.start &&
+      !submission.end;
     const key = cacheable ? cacheKey(ref.owner, ref.repo, latestSha) : null;
     const result = await scanWithCache<Usage>({
       key,
@@ -107,7 +129,8 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
           previous ? checkFixes(raw, previous, emit) : Promise.resolve(null),
         ]);
         await addStepTiming(id, "scan.total", Date.now() - scanStarted);
-        if (!fixes || !previous) return { ...fresh, key: cacheable ? cacheKey(ref.owner, ref.repo, raw.latestSha) : null };
+        if (!fixes || !previous)
+          return { ...fresh, key: cacheable ? cacheKey(ref.owner, ref.repo, raw.latestSha) : null };
         const iteration = { ...fixes.iteration, previous: snapshotOf(previous.loaded.session) };
         return {
           scan: { ...fresh.scan, signals: { ...fresh.scan.signals, iteration } },
@@ -147,7 +170,8 @@ export async function runSessionScan(id: string, owner: string | null, emit: Emi
     }
     if (err instanceof ScanError) usage = err.usage;
     const swamped = err instanceof ScanError && err.swamped;
-    const key: ErrorKey = err instanceof GitHubError ? err.code : swamped ? "swamped" : "judgeFailed";
+    const key: ErrorKey =
+      err instanceof GitHubError ? err.code : swamped ? "swamped" : "judgeFailed";
     log.error("scan.failed", {
       id,
       repo: repoUrl,
@@ -177,7 +201,9 @@ async function checkFixes(
   const review = {
     id: previous.loaded.session.id,
     odds: previous.odds,
-    round: previous.loaded.session.signals?.iteration?.round ?? (previous.loaded.session.signals?.iteration ? 2 : 1),
+    round:
+      previous.loaded.session.signals?.iteration?.round ??
+      (previous.loaded.session.signals?.iteration ? 2 : 1),
     fixes: previous.fixes,
     claims: previous.loaded.session.claims ?? [],
   };
@@ -187,7 +213,9 @@ async function checkFixes(
     return await recheckFixes(diff, review);
   } catch (err) {
     log.error("recheck.compare_failed", { repo: raw.ref.url, error: String(err) });
-    return recheckFixes({ commits: [], files: [], linear: false }, review, () => Promise.reject(new Error("no diff")));
+    return recheckFixes({ commits: [], files: [], linear: false }, review, () =>
+      Promise.reject(new Error("no diff")),
+    );
   }
 }
 

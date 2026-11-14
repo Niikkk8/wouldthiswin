@@ -7,7 +7,15 @@ import type { Iteration } from "./recheck";
 import { findingsOf, type Finding } from "./findings";
 import { buildPitch, type Pitch } from "./pitch";
 import { rubricFor } from "./events";
-import { aggregate, rubricDelta, sheetOf, type Criterion, type Rubric, type RubricCriterion, type ScoredCriterion } from "./rubric";
+import {
+  aggregate,
+  rubricDelta,
+  sheetOf,
+  type Criterion,
+  type Rubric,
+  type RubricCriterion,
+  type ScoredCriterion,
+} from "./rubric";
 import type { Judge, ReviewComment, ReviewStatus, SessionState } from "./session";
 
 export type CheckStatus = "passed" | "failed" | "warning";
@@ -60,7 +68,11 @@ export type RubricView = {
 /** Who's looking: the owner sees everything; anyone else sees public findings only. */
 export type Audience = "owner" | "public";
 
-function rubricView(criteria: ScoredCriterion[] | undefined, rubric: Rubric, visible: ReadonlySet<string>): RubricView | null {
+function rubricView(
+  criteria: ScoredCriterion[] | undefined,
+  rubric: Rubric,
+  visible: ReadonlySet<string>,
+): RubricView | null {
   if (!criteria?.length) return null;
   const merged = rubric.criteria.flatMap((c) => {
     const s = criteria.find((x) => x.key === c.key);
@@ -84,7 +96,12 @@ const host = (url: string | null) => {
 /** Every claim and signal as a CI-style check. */
 export function checksOf(s: Pick<SessionState, "claims" | "signals">): Check[] {
   const checks: Check[] = (s.claims ?? []).map((c) => ({
-    status: c.status === "backed" ? "passed" : c.status === "unbacked" || c.status === "mocked" ? "failed" : "warning",
+    status:
+      c.status === "backed"
+        ? "passed"
+        : c.status === "unbacked" || c.status === "mocked"
+          ? "failed"
+          : "warning",
     title: c.claim,
     detail: c.evidence,
     file: c.file ?? c.searched[0] ?? null,
@@ -92,10 +109,14 @@ export function checksOf(s: Pick<SessionState, "claims" | "signals">): Check[] {
   const demo = s.signals?.demo;
   if (demo) {
     const d = copy.review.checks;
-    if (demo.status === "loads") checks.push({ status: "passed", title: d.demoLoads, detail: host(demo.url), file: null });
-    else if (demo.status === "video") checks.push({ status: "passed", title: d.demoVideo, detail: host(demo.url), file: null });
-    else if (demo.status === "dead") checks.push({ status: "failed", title: d.demoDead, detail: host(demo.url), file: null });
-    else checks.push({ status: "warning", title: d.demoNone, detail: d.demoNoneDetail, file: null });
+    if (demo.status === "loads")
+      checks.push({ status: "passed", title: d.demoLoads, detail: host(demo.url), file: null });
+    else if (demo.status === "video")
+      checks.push({ status: "passed", title: d.demoVideo, detail: host(demo.url), file: null });
+    else if (demo.status === "dead")
+      checks.push({ status: "failed", title: d.demoDead, detail: host(demo.url), file: null });
+    else
+      checks.push({ status: "warning", title: d.demoNone, detail: d.demoNoneDetail, file: null });
   }
   if (s.signals) {
     const d = copy.review.checks;
@@ -118,7 +139,11 @@ export function summaryLine(summary: Record<CheckStatus, number>): string {
 }
 
 /** The review, once the panel has deliberated. Null before that. */
-export function reviewOf(s: SessionState, audience: Audience = "public", rubric: Rubric = rubricFor(s.eventSlug)): Review | null {
+export function reviewOf(
+  s: SessionState,
+  audience: Audience = "public",
+  rubric: Rubric = rubricFor(s.eventSlug),
+): Review | null {
   const panel = s.panel;
   if (!panel || !panel.reviews) return null;
   const odds = currentOdds(s.events);
@@ -161,7 +186,15 @@ export function reviewOf(s: SessionState, audience: Audience = "public", rubric:
             return points.length ? [{ judge: q.judge, question: q.text, points }] : [];
           })
         : [],
-    pitch: audience === "owner" ? buildPitch({ repo: s.repo, oneLiner: panel.oneLiner, claims: s.claims ?? [], facts: s.signals?.pitch ?? null }) : null,
+    pitch:
+      audience === "owner"
+        ? buildPitch({
+            repo: s.repo,
+            oneLiner: panel.oneLiner,
+            claims: s.claims ?? [],
+            facts: s.signals?.pitch ?? null,
+          })
+        : null,
     shareable: s.visibility?.shareable === true,
     listed: s.visibility?.listed === true,
   };

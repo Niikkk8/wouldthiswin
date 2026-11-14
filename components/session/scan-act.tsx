@@ -2,7 +2,15 @@
 
 import { motion } from "motion/react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { cn } from "cn";
 import { AnimatedBeam, type BeamState } from "@/components/ui/animated-beam";
 import { buttonVariants } from "@/components/ui/button";
@@ -28,7 +36,12 @@ const MAX_STEP_MS = 900;
 const DRAW_SHARE = 0.7;
 const POLL_MS = 2500;
 
-const BEAM_COLOR = { backed: "#f4f4f2", unclear: "#f5a524", mocked: "#ff3b30", unbacked: "#ff3b30" } as const;
+const BEAM_COLOR = {
+  backed: "#f4f4f2",
+  unclear: "#f5a524",
+  mocked: "#ff3b30",
+  unbacked: "#ff3b30",
+} as const;
 const TONE_TEXT: Record<Tone, string> = {
   gain: "text-gain",
   loss: "text-loss",
@@ -80,7 +93,9 @@ function liveReducer(live: Live, p: ScanProgress): Live {
         ...live,
         // The line follows the newest fetch still running, else this one.
         line: live.files.some((f) => f.state === "reading" && f.path !== p.path) ? live.line : line,
-        files: live.files.map((f) => (f.path === p.path ? { ...f, state: p.ok ? "read" : "skipped" } : f)),
+        files: live.files.map((f) =>
+          f.path === p.path ? { ...f, state: p.ok ? "read" : "skipped" } : f,
+        ),
       };
     default:
       return { ...live, line };
@@ -93,7 +108,11 @@ function LiveScan({ live, repo }: { live: Live; repo: string }) {
   const name = repo.split("/").pop() ?? repo;
   return (
     <>
-      <p className="label-mono mt-10 min-h-[1.3em] truncate lg:mt-12" role="status" aria-live="polite">
+      <p
+        className="label-mono mt-10 min-h-[1.3em] truncate lg:mt-12"
+        role="status"
+        aria-live="polite"
+      >
         <motion.span
           key={live.line}
           className="inline-block"
@@ -156,7 +175,11 @@ function LiveScan({ live, repo }: { live: Live; repo: string }) {
                   )}
                 </span>
                 <span className="label-mono shrink-0">
-                  {f.state === "reading" ? copy.acts.scan.reading : f.state === "skipped" ? copy.acts.scan.skippedTag : ""}
+                  {f.state === "reading"
+                    ? copy.acts.scan.reading
+                    : f.state === "skipped"
+                      ? copy.acts.scan.skippedTag
+                      : ""}
                 </span>
               </motion.li>
             ))}
@@ -200,7 +223,11 @@ function ClaimCard({
         )}
       >
         {claim.evidence}
-        {event && <span className={cn("ml-3 whitespace-nowrap", TONE_TEXT[tone])}>{signed(event.delta)}</span>}
+        {event && (
+          <span className={cn("ml-3 whitespace-nowrap", TONE_TEXT[tone])}>
+            {signed(event.delta)}
+          </span>
+        )}
       </p>
       {/* Where the beam leaves the card: the right edge on desktop, the left on mobile. */}
       <span
@@ -210,7 +237,7 @@ function ClaimCard({
           "absolute top-1/2 -left-[5px] size-[9px] -translate-y-1/2 rounded-full transition-colors duration-300 lg:-right-[5px] lg:left-auto",
           !resolved && "bg-border-strong",
           resolved && claim.status === "backed" && "bg-text",
-          (resolved && (claim.status === "unbacked" || claim.status === "mocked")) && "bg-loss",
+          resolved && (claim.status === "unbacked" || claim.status === "mocked") && "bg-loss",
           resolved && claim.status === "unclear" && "bg-unclear",
         )}
       />
@@ -218,7 +245,15 @@ function ClaimCard({
   );
 }
 
-function SignalCard({ event, view, resolved }: { event: OddsEvent; view: SessionView; resolved: boolean }) {
+function SignalCard({
+  event,
+  view,
+  resolved,
+}: {
+  event: OddsEvent;
+  view: SessionView;
+  resolved: boolean;
+}) {
   const tone = toneOf(event);
   const demo = view.signals?.demo;
   const title =
@@ -231,16 +266,17 @@ function SignalCard({ event, view, resolved }: { event: OddsEvent; view: Session
     event.kind === "iteration"
       ? event.reason
       : event.kind === "demo"
-      ? fill(
-          demo?.status === "loads"
-            ? copy.acts.scan.demoLoads
-            : demo?.status === "video"
-              ? copy.acts.scan.demoVideo
-              : copy.acts.scan.demoDead,
-          {
-          host: hostOf(demo?.url ?? null),
-        })
-      : copy.acts.scan.commitsDetail;
+        ? fill(
+            demo?.status === "loads"
+              ? copy.acts.scan.demoLoads
+              : demo?.status === "video"
+                ? copy.acts.scan.demoVideo
+                : copy.acts.scan.demoDead,
+            {
+              host: hostOf(demo?.url ?? null),
+            },
+          )
+        : copy.acts.scan.commitsDetail;
   return (
     <li
       className={cn(
@@ -305,7 +341,13 @@ function FileTree({
               {reduce ? (
                 <span aria-hidden>{name}</span>
               ) : (
-                <HyperText as="span" aria-hidden delay={i * ROW_STAGGER_MS} duration={SCRAMBLE_MS} className="inline-flex">
+                <HyperText
+                  as="span"
+                  aria-hidden
+                  delay={i * ROW_STAGGER_MS}
+                  duration={SCRAMBLE_MS}
+                  className="inline-flex"
+                >
                   {name}
                 </HyperText>
               )}
@@ -317,7 +359,15 @@ function FileTree({
   );
 }
 
-function NotFound({ claim, shown, nodeRef }: { claim: Claim; shown: boolean; nodeRef: (el: HTMLElement | null) => void }) {
+function NotFound({
+  claim,
+  shown,
+  nodeRef,
+}: {
+  claim: Claim;
+  shown: boolean;
+  nodeRef: (el: HTMLElement | null) => void;
+}) {
   return (
     <motion.div
       ref={nodeRef}
@@ -328,17 +378,27 @@ function NotFound({ claim, shown, nodeRef }: { claim: Claim; shown: boolean; nod
       aria-hidden={!shown}
     >
       <p className="text-loss">
-        {claim.missing ? fill(copy.acts.scan.notFound, { missing: claim.missing }) : copy.acts.scan.notFoundPlain}
+        {claim.missing
+          ? fill(copy.acts.scan.notFound, { missing: claim.missing })
+          : copy.acts.scan.notFoundPlain}
       </p>
       {claim.searched.length > 0 && (
-        <p className="text-text-subtle">{fill(copy.acts.scan.searched, { paths: claim.searched.join(", ") })}</p>
+        <p className="text-text-subtle">
+          {fill(copy.acts.scan.searched, { paths: claim.searched.join(", ") })}
+        </p>
       )}
     </motion.div>
   );
 }
 
 /** Desktop: an S-curve from the card's right edge to the file. Mobile: down a lane in the left gutter. */
-function beamPath(from: DOMRect, to: DOMRect, box: DOMRect, desktop: boolean, lane: number): string {
+function beamPath(
+  from: DOMRect,
+  to: DOMRect,
+  box: DOMRect,
+  desktop: boolean,
+  lane: number,
+): string {
   const sx = from.left + from.width / 2 - box.left;
   const sy = from.top + from.height / 2 - box.top;
   const ex = to.left - box.left - 2;
@@ -402,7 +462,9 @@ function XRay({
         claims.map((_, i) => {
           const from = dots.current[i];
           const to = target(i);
-          return from && to ? beamPath(from.getBoundingClientRect(), to.getBoundingClientRect(), b, desktop, i) : "";
+          return from && to
+            ? beamPath(from.getBoundingClientRect(), to.getBoundingClientRect(), b, desktop, i)
+            : "";
         }),
       );
     };
@@ -446,7 +508,8 @@ function XRay({
   const hits = new Map<string, Hit>();
   claims.forEach((c, i) => {
     if (i >= revealed || !c.file || c.status === "unbacked") return;
-    const hit: Exclude<Hit, null> = c.status === "backed" ? "backed" : c.status === "mocked" ? "mocked" : "unclear";
+    const hit: Exclude<Hit, null> =
+      c.status === "backed" ? "backed" : c.status === "mocked" ? "mocked" : "unclear";
     const had = hits.get(c.file);
     if (!had || RANK[hit] > RANK[had]) hits.set(c.file, hit);
   });
@@ -458,8 +521,8 @@ function XRay({
     : claims.some((c) => c.status === "mocked")
       ? copy.acts.scan.footer.mocked
       : claims.some((c) => c.status !== "backed")
-      ? copy.acts.scan.footer.unclear
-      : copy.acts.scan.footer.clean;
+        ? copy.acts.scan.footer.unclear
+        : copy.acts.scan.footer.clean;
 
   return (
     <>
@@ -471,7 +534,9 @@ function XRay({
           <h2 id="claims-heading" className="label-mono uppercase">
             {copy.acts.scan.claims}
           </h2>
-          {claims.length === 0 && <p className="mt-4 text-[17px] text-text-muted">{copy.acts.scan.noClaims}</p>}
+          {claims.length === 0 && (
+            <p className="mt-4 text-[17px] text-text-muted">{copy.acts.scan.noClaims}</p>
+          )}
           <ul className="mt-4 grid gap-6">
             {claims.map((c, i) => (
               <ClaimCard
@@ -488,7 +553,12 @@ function XRay({
           {signalEvents.length > 0 && (
             <ul className="mt-6 grid gap-4">
               {signalEvents.map((e, j) => (
-                <SignalCard key={`${e.kind}-${j}`} event={e} view={view} resolved={claims.length + j < revealed} />
+                <SignalCard
+                  key={`${e.kind}-${j}`}
+                  event={e}
+                  view={view}
+                  resolved={claims.length + j < revealed}
+                />
               ))}
             </ul>
           )}
@@ -546,7 +616,9 @@ function XRay({
         </svg>
       </div>
 
-      {done && <p className="mt-12 text-[20px] leading-snug font-bold text-balance lg:mt-14">{footer}</p>}
+      {done && (
+        <p className="mt-12 text-[20px] leading-snug font-bold text-balance lg:mt-14">{footer}</p>
+      )}
       <ActionBar
         label={copy.acts.scan.next}
         status={copy.acts.scan.busy.checking}
@@ -614,7 +686,8 @@ export function ScanAct({
   }, [scanned, failed, attempt, send]);
 
   // The panel reads along and reacts to each result as it lands.
-  const landed = scanned && revealed > 0 ? view.events[Math.min(revealed, view.events.length) - 1] : undefined;
+  const landed =
+    scanned && revealed > 0 ? view.events[Math.min(revealed, view.events.length) - 1] : undefined;
   const kind = landed ? reactionForDelta(landed.delta) : null;
   const cue: ReactionCue | null = kind ? { kind, key: revealed } : null;
 
@@ -622,7 +695,11 @@ export function ScanAct({
     <>
       <ActTitle eyebrow={copy.acts.scan.eyebrow} title={copy.acts.scan.title} />
       {!failed && (
-        <JudgeRow rest="scan" reactions={{ engineer: cue, investor: cue, tired: cue }} className="mt-8 lg:mt-10" />
+        <JudgeRow
+          rest="scan"
+          reactions={{ engineer: cue, investor: cue, tired: cue }}
+          className="mt-8 lg:mt-10"
+        />
       )}
       {failed ? (
         <div className="mt-12 max-w-xl">
@@ -634,7 +711,13 @@ export function ScanAct({
           </Link>
         </div>
       ) : scanned ? (
-        <XRay view={view} revealed={revealed} onReveal={onReveal} onNext={onNext} pending={pending} />
+        <XRay
+          view={view}
+          revealed={revealed}
+          onReveal={onReveal}
+          onNext={onNext}
+          pending={pending}
+        />
       ) : (
         <LiveScan live={live} repo={view.repo} />
       )}

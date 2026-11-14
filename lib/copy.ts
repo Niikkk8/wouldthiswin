@@ -81,7 +81,8 @@ export const copy = {
     prefs: {
       toggle: "Accessibility",
       extended: "Extended time",
-      extendedNote: "Twice as long to answer every question. No penalty, and it never shows on your review.",
+      extendedNote:
+        "Twice as long to answer every question. No penalty, and it never shows on your review.",
     },
     demoToggle: "Add a demo link or video (optional)",
     demoLabel: "Demo link or video",
@@ -159,8 +160,10 @@ export const copy = {
       envDetail: "Env files usually hold real keys. Only you can see this.",
       fix: "Rotate the key now, delete it from the repo, and add the file to .gitignore.",
       historyTitle: "{path} is still in git history",
-      historyDetail: "Still in history at {sha}, even if the file is gone now. Only you can see this.",
-      historyFix: "Rotate every key that file ever held: deleting it doesn't remove it from history.",
+      historyDetail:
+        "Still in history at {sha}, even if the file is gone now. Only you can see this.",
+      historyFix:
+        "Rotate every key that file ever held: deleting it doesn't remove it from history.",
     },
     template: {
       readme: "The README is still the starter template's",
@@ -241,7 +244,8 @@ export const copy = {
       foundNone: "no AI calls in the code read",
       foundPretrained: "a published model loaded with from_pretrained",
       overstated: '"{claim}" says more than the code shows',
-      overstatedDetail: "The claim reads as {claimed}; the code shows {found}. The Engineer will ask about it.",
+      overstatedDetail:
+        "The claim reads as {claimed}; the code shows {found}. The Engineer will ask about it.",
       noAiCode: "No AI imports or calls in the files checked.",
       fix: "Describe it as what it is ({found}), or point to the code that does more.",
     },
@@ -259,13 +263,17 @@ export const copy = {
     },
     timeline: {
       before: "{n} commit{s} from before the start",
-      beforeDetail: "Judges sometimes ask what existed before the event. Be ready to say what you prepared and what you built during it.",
+      beforeDetail:
+        "Judges sometimes ask what existed before the event. Be ready to say what you prepared and what you built during it.",
       after: "{n} commit{s} after the deadline",
-      afterDetail: "The last one landed about {hours}h after submissions closed. Judges may ask what changed after the deadline.",
+      afterDetail:
+        "The last one landed about {hours}h after submissions closed. Judges may ask what changed after the deadline.",
       oneAuthor: "All {n} commits are from one person",
-      oneAuthorDetail: "For a team project, judges sometimes ask who built what. Be ready to say how you split the work.",
+      oneAuthorDetail:
+        "For a team project, judges sometimes ask who built what. Be ready to say how you split the work.",
       split: "{share}% of commits are from one person",
-      splitDetail: "{author} made {share}% of the commits. Judges sometimes ask how the team split the work.",
+      splitDetail:
+        "{author} made {share}% of the commits. Judges sometimes ask how the team split the work.",
       checked: "From the commit history.",
     },
     hygiene: {
@@ -298,9 +306,11 @@ export const copy = {
     words: "{n} words",
     leftOut: "Claims left out until your code backs them",
     readme: {
-      oneLiner: "The judges will remember it as {oneLiner}. Say what it does and for whom here, in one sentence.",
+      oneLiner:
+        "The judges will remember it as {oneLiner}. Say what it does and for whom here, in one sentence.",
       what: "What it does",
-      nothingBacked: "Nothing the scan could confirm yet. Add each feature here once its code is in the repo.",
+      nothingBacked:
+        "Nothing the scan could confirm yet. Add each feature here once its code is in the repo.",
       stack: "Built with",
       setup: "Run it locally",
       team: "Team",
@@ -308,8 +318,10 @@ export const copy = {
     },
     submission: {
       intro: "{name} is the one judges will remember as {oneLiner}.",
-      works: "What works today: {list}. Each of these is in the code, and the README links to the files.",
-      noWorks: "The core of it is still being built, so this submission describes the plan, not a finished product.",
+      works:
+        "What works today: {list}. Each of these is in the code, and the README links to the files.",
+      noWorks:
+        "The core of it is still being built, so this submission describes the plan, not a finished product.",
       stack: "It's built with {stack}.",
       next: "Not done yet, and we won't claim it until it is: {list}.",
       repo: "The code is public at {url}.",
@@ -320,7 +332,8 @@ export const copy = {
     notChecked: "Couldn't check this one in the time the panel had.",
     noLines: "Couldn't point to the lines that show it.",
     checked: "Checked against the code.",
-    answerNow: "Budget exhausted. Answer now with your verdicts; anything you couldn't check is cant_verify.",
+    answerNow:
+      "Budget exhausted. Answer now with your verdicts; anything you couldn't check is cant_verify.",
   },
   // Findings: what each one says, and the one-line fix. Evidence, never motives.
   findings: {
@@ -328,13 +341,16 @@ export const copy = {
     demoLoads: "The demo link answered.",
     demoVideo: "The demo video is public and plays.",
     demoDead: "The demo link didn't answer.",
-    bulkCommit: "Most of the code arrived in one commit. Judges sometimes ask about that, so be ready to explain your process.",
+    bulkCommit:
+      "Most of the code arrived in one commit. Judges sometimes ask about that, so be ready to explain your process.",
     bulkCommitCheck: "The first commit added over 70% of today's files.",
     fix: {
-      mocked: "Swap the stand-in data in {path} for the real source, or say in the README that it's demo data.",
+      mocked:
+        "Swap the stand-in data in {path} for the real source, or say in the README that it's demo data.",
       unbacked: 'Build {missing}, or cut "{claim}" from the README until it exists.',
       unclear: "Name the file that does this in the README, so a judge can find it.",
-      partial: 'Finish "{claim}", or say in the README which parts are real and which are stand-ins.',
+      partial:
+        'Finish "{claim}", or say in the README which parts are real and which are stand-ins.',
       demoDead: "Redeploy the demo, or replace the link with one that loads.",
       demoNone: "Deploy a demo, or link a two-minute video in the README.",
     },
@@ -346,7 +362,8 @@ export const copy = {
     copyItem: "Copy",
     copied: "Copied",
     openIssue: "Open as GitHub issue",
-    empty: "Nothing to fix. Every check that ran came back clean, so there's no fix with evidence to list. That covers what was checked, not everything a judge might ask.",
+    empty:
+      "Nothing to fix. Every check that ran came back clean, so there's no fix with evidence to list. That covers what was checked, not everything a judge might ask.",
     severity: { blocker: "Blocker", major: "Major", minor: "Minor" },
     effort: { "5m": "5 min", "30m": "30 min", "2h": "2 h" },
     severityLabel: "Severity",
@@ -535,7 +552,8 @@ export const copy = {
       downloadFormat: "Download {format}",
       downloads: "Download the image",
       // The phone's share sheet: the image goes with this caption.
-      caption: 'The judges will remember {repo} as "{oneLiner}". {odds}% chance to win. Would yours win? {url}',
+      caption:
+        'The judges will remember {repo} as "{oneLiner}". {odds}% chance to win. Would yours win? {url}',
       captionLabel: "Caption",
       copyCaption: "Copy caption",
       qr: "Instagram",
@@ -549,7 +567,8 @@ export const copy = {
       visibility: {
         heading: "Who can see this",
         shareable: "Make shareable",
-        shareableNote: "Turns on a public link to the verdict: odds, status, scores and one line from each judge. Never your answers or anything private.",
+        shareableNote:
+          "Turns on a public link to the verdict: odds, status, scores and one line from each judge. Never your answers or anything private.",
         listed: "List publicly",
         listedNote: "Also shows it on the public board and lets search engines find it.",
         off: "Only you can see this review. Make it shareable to post it.",
@@ -557,7 +576,8 @@ export const copy = {
       link: "Verdict link",
       linkNote: "Anyone with the link sees the verdict. Never your answers or private findings.",
       badge: "README badge",
-      badgeNote: "Paste into your README. It always shows your latest shareable verdict and links to it.",
+      badgeNote:
+        "Paste into your README. It always shows your latest shareable verdict and links to it.",
       badgeAlt: "Would this win badge for this repo",
       copy: "Copy",
       copied: "Copied",
@@ -566,14 +586,23 @@ export const copy = {
   },
   // Titles and descriptions for search and link previews (lib/seo.ts caps them at 60 and 155).
   seo: {
-    demo: { title: "Sample session: watch a hackathon repo get judged", description: "Watch three AI judges check a sample hackathon project's README against its code, grill the team, and write the verdict. No sign-up." },
+    demo: {
+      title: "Sample session: watch a hackathon repo get judged",
+      description:
+        "Watch three AI judges check a sample hackathon project's README against its code, grill the team, and write the verdict. No sign-up.",
+    },
     privacy: { title: "Privacy: what Would This Win? keeps" },
-    guides: { title: "Hackathon guides: judging, READMEs, demos, pitches", description: "How hackathon judges score projects, and how to get your README, demo and answers ready before you submit." },
+    guides: {
+      title: "Hackathon guides: judging, READMEs, demos, pitches",
+      description:
+        "How hackathon judges score projects, and how to get your README, demo and answers ready before you submit.",
+    },
   },
   // A real hackathon's page, /hackathons/[slug], generated only from its preset.
   hackathons: {
     title: "{name}: how it's judged, and a pre-flight check",
-    description: "What {name} judges on, with weights, and a free check of your repo against those criteria before you submit.",
+    description:
+      "What {name} judges on, with weights, and a free check of your repo against those criteria before you submit.",
     heading: "{name}: how it's judged",
     lede: "The criteria {name} scores, and a way to run your repo past them before you submit.",
     criteria: "What {name} scores",
@@ -594,10 +623,12 @@ export const copy = {
     lede: "Run your repo past the panel before you submit. Same three judges, scored on this event's own criteria.",
     judgedOn: "Judged on",
     closed: "Submissions for {name} have closed. The panel still works without the event.",
-    upcoming: "{name} hasn't started yet. Come back when it opens, or face the panel without it now.",
+    upcoming:
+      "{name} hasn't started yet. Come back when it opens, or face the panel without it now.",
     withoutEvent: "Face the panel without the event",
     metaTitle: "{name}: pre-flight check",
-    metaDescription: "Before you submit to {name}: three AI judges check your repo's claims, grill you, and score it on {name}'s criteria. Free.",
+    metaDescription:
+      "Before you submit to {name}: three AI judges check your repo's claims, grill you, and score it on {name}'s criteria. Free.",
   },
   // The shareable verdict at /v/[id], and its preview card.
   verdict: {
@@ -635,7 +666,11 @@ export const copy = {
     warnings: "{n} warning{s}",
     status: { passed: "Passed", failed: "Failed", warning: "Warning" },
     reviewers: "Reviewers",
-    reviewerStatus: { approved: "Approved", changesRequested: "Changes requested", commented: "Commented" },
+    reviewerStatus: {
+      approved: "Approved",
+      changesRequested: "Changes requested",
+      commented: "Commented",
+    },
     comments: "Review comments",
     line: "line {n}",
     lines: "lines {from} to {to}",
@@ -702,9 +737,9 @@ export const copy = {
     invalidDemo: "That demo link doesn't look right. Paste a full link to a live site or a video.",
     judgeFailed: "The panel fell asleep mid-session. Try again.",
     swamped: "The panel's swamped. Try again in a minute.",
-    githubAuth: "We can't get into GitHub right now. That's on us, not your repo. Try again in a few minutes.",
-    rateLimited:
-      "You've used today's sessions. The verdict isn't changing. Come back tomorrow.",
+    githubAuth:
+      "We can't get into GitHub right now. That's on us, not your repo. Try again in a few minutes.",
+    rateLimited: "You've used today's sessions. The verdict isn't changing. Come back tomorrow.",
     dailyCap: "The judges are asleep. Come back tomorrow.",
     spendCap: "The judges are asleep. Come back tomorrow.",
     stale: "The panel has moved on. Picking up where you are.",
@@ -716,8 +751,10 @@ export const copy = {
     lifelineUsed: "You've already used your lifeline.",
     voiceUnavailable: "Voice answers aren't working right now. Type yours instead.",
     voiceEmpty: "Didn't catch any words. Try again, or type it.",
-    eventClosed: "This event isn't taking repos right now. Face the panel without it from the home page.",
-    invalidDevpost: "That Devpost link doesn't look right. Paste a project page, like devpost.com/software/your-project.",
+    eventClosed:
+      "This event isn't taking repos right now. Face the panel without it from the home page.",
+    invalidDevpost:
+      "That Devpost link doesn't look right. Paste a project page, like devpost.com/software/your-project.",
   },
   demo: {
     header: "Sample session · {repo}",
@@ -832,8 +869,6 @@ export const copy = {
     button: "Face the panel",
   },
 } as const;
-
-export type Copy = typeof copy;
 
 /** Fills {name} slots in a copy string. */
 export function fill(template: string, values: Record<string, string | number>): string {

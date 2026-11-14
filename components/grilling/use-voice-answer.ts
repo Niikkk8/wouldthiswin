@@ -31,8 +31,14 @@ export function useVoiceAnswer({
   onLateTranscript: (answer: string) => void;
 }) {
   const [pref, setPref] = useVoicePref();
-  const supported = useSyncExternalStore(noop, () => recordingType() !== null, () => false);
-  const [reason, setReason] = useState<Extract<RecorderState, "denied" | "unsupported"> | null>(null);
+  const supported = useSyncExternalStore(
+    noop,
+    () => recordingType() !== null,
+    () => false,
+  );
+  const [reason, setReason] = useState<Extract<RecorderState, "denied" | "unsupported"> | null>(
+    null,
+  );
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
   const lateText = useRef<string | null>(null);
@@ -91,7 +97,14 @@ export function useVoiceAnswer({
 
   return {
     enabled: pref === "on" && supported,
-    note: pref === "off" ? (reason === "denied" ? V.denied : reason === "unsupported" ? V.unsupported : V.off) : null,
+    note:
+      pref === "off"
+        ? reason === "denied"
+          ? V.denied
+          : reason === "unsupported"
+            ? V.unsupported
+            : V.off
+        : null,
     uploading,
     busy: recording || uploading,
     started,

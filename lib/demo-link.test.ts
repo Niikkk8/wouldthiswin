@@ -6,8 +6,14 @@ import { checkDemoLink } from "./demo-link-check";
 
 describe("parsing a demo link", () => {
   test("live sites, with or without https://", () => {
-    assert.deepEqual(parseDemoLink("queue.vercel.app"), { kind: "site", url: "https://queue.vercel.app/" });
-    assert.deepEqual(parseDemoLink(" https://myapp.com/demo "), { kind: "site", url: "https://myapp.com/demo" });
+    assert.deepEqual(parseDemoLink("queue.vercel.app"), {
+      kind: "site",
+      url: "https://queue.vercel.app/",
+    });
+    assert.deepEqual(parseDemoLink(" https://myapp.com/demo "), {
+      kind: "site",
+      url: "https://myapp.com/demo",
+    });
   });
 
   test("videos on YouTube, Loom, Vimeo and Google Drive", () => {
@@ -74,8 +80,14 @@ describe("checking a demo link", () => {
   });
 
   test("a live site that loads, or doesn't", async () => {
-    assert.equal(await checkDemoLink(parseDemoLink("app.example.com"), fake((u) => result(true, u)).check), "loads");
-    assert.equal(await checkDemoLink(parseDemoLink("app.example.com"), fake((u) => result(false, u)).check), "dead");
+    assert.equal(
+      await checkDemoLink(parseDemoLink("app.example.com"), fake((u) => result(true, u)).check),
+      "loads",
+    );
+    assert.equal(
+      await checkDemoLink(parseDemoLink("app.example.com"), fake((u) => result(false, u)).check),
+      "dead",
+    );
   });
 
   test("a YouTube video is checked through oEmbed, which 404s for a missing video", async () => {
@@ -98,7 +110,10 @@ describe("checking a demo link", () => {
     const link = parseDemoLink("https://drive.google.com/file/d/1AbCdEfGhIjK/view");
     assert.equal(await checkDemoLink(link, fake((u) => result(true, u)).check), "video");
     assert.equal(
-      await checkDemoLink(link, fake(() => result(true, "https://accounts.google.com/ServiceLogin")).check),
+      await checkDemoLink(
+        link,
+        fake(() => result(true, "https://accounts.google.com/ServiceLogin")).check,
+      ),
       "dead",
     );
   });

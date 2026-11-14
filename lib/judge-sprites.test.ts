@@ -2,7 +2,15 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "vitest";
-import { FRAMES, HEAD_CROP, REACTION_FRAME, SPRITE_SIZE, frameIndex, reactionForDelta, sheetPath } from "./judge-sprites";
+import {
+  FRAMES,
+  HEAD_CROP,
+  REACTION_FRAME,
+  SPRITE_SIZE,
+  frameIndex,
+  reactionForDelta,
+  sheetPath,
+} from "./judge-sprites";
 import { JUDGES } from "./session";
 
 const PUBLIC = path.resolve(import.meta.dirname, "../public");
@@ -27,7 +35,8 @@ test("every judge has the shared frames and a frame for each reaction", () => {
   for (const j of JUDGES) {
     const frames = FRAMES[j] as readonly string[];
     assert.deepEqual(frames.slice(0, 3), ["base", "blink", "talk"]);
-    for (const f of Object.values(REACTION_FRAME[j])) assert.ok(frames.includes(f), `${j} has no ${f} frame`);
+    for (const f of Object.values(REACTION_FRAME[j]))
+      assert.ok(frames.includes(f), `${j} has no ${f} frame`);
   }
   assert.ok((FRAMES.tired as readonly string[]).includes("dozing"));
 });
@@ -49,7 +58,10 @@ test("each sprite sheet is one 128px row of every frame, in order", () => {
 test("head crops sit inside the sprite", () => {
   for (const j of JUDGES) {
     const c = HEAD_CROP[j];
-    assert.ok(c.x >= 0 && c.y >= 0 && c.x + c.size <= SPRITE_SIZE && c.y + c.size <= SPRITE_SIZE, j);
+    assert.ok(
+      c.x >= 0 && c.y >= 0 && c.x + c.size <= SPRITE_SIZE && c.y + c.size <= SPRITE_SIZE,
+      j,
+    );
   }
 });
 

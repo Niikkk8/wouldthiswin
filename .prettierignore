@@ -1,0 +1,11 @@
+video/
+.next/
+node_modules/
+package-lock.json
+.agent/
+.claude/
+evals/out/
+content/
+db/
+*.tsbuildinfo
+next-env.d.ts

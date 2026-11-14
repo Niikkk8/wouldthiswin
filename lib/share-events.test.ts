@@ -4,7 +4,8 @@ import { ShareEvent } from "./share-events";
 import { captionFor, imageFileName, imagePath, linkedInUrl, reviewUrl } from "./site";
 
 test("share events: the five kinds, a download needs its format, nothing else gets through", () => {
-  for (const kind of ["share_image", "x_clicked", "linkedin_clicked", "caption_copied"]) assert.ok(ShareEvent.safeParse({ kind }).success, kind);
+  for (const kind of ["share_image", "x_clicked", "linkedin_clicked", "caption_copied"])
+    assert.ok(ShareEvent.safeParse({ kind }).success, kind);
   assert.ok(ShareEvent.safeParse({ kind: "download", format: "story" }).success);
   assert.ok(ShareEvent.safeParse({ kind: "share_image", format: "portrait" }).success);
   assert.ok(!ShareEvent.safeParse({ kind: "download" }).success, "download without a format");
@@ -14,7 +15,12 @@ test("share events: the five kinds, a download needs its format, nothing else ge
   assert.ok(!ShareEvent.safeParse(null).success);
 });
 
-const r = { id: "abcdefgh23", repo: "team/queue less", oneLiner: "the one with the QR code", odds: 34 };
+const r = {
+  id: "abcdefgh23",
+  repo: "team/queue less",
+  oneLiner: "the one with the QR code",
+  odds: 34,
+};
 
 test("share links: caption, LinkedIn, image paths", () => {
   const caption = captionFor(r);

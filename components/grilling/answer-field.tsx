@@ -58,7 +58,9 @@ export function AnswerField({
           ref={inputRef}
           rows={1}
           value={text}
-          onChange={(e) => onText(e.target.value.replace(/[\r\n]+/g, " ").slice(0, MAX_ANSWER_LENGTH))}
+          onChange={(e) =>
+            onText(e.target.value.replace(/[\r\n]+/g, " ").slice(0, MAX_ANSWER_LENGTH))
+          }
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.nativeEvent.isComposing) {
               e.preventDefault();
@@ -75,7 +77,10 @@ export function AnswerField({
         />
       ) : (
         <div className="mt-4 border-b border-border-strong pb-4">
-          <motion.p layoutId={answerId(index)} className="font-mono text-[18px] text-text-muted lg:text-[20px]">
+          <motion.p
+            layoutId={answerId(index)}
+            className="font-mono text-[18px] text-text-muted lg:text-[20px]"
+          >
             {text.trim() || G.silence}
           </motion.p>
         </div>

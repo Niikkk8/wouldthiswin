@@ -15,8 +15,18 @@ import { ActTitle } from "./act-parts";
 import { ActionBar } from "./action-bar";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
-const DELTA: Record<Tone, string> = { gain: "text-gain", loss: "text-loss", unclear: "text-unclear", flat: "text-text-muted" };
-const DOT: Record<Tone, string> = { gain: "#4D7CFF", loss: "#FF3B30", unclear: "#F5A524", flat: "#8A8A8E" };
+const DELTA: Record<Tone, string> = {
+  gain: "text-gain",
+  loss: "text-loss",
+  unclear: "text-unclear",
+  flat: "text-text-muted",
+};
+const DOT: Record<Tone, string> = {
+  gain: "#4D7CFF",
+  loss: "#FF3B30",
+  unclear: "#F5A524",
+  flat: "#8A8A8E",
+};
 
 const projectName = (repo: string) => repo.split("/").pop() ?? repo;
 const CHART_MS = 1200;
@@ -101,7 +111,9 @@ function Replay({ events, instant }: { events: readonly OddsEvent[]; instant: bo
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2, delay: at(i) }}
           >
-            <span className={cn("font-mono", DELTA[toneOf(e)])}>{e.delta > 0 ? `+${e.delta}` : e.delta}</span>
+            <span className={cn("font-mono", DELTA[toneOf(e)])}>
+              {e.delta > 0 ? `+${e.delta}` : e.delta}
+            </span>
             <span>{e.reason}</span>
           </motion.li>
         ))}
@@ -157,7 +169,11 @@ export function DeliberationAct({
     <>
       <ActTitle eyebrow={copy.acts.deliberation.eyebrow} title={copy.acts.deliberation.title} />
       <div className="mt-8 grid gap-10 lg:mt-14 lg:grid-cols-[minmax(0,1fr)_385px] lg:gap-16">
-        <section className="rounded-panel border border-border bg-surface" aria-live="polite" aria-busy={!panel}>
+        <section
+          className="rounded-panel border border-border bg-surface"
+          aria-live="polite"
+          aria-busy={!panel}
+        >
           <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-5 py-4">
             <h2 className="text-[17px] font-bold">
               {fill(copy.acts.deliberation.channel, { name: projectName(view.repo) })}
@@ -176,8 +192,12 @@ export function DeliberationAct({
                   <div key={i} className="flex items-end gap-3">
                     <Avatar judge={m.judge} />
                     <div className="min-w-0">
-                      <p className="text-[13px] font-bold text-text-subtle">{copy.judges[m.judge].name}</p>
-                      <p className="mt-1 w-fit rounded-card bg-surface-2 px-3.5 py-2 text-[16px] leading-snug">{m.text}</p>
+                      <p className="text-[13px] font-bold text-text-subtle">
+                        {copy.judges[m.judge].name}
+                      </p>
+                      <p className="mt-1 w-fit rounded-card bg-surface-2 px-3.5 py-2 text-[16px] leading-snug">
+                        {m.text}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -185,10 +205,14 @@ export function DeliberationAct({
             ) : failed ? (
               <div className="grid justify-items-start gap-4">
                 <p className="text-[17px] text-text-muted">{copy.acts.deliberation.failed}</p>
-                <Button variant="secondary" onClick={() => {
+                <Button
+                  variant="secondary"
+                  onClick={() => {
                     setFailed(false);
                     void ask();
-                  }} disabled={pending}>
+                  }}
+                  disabled={pending}
+                >
                   {copy.acts.deliberation.retry}
                 </Button>
               </div>

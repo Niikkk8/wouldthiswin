@@ -12,7 +12,10 @@ export function allEvents(env: Env = process.env): EventPreset[] {
   return env.NODE_ENV === "production" ? EVENT_PRESETS : [...EVENT_PRESETS, FIXTURE_EVENT];
 }
 
-export function eventBySlug(slug: string | null | undefined, env: Env = process.env): EventPreset | null {
+export function eventBySlug(
+  slug: string | null | undefined,
+  env: Env = process.env,
+): EventPreset | null {
   if (!slug) return null;
   return allEvents(env).find((e) => e.slug === slug) ?? null;
 }

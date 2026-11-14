@@ -14,11 +14,16 @@ import { badgeMarkdown } from "@/lib/site";
 
 // The card is drawn in the browser (it carries the judges' faces): loaded after the text,
 // in a box the same shape so nothing moves when it arrives.
-const CardBox = () => <div className="mt-3 aspect-[1200/630] w-full rounded-card border border-border bg-bg" />;
-const ShareCardPreview = dynamic(() => import("@/components/share-card-preview").then((m) => m.ShareCardPreview), {
-  ssr: false,
-  loading: CardBox,
-});
+const CardBox = () => (
+  <div className="mt-3 aspect-[1200/630] w-full rounded-card border border-border bg-bg" />
+);
+const ShareCardPreview = dynamic(
+  () => import("@/components/share-card-preview").then((m) => m.ShareCardPreview),
+  {
+    ssr: false,
+    loading: CardBox,
+  },
+);
 
 /** True once the element is within a screen or so of the viewport. */
 function useNear<T extends Element>() {
@@ -27,7 +32,9 @@ function useNear<T extends Element>() {
   useEffect(() => {
     const el = ref.current;
     if (!el || near) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "100% 0px" });
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), {
+      rootMargin: "100% 0px",
+    });
     io.observe(el);
     return () => io.disconnect();
   }, [near]);
@@ -39,7 +46,10 @@ function CopyMarkdown({ text }: { text: string }) {
   return (
     <button
       type="button"
-      className={cn(buttonVariants({ variant: "secondary" }), "h-10 shrink-0 gap-2 px-3 text-[14px]")}
+      className={cn(
+        buttonVariants({ variant: "secondary" }),
+        "h-10 shrink-0 gap-2 px-3 text-[14px]",
+      )}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);
@@ -49,7 +59,11 @@ function CopyMarkdown({ text }: { text: string }) {
       }}
       aria-label={`${copy.acts.share.copy}: ${copy.landing.walkAway.badge}`}
     >
-      {copied ? <Check aria-hidden size={16} strokeWidth={1.75} /> : <Copy aria-hidden size={16} strokeWidth={1.75} />}
+      {copied ? (
+        <Check aria-hidden size={16} strokeWidth={1.75} />
+      ) : (
+        <Copy aria-hidden size={16} strokeWidth={1.75} />
+      )}
       <span aria-live="polite">{copied ? copy.acts.share.copied : copy.acts.share.copy}</span>
     </button>
   );
@@ -65,7 +79,10 @@ export function WalkAway() {
   const badge = `data:image/svg+xml;utf8,${encodeURIComponent(badgeSvg(review.odds, review.tier))}`;
   return (
     <section aria-labelledby="walk-heading" className="page-x py-20 lg:py-28">
-      <h2 id="walk-heading" className="text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act">
+      <h2
+        id="walk-heading"
+        className="text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act"
+      >
         {w.heading}
       </h2>
       <p className="mt-4 text-[18px] leading-snug text-text-muted lg:text-[20px]">{w.lede}</p>
@@ -77,7 +94,10 @@ export function WalkAway() {
           </h3>
           <div className="relative mt-3 max-h-[880px] overflow-hidden rounded-panel border border-border px-5 pb-8 sm:px-8">
             <ReviewView review={review} still />
-            <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-bg to-transparent" />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-bg to-transparent"
+            />
           </div>
         </section>
 
@@ -102,7 +122,12 @@ export function WalkAway() {
               {w.badge}
             </h3>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={badge} alt={`would this win: ${review.odds}% ${copy.tiers[review.tier]}`} height={20} className="mt-3 h-5 w-auto" />
+            <img
+              src={badge}
+              alt={`would this win: ${review.odds}% ${copy.tiers[review.tier]}`}
+              height={20}
+              className="mt-3 h-5 w-auto"
+            />
             <div className="mt-3 flex items-stretch gap-2">
               <code className="flex min-w-0 flex-1 items-center overflow-x-auto rounded-control border border-border bg-surface px-3 py-2 font-mono text-[13px] whitespace-nowrap text-text-muted">
                 {md}

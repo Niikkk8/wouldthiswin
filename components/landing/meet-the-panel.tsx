@@ -11,7 +11,11 @@ const ORDER: readonly Judge[] = ["engineer", "investor", "tired"];
 const WORD_MS = 90;
 
 /** How many words of `text` are showing: all of them, then counting up from 0 once `on`. */
-function useTyping(text: string, on: boolean, instant: boolean): { shown: number; total: number; typing: boolean } {
+function useTyping(
+  text: string,
+  on: boolean,
+  instant: boolean,
+): { shown: number; total: number; typing: boolean } {
   const total = text.split(" ").length;
   const [shown, setShown] = useState(0);
   useEffect(() => {
@@ -60,7 +64,12 @@ function JudgeCard({ judge }: { judge: Judge }) {
       </button>
       <p className="label-mono mt-3">
         {j.name}, {copy.landing.meet.playedBy}{" "}
-        <a href={j.player.url} target="_blank" rel="noopener" className="text-text-muted underline underline-offset-4 hover:text-text">
+        <a
+          href={j.player.url}
+          target="_blank"
+          rel="noopener"
+          className="text-text-muted underline underline-offset-4 hover:text-text"
+        >
           {j.player.name}
         </a>
       </p>
@@ -79,7 +88,13 @@ function JudgeCard({ judge }: { judge: Judge }) {
           <span className="sr-only">{j.sample}</span>
           <span aria-hidden>
             {words.map((w, i) => (
-              <span key={i} className={cn("transition-colors duration-150", i < shown ? "text-text" : "text-text-subtle/40")}>
+              <span
+                key={i}
+                className={cn(
+                  "transition-colors duration-150",
+                  i < shown ? "text-text" : "text-text-subtle/40",
+                )}
+              >
                 {w}{" "}
               </span>
             ))}
@@ -94,10 +109,15 @@ function JudgeCard({ judge }: { judge: Judge }) {
 export function MeetThePanel() {
   return (
     <section aria-labelledby="meet-heading" className="page-x py-20 lg:py-28">
-      <h2 id="meet-heading" className="text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act">
+      <h2
+        id="meet-heading"
+        className="text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act"
+      >
         {copy.landing.meet.heading}
       </h2>
-      <p className="mt-4 max-w-[560px] text-[18px] leading-snug text-text-muted lg:text-[20px]">{copy.landing.meet.lede}</p>
+      <p className="mt-4 max-w-[560px] text-[18px] leading-snug text-text-muted lg:text-[20px]">
+        {copy.landing.meet.lede}
+      </p>
       <ul className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-6 lg:mt-14 lg:grid-cols-3">
         {ORDER.map((j) => (
           <JudgeCard key={j} judge={j} />

@@ -19,7 +19,10 @@ export function Transcript({ questions }: { questions: QuestionView[] }) {
         return (
           <li key={i} className="flex min-w-0 items-baseline gap-3 text-text-subtle" title={q.text}>
             <span className="label-mono shrink-0 uppercase">{copy.judges[q.judge].name}</span>
-            <motion.span layoutId={answerId(i)} className="block min-w-0 truncate text-text-muted/80">
+            <motion.span
+              layoutId={answerId(i)}
+              className="block min-w-0 truncate text-text-muted/80"
+            >
               {a.silent ? copy.acts.grilling.silence : a.text}
             </motion.span>
             {a.score !== null && (
@@ -38,4 +41,3 @@ export function Transcript({ questions }: { questions: QuestionView[] }) {
     </ol>
   );
 }
-

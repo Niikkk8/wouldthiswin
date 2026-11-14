@@ -27,6 +27,11 @@ export type TokenCounts = {
  */
 export function costUsd(model: string, t: TokenCounts): number {
   const p = PRICES[model] ?? PRICES[SONNET];
-  const usd = (t.input * p.input + t.output * p.output + t.cacheWrite * p.cacheWrite + t.cacheRead * p.cacheRead) / 1e6;
+  const usd =
+    (t.input * p.input +
+      t.output * p.output +
+      t.cacheWrite * p.cacheWrite +
+      t.cacheRead * p.cacheRead) /
+    1e6;
   return Math.round(usd * 1e8) / 1e8;
 }

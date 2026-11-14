@@ -121,9 +121,14 @@ export type Question = {
 };
 
 /** The window a question gets when the scan didn't say: the one-sentence question is a quick fact. */
-const DEFAULT_KIND: Record<Judge, QuestionKind> = { tired: "fact", investor: "decision", engineer: "tradeoff" };
+const DEFAULT_KIND: Record<Judge, QuestionKind> = {
+  tired: "fact",
+  investor: "decision",
+  engineer: "tradeoff",
+};
 
-export const kindOf = (q: Pick<Question, "kind" | "judge">): QuestionKind => q.kind ?? DEFAULT_KIND[q.judge];
+export const kindOf = (q: Pick<Question, "kind" | "judge">): QuestionKind =>
+  q.kind ?? DEFAULT_KIND[q.judge];
 
 /** Per-person settings, copied onto the session when it starts. Never shown on public surfaces. */
 export type SessionSettings = ClockSettings;
@@ -256,13 +261,22 @@ export function applyScan(s: SessionState, scan: Scan): Result {
     events.push(makeEvent(events, { ...e, act: 1, rawDelta: capScanDelta(total, e.rawDelta) }));
   };
   for (const c of scan.claims) {
-    push({ kind: "claim", status: c.status, rawDelta: claimDelta(c.status, c.weight), reason: c.label });
+    push({
+      kind: "claim",
+      status: c.status,
+      rawDelta: claimDelta(c.status, c.weight),
+      reason: c.label,
+    });
   }
   const demo = demoDelta(scan.signals.demo.status);
   if (demo !== 0) {
     const status = scan.signals.demo.status;
     const reason =
-      status === "loads" ? copy.odds.demoLoads : status === "video" ? copy.odds.demoVideo : copy.odds.demoDead;
+      status === "loads"
+        ? copy.odds.demoLoads
+        : status === "video"
+          ? copy.odds.demoVideo
+          : copy.odds.demoDead;
     push({ kind: "demo", rawDelta: demo, reason });
   }
   if (scan.signals.bulkFirstCommit) {
@@ -272,7 +286,9 @@ export function applyScan(s: SessionState, scan: Scan): Result {
   // panel's feedback is its own signal, worth at most +12.
   for (const f of scan.signals.iteration?.fixes ?? []) {
     const reason = fill(copy.iteration.event[f.status], { fix: clip(f.fix, 48) });
-    events.push(makeEvent(events, { act: 1, kind: "iteration", rawDelta: fixDelta(f.status), reason }));
+    events.push(
+      makeEvent(events, { act: 1, kind: "iteration", rawDelta: fixDelta(f.status), reason }),
+    );
   }
   return ok({
     ...s,
@@ -319,7 +335,10 @@ export function issueQuestion(s: SessionState, index: number, now: number): Resu
 type OpenQuestion = Question & { issuedAt: number };
 
 /** The question on the clock: issued, not yet answered. */
-function openQuestion(s: SessionState, index: number): { ok: true; q: OpenQuestion } | { ok: false; error: SessionError } {
+function openQuestion(
+  s: SessionState,
+  index: number,
+): { ok: true; q: OpenQuestion } | { ok: false; error: SessionError } {
   if (s.act !== "grilling") return { ok: false, error: "wrongAct" };
   if (index < 0 || index >= s.questions.length) return { ok: false, error: "badQuestion" };
   if (index < s.answers.length) return { ok: false, error: "alreadyAnswered" };
@@ -342,7 +361,9 @@ export function startRecording(s: SessionState, index: number, now: number): Res
   if (!open.ok) return fail(open.error);
   if (open.q.recordingStartedAt != null) return ok(s);
   if (!acceptsRecordingStart(clockOf(open.q), s.settings, now)) return fail("tooLate");
-  const questions = s.questions.map((q, i) => (i === index ? { ...q, recordingStartedAt: now } : q));
+  const questions = s.questions.map((q, i) =>
+    i === index ? { ...q, recordingStartedAt: now } : q,
+  );
   return ok({ ...s, questions });
 }
 
@@ -350,10 +371,13 @@ export function startRecording(s: SessionState, index: number, now: number): Res
 export function uploadRefusal(s: SessionState, index: number, now: number): SessionError | null {
   const open = openQuestion(s, index);
   if (!open.ok) return open.error;
-  return acceptsUpload(clockOf(open.q), s.settings, open.q.recordingStartedAt ?? null, now) ? null : "tooLate";
+  return acceptsUpload(clockOf(open.q), s.settings, open.q.recordingStartedAt ?? null, now)
+    ? null
+    : "tooLate";
 }
 
-export const lifelineUsed = (s: Pick<SessionState, "questions">) => s.questions.some((q) => q.lifeline);
+export const lifelineUsed = (s: Pick<SessionState, "questions">) =>
+  s.questions.some((q) => q.lifeline);
 
 /**
  * The one lifeline: 30 more seconds on the open question, for a fixed cost in the odds. The
@@ -365,7 +389,12 @@ export function pullLifeline(s: SessionState, index: number, now: number): Resul
   if (lifelineUsed(s)) return fail("lifelineUsed");
   if (!acceptsLifeline(clockOf(open.q), s.settings, now)) return fail("tooLate");
   const questions = s.questions.map((q, i) => (i === index ? { ...q, lifeline: true } : q));
-  const event = makeEvent(s.events, { act: 2, kind: "lifeline", rawDelta: LIFELINE_DELTA, reason: copy.odds.lifeline });
+  const event = makeEvent(s.events, {
+    act: 2,
+    kind: "lifeline",
+    rawDelta: LIFELINE_DELTA,
+    reason: copy.odds.lifeline,
+  });
   return ok({ ...s, questions, events: [...s.events, event] });
 }
 
@@ -414,7 +443,11 @@ export function settleAnswer(
 
   const event = makeEvent(s.events, { act: 2, kind: "answer", rawDelta: score, reason });
   const answers = s.answers.map((a, i) => (i === index ? { ...a, score, reason } : a));
-  const questions = withFollowUp(s.questions, index, answer.silent ? null : (scored?.followUp ?? null));
+  const questions = withFollowUp(
+    s.questions,
+    index,
+    answer.silent ? null : (scored?.followUp ?? null),
+  );
   return ok({ ...s, questions, answers, events: [...s.events, event] });
 }
 
@@ -422,11 +455,24 @@ export function settleAnswer(
  * After a vague answer, the same judge asks one short follow-up (a 45-second quick fact),
  * straight after. Never a follow-up to a follow-up, and at most MAX_FOLLOW_UPS a session.
  */
-export function withFollowUp(questions: Question[], index: number, text: string | null): Question[] {
+export function withFollowUp(
+  questions: Question[],
+  index: number,
+  text: string | null,
+): Question[] {
   const q = questions[index];
   if (!text || !q || q.followUpOf !== undefined) return questions;
-  if (questions.filter((x) => x.followUpOf !== undefined).length >= MAX_FOLLOW_UPS) return questions;
-  const followUp: Question = { judge: q.judge, text, caught: null, kind: "fact", issuedAt: null, followUpOf: index, findingId: q.findingId ?? null };
+  if (questions.filter((x) => x.followUpOf !== undefined).length >= MAX_FOLLOW_UPS)
+    return questions;
+  const followUp: Question = {
+    judge: q.judge,
+    text,
+    caught: null,
+    kind: "fact",
+    issuedAt: null,
+    followUpOf: index,
+    findingId: q.findingId ?? null,
+  };
   return [...questions.slice(0, index + 1), followUp, ...questions.slice(index + 1)];
 }
 
@@ -434,13 +480,24 @@ export function withFollowUp(questions: Question[], index: number, text: string 
  * Stores the deliberation, once, during act 3, and with it the rubric's one odds event
  * (lib/rubric.ts rubricDelta): the weighted score, mapped into a bounded move.
  */
-export function applyPanel(s: SessionState, panel: Panel, rubric: Rubric = rubricFor(s.eventSlug)): Result {
+export function applyPanel(
+  s: SessionState,
+  panel: Panel,
+  rubric: Rubric = rubricFor(s.eventSlug),
+): Result {
   if (s.act !== "deliberation") return fail("wrongAct");
   if (s.panel !== null) return fail("alreadyDeliberated");
   const events = [...s.events];
   if (panel.criteria?.length) {
     const agg = aggregate(panel.criteria, rubric);
-    events.push(makeEvent(events, { act: 3, kind: "rubric", rawDelta: rubricDelta(agg), reason: fill(copy.odds.rubric, { score: agg }) }));
+    events.push(
+      makeEvent(events, {
+        act: 3,
+        kind: "rubric",
+        rawDelta: rubricDelta(agg),
+        reason: fill(copy.odds.rubric, { score: agg }),
+      }),
+    );
   }
   // The file contents were only needed to write the review; comments keep their own excerpts.
   return ok({ ...s, panel, events, sources: [] });
@@ -515,7 +572,9 @@ export function toView(s: SessionState, now: number): SessionView {
       windowMs: clock.windowMs,
       lifeline: q.lifeline === true,
       followUp: q.followUpOf !== undefined,
-      answer: a ? { text: a.text, silent: a.silent, late: a.late, score: a.score, reason: a.reason } : null,
+      answer: a
+        ? { text: a.text, silent: a.silent, late: a.late, score: a.score, reason: a.reason }
+        : null,
     });
   }
   return {

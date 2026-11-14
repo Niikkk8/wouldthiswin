@@ -16,7 +16,10 @@ const OEMBED: Record<"youtube" | "vimeo" | "loom", (url: string) => string> = {
 type Check = typeof checkDemo;
 
 /** loads: a live site answers. video: the video exists and is public. dead: neither. */
-export async function checkDemoLink(link: DemoLink | null, check: Check = checkDemo): Promise<DemoStatus> {
+export async function checkDemoLink(
+  link: DemoLink | null,
+  check: Check = checkDemo,
+): Promise<DemoStatus> {
   if (!link) return "none";
   if (link.kind === "site") return (await check(link.url)).loads ? "loads" : "dead";
   if (link.provider === "drive") {

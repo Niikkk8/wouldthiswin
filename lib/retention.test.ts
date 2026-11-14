@@ -10,19 +10,42 @@ const panel: Panel = {
   reviews: {
     tired: { status: "commented", comment: null },
     investor: { status: "approved", comment: null },
-    engineer: { status: "changesRequested", comment: { file: "a.ts", excerpt: "x", startLine: 1, body: "b" } },
+    engineer: {
+      status: "changesRequested",
+      comment: { file: "a.ts", excerpt: "x", startLine: 1, body: "b" },
+    },
   },
 };
 
 test("after 30 days the answer text and the chat go; scores and the review stay", () => {
   const out = forgetAnswers({
     answers: [
-      { text: "We send SMS via Twilio.", receivedAt: 1, silent: false, late: false, score: 7, reason: "ok" },
-      { text: "", receivedAt: 2, silent: true, late: true, score: -12, reason: "Answered after the buzzer" },
+      {
+        text: "We send SMS via Twilio.",
+        receivedAt: 1,
+        silent: false,
+        late: false,
+        score: 7,
+        reason: "ok",
+      },
+      {
+        text: "",
+        receivedAt: 2,
+        silent: true,
+        late: true,
+        score: -12,
+        reason: "Answered after the buzzer",
+      },
     ],
     panel,
   });
-  assert.deepEqual(out.answers.map((a) => [a.text, a.score, a.silent]), [["", 7, false], ["", -12, true]]);
+  assert.deepEqual(
+    out.answers.map((a) => [a.text, a.score, a.silent]),
+    [
+      ["", 7, false],
+      ["", -12, true],
+    ],
+  );
   assert.deepEqual(out.panel?.chat, []);
   assert.equal(out.panel?.oneLiner, "the one that texts you");
   assert.deepEqual(out.panel?.reviews, panel.reviews);

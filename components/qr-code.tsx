@@ -1,7 +1,15 @@
 import { encode } from "uqr";
 
 /** A QR code, dark on light so every phone camera reads it. */
-export function QrCode({ text, label, size = 132 }: { text: string; label: string; size?: number }) {
+export function QrCode({
+  text,
+  label,
+  size = 132,
+}: {
+  text: string;
+  label: string;
+  size?: number;
+}) {
   const { data, size: n } = encode(text, { ecc: "M", border: 0 });
   // The standard four-module quiet zone, light like the code's background.
   const quiet = 4;

@@ -14,7 +14,12 @@ export type CacheKey = { owner: string; repo: string; sha: string; version: numb
 
 const SHA_RE = /^[0-9a-f]{40}$/;
 
-export function cacheKey(owner: string, repo: string, sha: string, version = SCAN_VERSION): CacheKey | null {
+export function cacheKey(
+  owner: string,
+  repo: string,
+  sha: string,
+  version = SCAN_VERSION,
+): CacheKey | null {
   if (!owner || !repo || !SHA_RE.test(sha)) return null;
   return { owner: owner.toLowerCase(), repo: repo.toLowerCase(), sha, version };
 }
@@ -38,7 +43,12 @@ export function fromCached(cached: CachedScan, sources: Source[]): Scan {
 export function isCachedScan(v: unknown): v is CachedScan {
   if (!v || typeof v !== "object") return false;
   const c = v as Partial<CachedScan>;
-  return Array.isArray(c.claims) && Array.isArray(c.questions) && Array.isArray(c.sourcePaths) && !!c.signals;
+  return (
+    Array.isArray(c.claims) &&
+    Array.isArray(c.questions) &&
+    Array.isArray(c.sourcePaths) &&
+    !!c.signals
+  );
 }
 
 export type ScanSource = "cache" | "fresh";

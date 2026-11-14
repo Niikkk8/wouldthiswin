@@ -18,16 +18,26 @@ export type FixItem = {
 const SEVERITY_ORDER: Record<Severity, number> = { blocker: 0, major: 1, minor: 2 };
 const EFFORT_ORDER: Record<Effort, number> = { "5m": 0, "30m": 1, "2h": 2 };
 
-export function fixItems(findings: readonly Finding[], repo: string, commit: string | null): FixItem[] {
+export function fixItems(
+  findings: readonly Finding[],
+  repo: string,
+  commit: string | null,
+): FixItem[] {
   return findings
-    .filter((f): f is Finding & { severity: Severity; effort: Effort; fix: string } => f.outcome !== "pass" && !!f.fix && !!f.severity && !!f.effort)
+    .filter(
+      (f): f is Finding & { severity: Severity; effort: Effort; fix: string } =>
+        f.outcome !== "pass" && !!f.fix && !!f.severity && !!f.effort,
+    )
     .map((f) => ({
       id: f.id,
       severity: f.severity,
       effort: f.effort,
       title: f.title,
       fix: f.fix,
-      evidence: f.evidence.map((e) => ({ label: evidenceLabel(e), href: evidenceHref(e, repo, commit ?? undefined) })),
+      evidence: f.evidence.map((e) => ({
+        label: evidenceLabel(e),
+        href: evidenceHref(e, repo, commit ?? undefined),
+      })),
     }))
     .sort(
       (a, b) =>
@@ -58,7 +68,9 @@ const MAX_ISSUE_URL = 6000;
 
 /** A prefilled "new issue" link on the repo itself. No OAuth: the team opens it in their own browser. */
 export function issueUrl(item: FixItem, repo: string, reviewId: string): string {
-  const evidence = item.evidence.map((e) => `- ${e.href ? `[${e.label}](${e.href})` : e.label}`).join("\n");
+  const evidence = item.evidence
+    .map((e) => `- ${e.href ? `[${e.label}](${e.href})` : e.label}`)
+    .join("\n");
   const body = [
     item.fix,
     "",

@@ -28,12 +28,21 @@ describe("the judging sheet", () => {
     assert.equal(technicalScore([{ status: "unbacked", weight: "core" }]), 1);
     assert.equal(technicalScore([{ status: "mocked", weight: "core" }]), 2);
     // (5*2 + 1*1) / 3 = 3.67 -> 4
-    assert.equal(technicalScore([{ status: "backed", weight: "core" }, { status: "unbacked", weight: "minor" }]), 4);
+    assert.equal(
+      technicalScore([
+        { status: "backed", weight: "core" },
+        { status: "unbacked", weight: "minor" },
+      ]),
+      4,
+    );
     assert.equal(technicalScore([]), 2);
   });
 
   test("an answer's -12..+12 lands on 1..5; silence is a 1", () => {
-    assert.deepEqual([12, 9, 8, 5, 4, 0, -1, -6, -7, -12].map((s) => answerScore(s, false)), [5, 5, 4, 4, 3, 3, 2, 2, 1, 1]);
+    assert.deepEqual(
+      [12, 9, 8, 5, 4, 0, -1, -6, -7, -12].map((s) => answerScore(s, false)),
+      [5, 5, 4, 4, 3, 3, 2, 2, 1, 1],
+    );
     assert.equal(answerScore(10, true), 1);
   });
 
@@ -46,8 +55,15 @@ describe("the judging sheet", () => {
   test("every line says where its score came from; the feedback line only on a re-review", () => {
     const base = {
       claims: [{ status: "backed" as const, weight: "core" as const }],
-      signals: { demo: { status: "loads" as const, url: "https://x.vercel.app" }, bulkFirstCommit: false },
-      questions: [{ judge: "tired" as const }, { judge: "investor" as const }, { judge: "engineer" as const }],
+      signals: {
+        demo: { status: "loads" as const, url: "https://x.vercel.app" },
+        bulkFirstCommit: false,
+      },
+      questions: [
+        { judge: "tired" as const },
+        { judge: "investor" as const },
+        { judge: "engineer" as const },
+      ],
       answers: [
         { score: 8, silent: false },
         { score: -4, silent: false },
@@ -65,15 +81,29 @@ describe("the judging sheet", () => {
         ["defense", 1, "silent"],
       ],
     );
-    const again = sheetOf({ ...base, signals: { ...base.signals, iteration: it(["addressed", "addressed", "partly"]) } });
-    assert.deepEqual(again.at(-1), { key: "iteration", score: 4, basis: "fixes", values: { done: 2, started: 1, total: 3 } });
+    const again = sheetOf({
+      ...base,
+      signals: { ...base.signals, iteration: it(["addressed", "addressed", "partly"]) },
+    });
+    assert.deepEqual(again.at(-1), {
+      key: "iteration",
+      score: 4,
+      basis: "fixes",
+      values: { done: 2, started: 1, total: 3 },
+    });
   });
 });
 
 describe("rubric criteria", () => {
   const ids = new Set(["claim-1", "demo"]);
   const all = (score: number, extra: Record<string, unknown> = {}) =>
-    DEFAULT_RUBRIC.criteria.map((c) => ({ criterion: c.key, score, reason: "Because.", findings: ["claim-1"], ...extra }));
+    DEFAULT_RUBRIC.criteria.map((c) => ({
+      criterion: c.key,
+      score,
+      reason: "Because.",
+      findings: ["claim-1"],
+      ...extra,
+    }));
 
   test("names map back to keys, whatever the casing or spacing", () => {
     assert.equal(canonicalKey("Technical Execution", DEFAULT_RUBRIC), "technical");
@@ -90,24 +120,41 @@ describe("rubric criteria", () => {
   });
 
   test("only findings that exist can be cited", () => {
-    const out = validateCriteria(all(5, { findings: ["claim-1", "claim-9", "claim-1", "demo"] }), DEFAULT_RUBRIC, ids)!;
+    const out = validateCriteria(
+      all(5, { findings: ["claim-1", "claim-9", "claim-1", "demo"] }),
+      DEFAULT_RUBRIC,
+      ids,
+    )!;
     assert.deepEqual(out[0].findings, ["claim-1", "demo"]);
   });
 
   test("a missing criterion, a harsh reason or a non-number makes the set unusable", () => {
     assert.equal(validateCriteria(all(5).slice(1), DEFAULT_RUBRIC, ids), null);
-    assert.equal(validateCriteria(all(5, { reason: "They're lying about the demo." }), DEFAULT_RUBRIC, ids), null);
+    assert.equal(
+      validateCriteria(all(5, { reason: "They're lying about the demo." }), DEFAULT_RUBRIC, ids),
+      null,
+    );
     assert.equal(validateCriteria(all(5, { score: "9" }), DEFAULT_RUBRIC, ids), null);
     assert.equal(validateCriteria("nope", DEFAULT_RUBRIC, ids), null);
   });
 
   test("an extra criterion the rubric doesn't have is ignored", () => {
-    const out = validateCriteria([...all(5), { criterion: "vibes", score: 10, reason: "r", findings: [] }], DEFAULT_RUBRIC, ids);
+    const out = validateCriteria(
+      [...all(5), { criterion: "vibes", score: 10, reason: "r", findings: [] }],
+      DEFAULT_RUBRIC,
+      ids,
+    );
     assert.equal(out?.length, DEFAULT_RUBRIC.criteria.length);
   });
 
   test("the aggregate is the weighted mean", () => {
-    const scored = DEFAULT_RUBRIC.criteria.map((c) => ({ key: c.key, score: c.key === "technical" ? 10 : 0, reason: "r", findings: [], source: "panel" as const }));
+    const scored = DEFAULT_RUBRIC.criteria.map((c) => ({
+      key: c.key,
+      score: c.key === "technical" ? 10 : 0,
+      reason: "r",
+      findings: [],
+      source: "panel" as const,
+    }));
     assert.equal(aggregate(scored, DEFAULT_RUBRIC), 3);
   });
 
@@ -119,7 +166,12 @@ describe("rubric criteria", () => {
   });
 
   test("the fallback turns the 1..5 sheet into 0..10 and marks it as rules", () => {
-    const sheet = sheetOf({ claims: [{ status: "backed", weight: "core" }], signals: null, questions: [], answers: [] });
+    const sheet = sheetOf({
+      claims: [{ status: "backed", weight: "core" }],
+      signals: null,
+      questions: [],
+      answers: [],
+    });
     const out = fallbackCriteria(DEFAULT_RUBRIC, sheet, "rules");
     assert.equal(out.find((c) => c.key === "technical")?.score, 10);
     assert.equal(out.find((c) => c.key === "demo")?.score, 3);

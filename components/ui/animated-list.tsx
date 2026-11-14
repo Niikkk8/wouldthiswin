@@ -8,7 +8,13 @@ import { AnimatePresence, motion } from "motion/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
-export function AnimatedListItem({ children, instant }: { children: React.ReactNode; instant?: boolean }) {
+export function AnimatedListItem({
+  children,
+  instant,
+}: {
+  children: React.ReactNode;
+  instant?: boolean;
+}) {
   return (
     <motion.li
       layout={!instant}
@@ -51,10 +57,13 @@ export function AnimatedList({
   useEffect(() => {
     if (instant || shown >= items.length) return;
     const t1 = setTimeout(() => setTyping(true), shown === 0 ? 0 : delay - typingMs);
-    const t2 = setTimeout(() => {
-      setTyping(false);
-      setShown((n) => n + 1);
-    }, shown === 0 ? typingMs : delay);
+    const t2 = setTimeout(
+      () => {
+        setTyping(false);
+        setShown((n) => n + 1);
+      },
+      shown === 0 ? typingMs : delay,
+    );
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);

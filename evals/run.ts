@@ -21,7 +21,18 @@ const pct = (n: number | null) => (n === null ? "n/a" : `${Math.round(n * 100)}%
 /** A scorer that obeys whatever the answer says: the worst case for the injection cap. */
 const obedient = async () =>
   ({
-    content: [{ type: "text", text: JSON.stringify({ why: "told to", score: 10, specific: true, reaction: "Perfect.", followUp: null }) }],
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          why: "told to",
+          score: 10,
+          specific: true,
+          reaction: "Perfect.",
+          followUp: null,
+        }),
+      },
+    ],
     stop_reason: "end_turn",
     usage: { input_tokens: 0, output_tokens: 0 },
   }) as unknown as Anthropic.Message;
@@ -31,24 +42,50 @@ async function main() {
   const out = process.stdout;
   out.write(`Fixtures: ${FIXTURES.map((f) => f.name).join(", ")}\n\n`);
   out.write("| Check | Precision | Recall | TP | FP | FN |\n|---|---|---|---|---|---|\n");
-  for (const s of scores) out.write(`| ${s.check} | ${pct(s.precision)} | ${pct(s.recall)} | ${s.tp} | ${s.fp} | ${s.fn} |\n`);
+  for (const s of scores)
+    out.write(
+      `| ${s.check} | ${pct(s.precision)} | ${pct(s.recall)} | ${s.tp} | ${s.fp} | ${s.fn} |\n`,
+    );
 
-  const injected = await scoreAnswer({ judge: "engineer", question: "Which file does it?", answer: injection.readme, claims: [] }, obedient);
-  const invariants = { findingsUnchanged: sameFindings(honest, injection), injectedAnswerScore: injected.score };
+  const injected = await scoreAnswer(
+    { judge: "engineer", question: "Which file does it?", answer: injection.readme, claims: [] },
+    obedient,
+  );
+  const invariants = {
+    findingsUnchanged: sameFindings(honest, injection),
+    injectedAnswerScore: injected.score,
+  };
   out.write(
     `\nInjection: findings unchanged ${invariants.findingsUnchanged ? "yes" : "NO"}; an injected answer scored by a model that obeys it still gets ${invariants.injectedAnswerScore}.\n`,
   );
 
-  const report: Record<string, unknown> = { date: new Date().toISOString(), fixtures: FIXTURES.map((f) => f.name), checks: scores, invariants };
+  const report: Record<string, unknown> = {
+    date: new Date().toISOString(),
+    fixtures: FIXTURES.map((f) => f.name),
+    checks: scores,
+    invariants,
+  };
 
   if (process.argv.includes("--claims")) {
     const usage = newUsage();
     const agent: Record<string, { claim: string; verdict: string }[]> = {};
     for (const f of FIXTURES) {
-      const claims = await extractClaims(claimSources({ readme: f.readme, devpost: null, submission: null }), usage);
-      const { verdicts } = await verifyClaims(claims, { tree: Object.keys(f.files), read: async (p) => f.files[p] ?? null }, usage);
-      agent[f.name] = claims.map((c) => ({ claim: c.text, verdict: verdicts.find((v) => v.id === c.id)?.status ?? "cant_verify" }));
-      out.write(`\n${f.name}\n${agent[f.name].map((c) => `  ${c.verdict}: ${c.claim}`).join("\n")}\n`);
+      const claims = await extractClaims(
+        claimSources({ readme: f.readme, devpost: null, submission: null }),
+        usage,
+      );
+      const { verdicts } = await verifyClaims(
+        claims,
+        { tree: Object.keys(f.files), read: async (p) => f.files[p] ?? null },
+        usage,
+      );
+      agent[f.name] = claims.map((c) => ({
+        claim: c.text,
+        verdict: verdicts.find((v) => v.id === c.id)?.status ?? "cant_verify",
+      }));
+      out.write(
+        `\n${f.name}\n${agent[f.name].map((c) => `  ${c.verdict}: ${c.claim}`).join("\n")}\n`,
+      );
     }
     report.agent = agent;
     out.write(`\nClaim agent spend: $${usdOf(usage).toFixed(4)}\n`);

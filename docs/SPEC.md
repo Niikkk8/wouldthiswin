@@ -1,6 +1,6 @@
 # Would This Win? Spec
 
-The single source of truth for wouldthiswin.com. If code and this file disagree, this file wins, or gets updated in the same commit as the code.
+The original product spec and its history. Since the upgrade (evidence engine, rubric, sharing, events), `docs/architecture.md` and the code are current where they differ from this file: notably, migrations now live in `db/migrations`, tests run on vitest, and the scan, scoring and limits work as described there.
 
 Status: phases A, B, C, D1, the pre-launch round and the judging-realism round are done. D2 (GitHub auth and the board) comes after launch. Launch setup: `docs/LAUNCH.md`.
 
@@ -12,11 +12,11 @@ One night, one number. A hackathon team pastes a public GitHub repo, and the app
 
 The panel has three judges:
 
-| Judge | Voice | Asks about |
-|---|---|---|
-| The Tired Judge | Blunt, short, end of a long day | "In one sentence. What is it?", tuned to the project |
-| The Investor | Commercial | Who uses it, who pays, why now |
-| The Engineer | Technical, goes for the gap | The weakest core claim; names the missing file or dependency |
+| Judge           | Voice                           | Asks about                                                   |
+| --------------- | ------------------------------- | ------------------------------------------------------------ |
+| The Tired Judge | Blunt, short, end of a long day | "In one sentence. What is it?", tuned to the project         |
+| The Investor    | Commercial                      | Who uses it, who pays, why now                               |
+| The Engineer    | Technical, goes for the gap     | The weakest core claim; names the missing file or dependency |
 
 They ask in this order: Tired Judge, Investor, Engineer.
 
@@ -24,14 +24,14 @@ They ask in this order: Tired Judge, Investor, Engineer.
 
 The flow is four acts plus a landing page and a share screen.
 
-| # | Screen | What happens | Ends with (the one primary button) |
-|---|---|---|---|
-| 0 | Landing (`/`) | Hero, repo input, an optional demo link (collapsed), Yesterday's board, footer with Privacy | "Face the panel" (starts a session) |
-| 1 | The scan | README claims traced to files; the odds move per claim and per signal | "Face the panel" |
-| 2 | The grilling | Three questions, typed answers, 30s each; the odds move after each answer | "Leave the room" |
-| 3 | Deliberation | A read-only judges' chat about the project, plus a replay of every odds change and why | "See the review" |
-| 4 | The review | The verdict as a pull-request style code review (see §11.1) | "Share the review" |
-| 5 | Share | Share images in three formats, posting and download, the caption, a QR code to the phone, the public review link, the README badge. Versus and Wrapped are hidden for now. | "Post to X" (desktop) / "Share image" (phone) |
+| #   | Screen        | What happens                                                                                                                                                               | Ends with (the one primary button)            |
+| --- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| 0   | Landing (`/`) | Hero, repo input, an optional demo link (collapsed), Yesterday's board, footer with Privacy                                                                                | "Face the panel" (starts a session)           |
+| 1   | The scan      | README claims traced to files; the odds move per claim and per signal                                                                                                      | "Face the panel"                              |
+| 2   | The grilling  | Three questions, typed answers, 30s each; the odds move after each answer                                                                                                  | "Leave the room"                              |
+| 3   | Deliberation  | A read-only judges' chat about the project, plus a replay of every odds change and why                                                                                     | "See the review"                              |
+| 4   | The review    | The verdict as a pull-request style code review (see §11.1)                                                                                                                | "Share the review"                            |
+| 5   | Share         | Share images in three formats, posting and download, the caption, a QR code to the phone, the public review link, the README badge. Versus and Wrapped are hidden for now. | "Post to X" (desktop) / "Share image" (phone) |
 
 ### Consistency rules
 
@@ -47,26 +47,27 @@ The flow is four acts plus a landing page and a share screen.
 
 The engine is deterministic and lives in code. The model only classifies claims and scores answers; it never outputs odds.
 
-| Rule | Value |
-|---|---|
-| Start | 50 |
-| Odds clamp | 1 to 99, applied after every event |
-| Core claim: backed / mocked / unbacked / unclear | +6 / −10 / −19 / −2 |
-| Minor claim: backed / mocked / unbacked / unclear | +3 / −5 / −9 / 0 (half the core deltas, rounded toward zero; approved) |
-| Mocked | The code fakes it: mock or sample data standing in for the real source, a hardcoded response, an in-memory array where the README names a database or queue. Judges mark "only works with pre-loaded data" down hard, but a mock is a working stand-in, not an empty promise, so it costs less than missing. Before this status existed, a repo that mocked all eight databases it claimed scored the same as one whose files were cut off. |
-| Unclear | Means unverified, not false, so it costs little. A real hackathon winner scored low when unclear cost as much as −6. |
-| Scan cap | The scan as a whole (claims, demo, commits) moves the odds by at most +20 and −30 from the start (`SCAN_CAP_UP`, `SCAN_CAP_DOWN`), so a long README can't farm points. An event past the cap is stored with the part that still fits, often 0. |
-| Live demo loads | +8, reason "Demo link loads". Judges call a demo that runs the single largest differentiator, so it is the biggest single gain the scan gives. |
-| Demo video resolves (YouTube, Loom, Vimeo, Google Drive) | +4, reason "Demo video resolves" (the fallback judges accept when the wifi dies) |
-| Demo link provided but dead | −8, reason "Demo link is dead" |
-| No demo link | 0 (no event) |
-| First commit added more than 70% of today's files | −10, reason "Most of the code arrived in one commit." |
-| Answer score from the model | Clamped in code to −12..+12. Rounded; non-numbers count as 0. |
-| Re-review fix check (§4.4) | Per fix the panel asked for last round: done +4, started +2, still open 0. Outside the scan cap, so at most +12. Reasons "Done: …", "Started: …", "Still open: …". |
-| Silence (empty answer, or later than 33s) | −12 (`SILENCE_SCORE`), reason "Said nothing" or "Answered after the buzzer". The model is not called. |
-| Big drop | Any event of −10 or worse triggers the flash and shake (`BIG_DROP`). |
+| Rule                                                     | Value                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Start                                                    | 50                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Odds clamp                                               | 1 to 99, applied after every event                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Core claim: backed / mocked / unbacked / unclear         | +6 / −10 / −19 / −2                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Minor claim: backed / mocked / unbacked / unclear        | +3 / −5 / −9 / 0 (half the core deltas, rounded toward zero; approved)                                                                                                                                                                                                                                                                                                                                                                      |
+| Mocked                                                   | The code fakes it: mock or sample data standing in for the real source, a hardcoded response, an in-memory array where the README names a database or queue. Judges mark "only works with pre-loaded data" down hard, but a mock is a working stand-in, not an empty promise, so it costs less than missing. Before this status existed, a repo that mocked all eight databases it claimed scored the same as one whose files were cut off. |
+| Unclear                                                  | Means unverified, not false, so it costs little. A real hackathon winner scored low when unclear cost as much as −6.                                                                                                                                                                                                                                                                                                                        |
+| Scan cap                                                 | The scan as a whole (claims, demo, commits) moves the odds by at most +20 and −30 from the start (`SCAN_CAP_UP`, `SCAN_CAP_DOWN`), so a long README can't farm points. An event past the cap is stored with the part that still fits, often 0.                                                                                                                                                                                              |
+| Live demo loads                                          | +8, reason "Demo link loads". Judges call a demo that runs the single largest differentiator, so it is the biggest single gain the scan gives.                                                                                                                                                                                                                                                                                              |
+| Demo video resolves (YouTube, Loom, Vimeo, Google Drive) | +4, reason "Demo video resolves" (the fallback judges accept when the wifi dies)                                                                                                                                                                                                                                                                                                                                                            |
+| Demo link provided but dead                              | −8, reason "Demo link is dead"                                                                                                                                                                                                                                                                                                                                                                                                              |
+| No demo link                                             | 0 (no event)                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| First commit added more than 70% of today's files        | −10, reason "Most of the code arrived in one commit."                                                                                                                                                                                                                                                                                                                                                                                       |
+| Answer score from the model                              | Clamped in code to −12..+12. Rounded; non-numbers count as 0.                                                                                                                                                                                                                                                                                                                                                                               |
+| Re-review fix check (§4.4)                               | Per fix the panel asked for last round: done +4, started +2, still open 0. Outside the scan cap, so at most +12. Reasons "Done: …", "Started: …", "Still open: …".                                                                                                                                                                                                                                                                          |
+| Silence (empty answer, or later than 33s)                | −12 (`SILENCE_SCORE`), reason "Said nothing" or "Answered after the buzzer". The model is not called.                                                                                                                                                                                                                                                                                                                                       |
+| Big drop                                                 | Any event of −10 or worse triggers the flash and shake (`BIG_DROP`).                                                                                                                                                                                                                                                                                                                                                                        |
 
 **Events.** Every change is stored as `{act, kind, status?, delta, reason, before, after}`.
+
 - `kind` is one of `claim`, `demo`, `commits`, `iteration` or `answer`.
 - `delta` is the change actually applied after the scan cap and the odds clamp, so a −19 at 12% is stored as −11.
 - Act 1 events come in order: one per claim, then demo, then commits, then (on a re-review) one per fix checked. Act 2 adds one per answer.
@@ -76,14 +77,15 @@ The engine is deterministic and lives in code. The model only classifies claims 
 
 **Tiers** (from the final odds):
 
-| Odds | Tier key | Label |
-|---|---|---|
-| 75+ | `winner` | Winner. |
-| 55–74 | `top3` | Top 3, probably. |
-| 30–54 | `honorable` | Honorable mention. |
+| Odds     | Tier key        | Label                        |
+| -------- | --------------- | ---------------------------- |
+| 75+      | `winner`        | Winner.                      |
+| 55–74    | `top3`          | Top 3, probably.             |
+| 30–54    | `honorable`     | Honorable mention.           |
 | below 30 | `participating` | Thank you for participating. |
 
 **Review status** (`readyToWin` in `lib/odds.ts`; replaced guilty / not guilty):
+
 - "Ready to win" when the final odds are 55 or more (`READY_ODDS`) AND no core claim is unbacked or mocked.
 - Otherwise "Changes requested".
 
@@ -94,22 +96,26 @@ All three calls use `claude-haiku-5-5`, effort `low`, structured JSON output and
 ### 1. Scan and questions: two calls with a file fetch between (built, `lib/scan.ts`)
 
 **Call A: claims and where they'd live.**
+
 - Input: repo name and description; dependencies per manifest (root `package.json` / `requirements.txt` plus up to 4 nested ones at most 3 path segments deep); up to 250 files (no build output or assets, shallow ones first); the README, capped at 6,000 characters.
 - Output: up to 6 claims, each with `claim`, `weight` (core or minor) and up to 2 `candidates`: files from the tree that would implement it. If nothing looks related, the manifest or entry file where it would have to show up.
 
 **Code fetches the files** (`lib/sources.ts`, `fetchSources` in `lib/github.ts`):
+
 - Every claim's first candidate, then every claim's second; no repeats; at most 10 files.
 - Fetched at the scanned commit, each cut to 12,000 characters (`SOURCE_CHARS`). A file longer than that is marked `truncated` and shown to the model as `cut_off="true"`. At 6,000, half the files a real scan read were cut, and a cut file can only ever be "unclear".
 - Skipped: lockfiles, build output, minified bundles, binaries (by extension and NUL bytes), files marked generated, and env files (except `.env.example` / `.sample` / `.template`, since a committed `.env` can hold real keys).
 - A file that fails to fetch is simply not read. If the fetch fails entirely, nothing is read.
 
 **Call B: verify, then ask.**
+
 - Input: repo name, description and dependencies; the README; the numbered claims, each with the files read for it; every fetched file inside `<untrusted_file path="...">`.
 - Output: a verdict per claim (`status`: backed, mocked, unbacked or unclear; `file`, `quote`, `evidence`, `label`, `missing`), then one question per judge (`text` and `caught`). Questions come after verification, so they're never built on a false finding.
 - The questions follow the ones real judges ask most: the Engineer goes for a mocked core claim first, then a missing one, else "what breaks first" or "what did you build versus wire together"; the Investor pushes for a named user and who pays; the Tired Judge asks for the one-sentence version.
 - On a re-review, call B also sees last round's fixes, and at least one question follows up on them.
 
 **Validated in code** (`lib/scan-validate.ts`); nothing the model says is trusted:
+
 - Candidates must be real files in the tree (not folders); paths are normalised; `..`, null bytes and paths over 200 characters are rejected.
 - **Backed** and **mocked** need a `file` that was fetched and read, and a `quote` of at most 120 characters that appears in it verbatim (`quotedIn`: any run of whitespace matches any other, since models re-indent copied lines; every other character must match). Otherwise **unclear**.
 - **Unbacked** needs every candidate of that claim to have been fetched and read in full: a candidate that was cut off makes it **unclear** ("… was too long to read to the end"). Its `searched` list is set by code: the files that were read.
@@ -125,6 +131,7 @@ Measured scan cost (two calls, 7 to 10 files read): about 17–28k input and 1.2
 **Live progress.** The scan request streams NDJSON when the client asks for it (`accept: application/x-ndjson`): one `{type: "progress", event}` line per real step, then one `{type: "result", status, body}` line carrying exactly what the JSON response would have been (view, 202 pending, or error). Events (`lib/scan-progress.ts`): `repo` (GitHub answered, N files), `cached`, `claims` (call A's claim names), `reading` / `read` (each file, as it's fetched; files are fetched two at a time so each event is real), `checking` (call B started). Nothing is on a timer. A request that finds the scan already running gets the usual 202 and polls.
 
 **Signals measured in code alongside the call:**
+
 - The demo link. A link the team gives on the landing page (`sessions.demo_url`) beats auto-detection. Auto-detection uses the repo's GitHub website field, else the first README link on a known hosting provider (vercel.app, netlify.app, github.io and so on). `lib/demo-link.ts` classifies a link as a live site or a video (YouTube, Loom, Vimeo or Google Drive, by host and path; a video host's home page is a site). `lib/demo-link-check.ts` checks it, every request through the SSRF-safe `checkDemo`: a site must answer; a YouTube, Vimeo or Loom video must exist in that host's oEmbed endpoint (a deleted or private video's page often still answers 200); a Drive file must load without redirecting to Google sign-in. The auto-detected result is also stored (`autoDemo`), so a cached scan can be reused with or without a team's own link; a team's link is always checked fresh.
 - The bulk first commit, via `computeSignals`.
 
@@ -135,6 +142,7 @@ Measured scan cost (two calls, 7 to 10 files read): about 17–28k input and 1.2
 **Output:** `{why, score, reaction}`. `why` is a private one-line rationale that keeps the reasoning out of `reaction`; code discards it. `reaction` is 3–9 words, spoken to the team in that judge's voice, and becomes the odds event's reason.
 
 **Rubric** (in the prompt):
+
 - Specific, concrete, direct: +6 to +12.
 - Honestly admitting a gap AND saying what you'd do: 0 to +4. Never penalize honesty. A specific answer that also names a weakness still scores +6 or more.
 - Vague: −2 to −6.
@@ -142,6 +150,7 @@ Measured scan cost (two calls, 7 to 10 files read): about 17–28k input and 1.2
 - Score the answer, not the repo; the scan already scored the repo's gaps. The scan reads at most 10 truncated files, so "couldn't find" means unseen, not false: an answer that explains the mechanism is credible.
 
 **Validated in code:**
+
 - The score is clamped to −12..+12 and rounded; the reaction is flattened to one line and cut to 80 characters.
 - Bad output is retried once. An API error, a refusal or two bad outputs score 0 with "Didn't catch that. No change." Nobody loses points for our outage, and the room doesn't stall.
 - Silent or late answers skip the call (−12).
@@ -162,6 +171,7 @@ Made when act 3 opens (`{action: "deliberate"}`), not after the last answer, so 
 **Output:** `chat` (5–6 messages in the judges' voices), `oneLiner`, three `fixes`, and per judge a review `status` (approved, changes requested, commented) with a `file`, an `excerpt` and a `comment`.
 
 **Validated in code:**
+
 - Chat lines that are empty, over 220 characters, or harsh (verdict words, "liar", "fraud", "lazy") are dropped; fewer than 5 left fails the call. At most 6 are kept.
 - A one-liner (at most 100 characters) and exactly three fixes (at most 160 each), or it fails.
 - A review comment must name a file the scan fetched (`sources`) and quote 1–8 consecutive lines (at most 400 characters) that appear in it verbatim (CRLF is normalised; trailing whitespace is tolerated, nothing inside the lines is). Code computes the line numbers. A comment that fails is dropped; the judge's status stays.
@@ -177,6 +187,7 @@ The mentor check-in, built in. After the review, the owner pushes fixes and pres
 **Starting one** (`POST /api/sessions` with `previousId`): the previous session must be this browser's own, finished (act 4 or share, panel written), of the same repo, and the repo's latest commit must differ from the one it reviewed ("Nothing new on GitHub since the last review"). It counts toward the 3-a-day limit like any session and keeps the team's demo link unless they give a new one. The link to the previous review rides in the `signals` column until the scan replaces it (`PendingSignals`), so no new column was needed; `save` leaves that column alone until then.
 
 **The scan** skips the cache in both directions and runs in parallel with the fix check:
+
 - GitHub's compare API (`fetchCompare`): the commits since the previous review's commit, the changed files (at most 100), and each readable file's added lines (at most 4,000 characters).
 - The model sees the three fixes, the commit messages (inside `<untrusted_commits>`), the changed-file list, and the added lines of the 8 most relevant files (inside `<untrusted_diff>`): files the last review pointed at first, then files whose path names something a fix asked for, then the biggest additions.
 - Per fix: `status` (addressed, partly, untouched), `file`, `quote`, `note`.
@@ -191,11 +202,11 @@ Measured on a 4-commit, 100-file diff: about 13–19k input and 200–850 output
 
 ### Cost per full session (measured on 3 real sessions)
 
-| Session | Scan (A + B) | 3 answers | Deliberation | Total tokens | Cost at $0.10 / $0.50 per MTok |
-|---|---|---|---|---|---|
-| dtemir/OperatorAI | 17.1k / 3.3k | 4.6k / 0.4k | 7.6k / 0.7k | 29.3k in / 4.4k out | $0.0051 |
-| ModelGate-Hackathon | 24.8k / 3.2k | 4.7k / 0.4k | 10.5k / 0.8k | 40.0k in / 4.4k out | $0.0062 |
-| open-ai-stylist | 27.9k / 1.2k | 4.6k / 0.4k | 12.1k / 0.8k | 44.5k in / 2.4k out | $0.0056 |
+| Session             | Scan (A + B) | 3 answers   | Deliberation | Total tokens        | Cost at $0.10 / $0.50 per MTok |
+| ------------------- | ------------ | ----------- | ------------ | ------------------- | ------------------------------ |
+| dtemir/OperatorAI   | 17.1k / 3.3k | 4.6k / 0.4k | 7.6k / 0.7k  | 29.3k in / 4.4k out | $0.0051                        |
+| ModelGate-Hackathon | 24.8k / 3.2k | 4.7k / 0.4k | 10.5k / 0.8k | 40.0k in / 4.4k out | $0.0062                        |
+| open-ai-stylist     | 27.9k / 1.2k | 4.6k / 0.4k | 12.1k / 0.8k | 44.5k in / 2.4k out | $0.0056                        |
 
 About half a cent a session. At `DAILY_CAP` 50 that's at most about $0.31 a day.
 
@@ -218,6 +229,7 @@ About half a cent a session. At `DAILY_CAP` 50 that's at most about $0.31 a day.
 The server owns the session. The client's `useReducer` only mirrors a `SessionView` that the server returns. On refresh, the session resumes at the current act.
 
 **Storage** is the Supabase table `sessions`, with these columns:
+
 - Identity: `id`, `repo_url`, `repo`, `latest_sha`
 - Access and limits: `owner_hash`, `ip_hash`
 - State: `act`, `claims`, `questions` (with `issuedAt`), `answers`, `events`, `panel`, `signals` (before the scan of a re-review: `{previousId}`; after: the signals, with `iteration` on a re-review), `files` (repo paths, capped at 3,000), `sources` (files the scan read: `[{path, text, truncated?}]`, at most 10 × 12,000 characters; emptied when the review is written), `demo_url` (the team's own link)
@@ -226,6 +238,7 @@ The server owns the session. The client's `useReducer` only mirrors a `SessionVi
 - Accounting: `input_tokens`, `output_tokens`, `created_at`, `updated_at`
 
 **Rules** (pure functions in `lib/session.ts`):
+
 - Every write is conditional on the `version` it read (optimistic locking). Of two racing requests, one wins; the other gets "stale" plus the current view.
 - `advance(from)` must name the current act, and the act must be complete. Skips and repeats are rejected.
 - `issueQuestion` starts a question's clock once (`issuedAt`, server time). Showing it again never resets the clock. Questions go strictly in order.
@@ -251,6 +264,7 @@ The server owns the session. The client's `useReducer` only mirrors a `SessionVi
 **Token tracking.** Tokens are logged per call (`scan.call`, `scan.done`, `answer.call`, `panel.call`, `panel.done`) and added to the session row via `add_session_usage`.
 
 **API.**
+
 - `POST /api/sessions {repoUrl, demoUrl?}`: checks the URL (and the demo link's shape, `invalidDemo` if it's not a public http(s) link), the limits and that the repo exists, then reserves the row and returns `{id}`. Sets the owner cookie.
 - `GET /api/cron/retention`: the daily retention job (Vercel cron, bearer `CRON_SECRET`).
 - `GET /og/[id]`: the share card (PNG, 1200×630), public, cached 1h. 404 until act 4.
@@ -270,10 +284,11 @@ The server owns the session. The client's `useReducer` only mirrors a `SessionVi
 **Tests** (`npm test`, node:test via tsx, 154 tests): the odds rules and scan cap, the review status, a late answer scored as silence, a duplicate answer rejected, an act skip rejected, clock non-reset, view hiding, scan validation (quote and read rules, wording), answer scoring (clamp, retry, fallback, harsh reactions), the deliberation (comment anchoring, the forced Engineer status, harsh lines), the review (checks, summary, no answers or chat), the rate-limit IP, and the injection cases.
 
 **Retention** (`lib/retention.ts`, run daily by `/api/cron/retention` from `vercel.json`, 04:00 UTC, `Authorization: Bearer $CRON_SECRET` required):
+
 - Answers and the act 3 chat: after 30 days the answer text and the chat are deleted (`forgotten_at` set). Scores, odds, claims, questions and the review stay forever: badges and review links point at them.
 - File contents (`sources`): cleared by `applyPanel` when the review is written; the job clears any left on sessions older than a day.
 - The scan cache: deleted after 24 hours.
-The plain-language version is `/privacy`; keep the two in step.
+  The plain-language version is `/privacy`; keep the two in step.
 
 **Test data.** `npm run clear-test-data` lists sessions from test buckets (the off-Vercel "unknown" bucket, loopback, and TEST-NET IPs sent through `x-test-ip`) and scan-cache rows only they used. It deletes nothing without `--yes`. The database in `.env` may be production: never run it with `--yes` without asking.
 
@@ -281,19 +296,19 @@ The plain-language version is `/privacy`; keep the two in step.
 
 ### Tokens (`app/globals.css` `@theme`)
 
-| Token | Value |
-|---|---|
-| bg | #0A0A0B |
-| surface | #141416 |
-| surface-2 | #1C1C1F |
-| border | #222225 |
-| border-strong | #3A3A3E |
-| text | #F4F4F2 |
-| text-muted | #B5B5B8 |
-| text-subtle | #8A8A8E |
-| gain (odds up) | #4D7CFF |
-| loss (odds down, timer) | #FF3B30 |
-| unclear | #F5A524 |
+| Token                                   | Value                       |
+| --------------------------------------- | --------------------------- |
+| bg                                      | #0A0A0B                     |
+| surface                                 | #141416                     |
+| surface-2                               | #1C1C1F                     |
+| border                                  | #222225                     |
+| border-strong                           | #3A3A3E                     |
+| text                                    | #F4F4F2                     |
+| text-muted                              | #B5B5B8                     |
+| text-subtle                             | #8A8A8E                     |
+| gain (odds up)                          | #4D7CFF                     |
+| loss (odds down, timer)                 | #FF3B30                     |
+| unclear                                 | #F5A524                     |
 | share card only: orange / blue / yellow | #FF4F1F / #2236FF / #FFE14D |
 
 The court paper's tokens and Courier Prime were removed in phase D.
@@ -305,15 +320,15 @@ The court paper's tokens and Courier Prime were removed in phase D.
 
 ### Type scale (size / line-height / letter-spacing, weight)
 
-| Use | Spec | Utility |
-|---|---|---|
-| Landing h1 | 128 / 0.88 / −0.05em, 900 | `text-hero` |
-| Act title | 52 / 1 / −0.04em, 900 | `text-act` |
-| Judge question | 70 / 1.02 / −0.035em, 800 | `text-question` |
-| Odds number (acts) | 72 / 0.9 / −0.05em, 900 | `text-odds` |
-| Odds number (verdict) | 120 / 0.9 / −0.05em, 900 | `text-odds-lg` |
-| Body | 17 to 22 / 1.45 | |
-| Labels | Mono 12–13; uppercase for eyebrows; no extra tracking | `label-mono` |
+| Use                   | Spec                                                  | Utility         |
+| --------------------- | ----------------------------------------------------- | --------------- |
+| Landing h1            | 128 / 0.88 / −0.05em, 900                             | `text-hero`     |
+| Act title             | 52 / 1 / −0.04em, 900                                 | `text-act`      |
+| Judge question        | 70 / 1.02 / −0.035em, 800                             | `text-question` |
+| Odds number (acts)    | 72 / 0.9 / −0.05em, 900                               | `text-odds`     |
+| Odds number (verdict) | 120 / 0.9 / −0.05em, 900                              | `text-odds-lg`  |
+| Body                  | 17 to 22 / 1.45                                       |                 |
+| Labels                | Mono 12–13; uppercase for eyebrows; no extra tracking | `label-mono`    |
 
 On mobile: h1 64, act title 36, judge question 36, odds bar 36.
 
@@ -339,6 +354,7 @@ On mobile: h1 64, act title 36, judge question 36, odds bar 36.
 Use the Motion library. Default easing is `[0.22, 1, 0.36, 1]`. Animate transform and opacity only, except where noted.
 
 **Global**
+
 - Act transitions: the current act fades out over 250ms; the next act's title rises 24px and fades in over 400ms. The header never re-mounts.
 - Odds widget:
   - NumberFlow rolls the digits over 600ms.
@@ -346,12 +362,14 @@ Use the Motion library. Default easing is `[0.22, 1, 0.36, 1]`. Animate transfor
   - On a drop of 10 or more: one red flash on the number (a colour change) and a single 6px horizontal shake.
 
 **Landing**
+
 - The h1 words blur-fade in with a 60ms stagger.
 - "Add a demo link or video (optional)" is a native `<details>` under the repo input (it opens even before hydration); the chevron turns 90°.
 - Board rows enter with animated-list. Sparklines draw on hover.
 - The ticker uses marquee on a 40s loop and pauses on hover.
 
 **Act 1, the scan** (built)
+
 - While the scan runs (real events, §4.1): one mono status line ("Walking 98 files.", "Found 5 claims.", "Reading backend/src/utils.js", "Checking claims against the code."), crossfading 250ms on each event. Claim names appear as dimmed cards as soon as call A returns. Each candidate file appears in the file tree as its fetch starts, scrambling in with hyper-text, tagged "reading", then turns full white when read or struck through when skipped.
 - The odds widget sits at 50% and pulses (opacity 1 to 0.45 and back, 1.8s) until playback starts. It's started imperatively, because the widget mounts under `AnimatePresence initial={false}`, which skips first-render animations.
 - File tree rows cascade in with a 20ms stagger; file names scramble for 300ms with hyper-text.
@@ -364,6 +382,7 @@ Use the Motion library. Default easing is `[0.22, 1, 0.36, 1]`. Animate transfor
 - A "Skip" link reveals everything.
 
 **Act 2, the grilling** (built)
+
 - The question appears word by word, 60ms per word (opacity 0 to 1, y 8 to 0). Words with no space between them ("calls,") stay on one line.
 - The caught phrase comes in last, in red, with an underline that draws in, word by word.
 - The timer is mono. At 10 seconds left it turns red and pulses once per second (scale 1.08 to 1). A progress bar shrinks linearly. Both stop on submit.
@@ -372,18 +391,22 @@ Use the Motion library. Default easing is `[0.22, 1, 0.36, 1]`. Animate transfor
 - "Riding on this answer: up to 12 points" sits under the widget on desktop while a question is open.
 
 **Act 3, deliberation** (built)
+
 - While the call runs: a typing indicator and "The panel is deliberating."
 - Messages arrive via animated-list, 900ms apart, each preceded by a 450ms typing indicator. "See the review" appears once the last one is in.
 - The replay chart draws its line (pathLength 0 to 1, 1.2s), and each event dot pops in time with its row in the list.
 
 **Act 4, the review** (built)
+
 - Header, odds, one-liner, reviewers, checks, comments and fixes each rise 16px and fade in over 400ms, staggered 0 to 460ms.
 - One small confetti burst, 500ms in, only for Winner or Ready to win.
 
 **Share** (built)
+
 - The card rises 16px and fades in; the link and badge column fades in 150ms later. (The three Wrapped slides are hidden for now.)
 
 **Reduced motion**
+
 - Everything above becomes a simple 200ms crossfade. No shakes, confetti or scrambles. Beams fade instead of drawing. Act 3's chat shows at once.
 - Use `useReducedMotion` from `lib/use-reduced-motion.ts`, never Motion's: Motion's reads the media query before hydration, so components that render different elements under reduced motion mismatch the server HTML (it lost the landing page's first click). Ours renders `false` during hydration, then switches.
 
@@ -413,6 +436,7 @@ Use the Motion library. Default easing is `[0.22, 1, 0.36, 1]`. Animate transfor
 ### 11.1 Act 4 is a code review (built)
 
 Act 4 stays in the dark system (`components/review/review-view.tsx`, built from `reviewOf` in `lib/review.ts`):
+
 - **Top:** the repo name, an overall status pill ("Ready to win" or "Changes requested", per §3), and the final odds with its tier.
 - **The one-liner:** "Judges will remember it as: …"
 - **Checks, styled like CI results:** every claim (backed passed, unbacked failed, unclear warning) and signal (demo loads passed, dead failed, none warning; bulk first commit failed, otherwise "Built across commits" passed), each with its file. A summary line, e.g. "3 passed, 1 failed, 1 warning".
@@ -508,71 +532,71 @@ Stop after each phase for review.
 
 ## 15. Key files
 
-| File | What it does |
-|---|---|
-| `app/page.tsx` | Landing (act 0): headline, repo form (with the optional demo link), Yesterday's board, footer |
-| `app/privacy/page.tsx` | The privacy page (copy in `copy.privacy`) |
-| `app/api/cron/retention/route.ts` | The daily retention job |
-| `app/icon.tsx`, `app/apple-icon.tsx` | Favicon and home-screen icon, generated from `public/logo.png` |
-| `app/opengraph-image.tsx`, `app/twitter-image.tsx` | The landing page's share card |
-| `app/robots.ts` | robots.txt |
-| `app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx` | Error pages in the product's voice |
-| `app/s/[id]/page.tsx` | Session page: the owner resumes at the server's act; anyone else sees only the review. Share-card metadata. |
-| `app/og/[id]/route.tsx` | The share card image |
-| `app/badge/[file]/route.ts` | The README badge |
-| `app/api/sessions/route.ts` | `POST`: validate the repo URL, check limits, check the repo exists, reserve a session, set the owner cookie |
-| `app/api/sessions/[id]/route.ts` | `POST` actions: scan, advance, show, answer, deliberate (AI call 3, with its lock). |
-| `app/layout.tsx`, `app/globals.css` | Fonts, Tooltip provider, Toaster; design tokens, type scale, `page-x`, `label-mono` |
-| `app/not-found.tsx` | Not-found page |
-| `lib/odds.ts` | The odds engine: deltas, clamps, events, tiers, tone, big drop |
-| `lib/session.ts` | The pure session state machine and `SessionView` (what the client may see) |
-| `lib/session-store.ts` | Supabase load/save with optimistic locking, owner cookie, scan and panel locks, scan cache, token usage, `reserve_session`, the public review read |
-| `lib/scan.ts` | Scan prompts, calls A and B with retry, the file fetch, demo check, first-commit signal |
-| `lib/sources.ts` | Which files the scan reads (picking order, skip rules, truncation) |
-| `lib/client-ip.ts` | The rate-limit IP: platform header only |
-| `lib/scan-progress.ts` | Live scan progress events and their status lines |
-| `lib/demo-link.ts`, `lib/demo-link-check.ts` | Demo link parsing (site or video) and the SSRF-safe check |
-| `lib/retention.ts` | Retention rules and cutoffs |
-| `lib/logo.ts` | The logo as a data URI for generated images |
-| `lib/scan-validate.ts` | Model-output schemas; code validation of candidates, verdicts (quote and read rules), wording, questions |
-| `lib/answer-score.ts` | AI call 2: answer prompt, injection check and cap, call with retry and fallback |
-| `lib/run-scan.ts` | Orchestrates one session's scan: cache, GitHub, model, apply, usage, failure handling |
-| `lib/file-tree.ts` | Path existence, tree ordering, the trimmed tree act 1 draws |
-| `lib/github.ts` | GitHub fetch: metadata, README, tree, commits, root commit, manifests (root and nested) |
-| `lib/signals.ts` | Repo signals (first-commit share, stack, deps parsers, demo URL finder) |
-| `lib/demo-check.ts` | SSRF-safe demo link liveness check |
-| `lib/panel.ts` | AI call 3: deliberation prompt, comment anchoring, validation, call with retry |
-| `lib/review.ts` | The review built from a session: checks, summary, reviewers, comments, sparkline, judging sheet, re-review |
-| `lib/rubric.ts` | The judging sheet: each criterion 1 to 5 by fixed rules |
-| `lib/recheck.ts` | AI call 4 (re-reviews): the fix check against the diff, its prompt, validation and fallback |
-| `components/review/re-review.tsx` | The owner's "Ask for a re-review" card |
-| `lib/badge.ts` | The badge SVG |
-| `lib/site.ts` | Public URLs: review link, card, badge, markdown, X post |
-| `lib/og-fonts.ts` | Fonts for the share card |
-| `lib/use-reduced-motion.ts` | Hydration-safe reduced-motion hook |
-| `lib/api.ts` | Error responses with status codes and view resync, client IP |
-| `lib/db.ts` | Supabase client, `dailyCap`, IP hashing, ids |
-| `lib/copy.ts` | Every user-facing string, plus `fill()` |
-| `lib/motion.ts` | Shared easing |
-| `lib/repo-url.ts` | GitHub URL parsing (shared by client and server) |
-| `components/site-header.tsx` | The shared header (logo, wordmark, repo, status) |
-| `components/odds-widget.tsx` | Live odds: NumberFlow, delta chip, flash and shake, aria-live, mobile sticky bar |
-| `components/session/session-shell.tsx` | Client reducer, `send()`, act switching, transitions, header status |
-| `components/session/scan-act.tsx` | Act 1: scan request and polling, X-ray playback, beams, skip, error state |
-| `components/session/grilling-act.tsx` | Act 2: word-by-word question, answer field with counter, timer, judge reaction, chip travel, transcript |
-| `components/session/deliberation-act.tsx` | Act 3: the deliberate call and polling, the chat, the replay chart |
-| `components/session/verdict-act.tsx` | Act 4: the review, confetti for Winner or Ready to win |
-| `components/review/review-view.tsx` | The review screen (act 4 and the public link) |
-| `components/session/share-act.tsx` | Share: card, Post to X, review link, badge and markdown |
-| `components/session/act-parts.tsx` | Act title and the act footer with its single primary button |
-| `components/landing/*` | Headline (blur-fade), repo form (Versus link disabled), board (empty state) |
-| `components/ui/*` | Restyled shadcn primitives, adapted Magic UI blur-fade, hyper-text, animated-beam, animated-list, confetti |
-| `scripts/signals.ts` | CLI to print a repo's signals (`npm run signals`) |
-| `components/site-footer.tsx` | Footer with the Privacy link (outside sessions only) |
-| `vercel.json` | The daily cron |
-| `docs/LAUNCH.md` | Environment variables and launch steps |
-| `scripts/clear-test-data.ts` | Lists (and with `--yes` deletes) test sessions and their cache rows (`npm run clear-test-data`) |
-| `supabase/schema.sql` | Local only (gitignored): the full schema, run by hand |
+| File                                                         | What it does                                                                                                                                       |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/page.tsx`                                               | Landing (act 0): headline, repo form (with the optional demo link), Yesterday's board, footer                                                      |
+| `app/privacy/page.tsx`                                       | The privacy page (copy in `copy.privacy`)                                                                                                          |
+| `app/api/cron/retention/route.ts`                            | The daily retention job                                                                                                                            |
+| `app/icon.tsx`, `app/apple-icon.tsx`                         | Favicon and home-screen icon, generated from `public/logo.png`                                                                                     |
+| `app/opengraph-image.tsx`, `app/twitter-image.tsx`           | The landing page's share card                                                                                                                      |
+| `app/robots.ts`                                              | robots.txt                                                                                                                                         |
+| `app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx` | Error pages in the product's voice                                                                                                                 |
+| `app/s/[id]/page.tsx`                                        | Session page: the owner resumes at the server's act; anyone else sees only the review. Share-card metadata.                                        |
+| `app/og/[id]/route.tsx`                                      | The share card image                                                                                                                               |
+| `app/badge/[file]/route.ts`                                  | The README badge                                                                                                                                   |
+| `app/api/sessions/route.ts`                                  | `POST`: validate the repo URL, check limits, check the repo exists, reserve a session, set the owner cookie                                        |
+| `app/api/sessions/[id]/route.ts`                             | `POST` actions: scan, advance, show, answer, deliberate (AI call 3, with its lock).                                                                |
+| `app/layout.tsx`, `app/globals.css`                          | Fonts, Tooltip provider, Toaster; design tokens, type scale, `page-x`, `label-mono`                                                                |
+| `app/not-found.tsx`                                          | Not-found page                                                                                                                                     |
+| `lib/odds.ts`                                                | The odds engine: deltas, clamps, events, tiers, tone, big drop                                                                                     |
+| `lib/session.ts`                                             | The pure session state machine and `SessionView` (what the client may see)                                                                         |
+| `lib/session-store.ts`                                       | Supabase load/save with optimistic locking, owner cookie, scan and panel locks, scan cache, token usage, `reserve_session`, the public review read |
+| `lib/scan.ts`                                                | Scan prompts, calls A and B with retry, the file fetch, demo check, first-commit signal                                                            |
+| `lib/sources.ts`                                             | Which files the scan reads (picking order, skip rules, truncation)                                                                                 |
+| `lib/client-ip.ts`                                           | The rate-limit IP: platform header only                                                                                                            |
+| `lib/scan-progress.ts`                                       | Live scan progress events and their status lines                                                                                                   |
+| `lib/demo-link.ts`, `lib/demo-link-check.ts`                 | Demo link parsing (site or video) and the SSRF-safe check                                                                                          |
+| `lib/retention.ts`                                           | Retention rules and cutoffs                                                                                                                        |
+| `lib/logo.ts`                                                | The logo as a data URI for generated images                                                                                                        |
+| `lib/scan-validate.ts`                                       | Model-output schemas; code validation of candidates, verdicts (quote and read rules), wording, questions                                           |
+| `lib/answer-score.ts`                                        | AI call 2: answer prompt, injection check and cap, call with retry and fallback                                                                    |
+| `lib/run-scan.ts`                                            | Orchestrates one session's scan: cache, GitHub, model, apply, usage, failure handling                                                              |
+| `lib/file-tree.ts`                                           | Path existence, tree ordering, the trimmed tree act 1 draws                                                                                        |
+| `lib/github.ts`                                              | GitHub fetch: metadata, README, tree, commits, root commit, manifests (root and nested)                                                            |
+| `lib/signals.ts`                                             | Repo signals (first-commit share, stack, deps parsers, demo URL finder)                                                                            |
+| `lib/demo-check.ts`                                          | SSRF-safe demo link liveness check                                                                                                                 |
+| `lib/panel.ts`                                               | AI call 3: deliberation prompt, comment anchoring, validation, call with retry                                                                     |
+| `lib/review.ts`                                              | The review built from a session: checks, summary, reviewers, comments, sparkline, judging sheet, re-review                                         |
+| `lib/rubric.ts`                                              | The judging sheet: each criterion 1 to 5 by fixed rules                                                                                            |
+| `lib/recheck.ts`                                             | AI call 4 (re-reviews): the fix check against the diff, its prompt, validation and fallback                                                        |
+| `components/review/re-review.tsx`                            | The owner's "Ask for a re-review" card                                                                                                             |
+| `lib/badge.ts`                                               | The badge SVG                                                                                                                                      |
+| `lib/site.ts`                                                | Public URLs: review link, card, badge, markdown, X post                                                                                            |
+| `lib/og-fonts.ts`                                            | Fonts for the share card                                                                                                                           |
+| `lib/use-reduced-motion.ts`                                  | Hydration-safe reduced-motion hook                                                                                                                 |
+| `lib/api.ts`                                                 | Error responses with status codes and view resync, client IP                                                                                       |
+| `lib/db.ts`                                                  | Supabase client, `dailyCap`, IP hashing, ids                                                                                                       |
+| `lib/copy.ts`                                                | Every user-facing string, plus `fill()`                                                                                                            |
+| `lib/motion.ts`                                              | Shared easing                                                                                                                                      |
+| `lib/repo-url.ts`                                            | GitHub URL parsing (shared by client and server)                                                                                                   |
+| `components/site-header.tsx`                                 | The shared header (logo, wordmark, repo, status)                                                                                                   |
+| `components/odds-widget.tsx`                                 | Live odds: NumberFlow, delta chip, flash and shake, aria-live, mobile sticky bar                                                                   |
+| `components/session/session-shell.tsx`                       | Client reducer, `send()`, act switching, transitions, header status                                                                                |
+| `components/session/scan-act.tsx`                            | Act 1: scan request and polling, X-ray playback, beams, skip, error state                                                                          |
+| `components/session/grilling-act.tsx`                        | Act 2: word-by-word question, answer field with counter, timer, judge reaction, chip travel, transcript                                            |
+| `components/session/deliberation-act.tsx`                    | Act 3: the deliberate call and polling, the chat, the replay chart                                                                                 |
+| `components/session/verdict-act.tsx`                         | Act 4: the review, confetti for Winner or Ready to win                                                                                             |
+| `components/review/review-view.tsx`                          | The review screen (act 4 and the public link)                                                                                                      |
+| `components/session/share-act.tsx`                           | Share: card, Post to X, review link, badge and markdown                                                                                            |
+| `components/session/act-parts.tsx`                           | Act title and the act footer with its single primary button                                                                                        |
+| `components/landing/*`                                       | Headline (blur-fade), repo form (Versus link disabled), board (empty state)                                                                        |
+| `components/ui/*`                                            | Restyled shadcn primitives, adapted Magic UI blur-fade, hyper-text, animated-beam, animated-list, confetti                                         |
+| `scripts/signals.ts`                                         | CLI to print a repo's signals (`npm run signals`)                                                                                                  |
+| `components/site-footer.tsx`                                 | Footer with the Privacy link (outside sessions only)                                                                                               |
+| `vercel.json`                                                | The daily cron                                                                                                                                     |
+| `docs/LAUNCH.md`                                             | Environment variables and launch steps                                                                                                             |
+| `scripts/clear-test-data.ts`                                 | Lists (and with `--yes` deletes) test sessions and their cache rows (`npm run clear-test-data`)                                                    |
+| `supabase/schema.sql`                                        | Local only (gitignored): the full schema, run by hand                                                                                              |
 
 ## 16. Database objects (Supabase, public schema)
 

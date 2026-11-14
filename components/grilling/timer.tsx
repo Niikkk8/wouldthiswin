@@ -56,7 +56,9 @@ export function Timer({
           className={cn("h-full origin-left", urgent ? "bg-loss" : "bg-text")}
           initial={{ scaleX: left / windowMs }}
           animate={{ scaleX: stopped || reading ? left / windowMs : 0 }}
-          transition={stopped || reading ? { duration: 0 } : { duration: left / 1000, ease: "linear" }}
+          transition={
+            stopped || reading ? { duration: 0 } : { duration: left / 1000, ease: "linear" }
+          }
         />
       </div>
       <p className="label-mono mt-2 text-right tabular-nums" aria-live="polite">

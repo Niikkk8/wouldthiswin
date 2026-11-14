@@ -159,10 +159,21 @@ export function keepCookies(jar: Jar, setCookie: string[], host: string) {
     if (eq <= 0) continue;
     const name = pair.slice(0, eq).trim();
     const value = pair.slice(eq + 1).trim();
-    const domainAttr = attrs.map((a) => a.trim().match(/^domain=\.?(.+)$/i)?.[1]?.toLowerCase()).find(Boolean);
+    const domainAttr = attrs
+      .map((a) =>
+        a
+          .trim()
+          .match(/^domain=\.?(.+)$/i)?.[1]
+          ?.toLowerCase(),
+      )
+      .find(Boolean);
     // A Domain attribute must cover the host that set it, or the cookie is ignored.
     if (domainAttr && host !== domainAttr && !host.endsWith("." + domainAttr)) continue;
-    jar.set(`${name}@${domainAttr ?? host}`, { value: `${name}=${value}`, domain: domainAttr ?? host, hostOnly: !domainAttr });
+    jar.set(`${name}@${domainAttr ?? host}`, {
+      value: `${name}=${value}`,
+      domain: domainAttr ?? host,
+      hostOnly: !domainAttr,
+    });
   }
 }
 
@@ -342,7 +353,10 @@ function hostAllowed(host: string, allow: readonly string[] | undefined): boolea
   return allow.some((a) => h === a || h.endsWith(`.${a}`));
 }
 
-function readBody(res: http.IncomingMessage, maxBytes: number): Promise<{ body: string; truncated: boolean }> {
+function readBody(
+  res: http.IncomingMessage,
+  maxBytes: number,
+): Promise<{ body: string; truncated: boolean }> {
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
     let size = 0;
@@ -369,41 +383,49 @@ function readBody(res: http.IncomingMessage, maxBytes: number): Promise<{ body: 
 }
 
 function pageOnce(url: URL, signal: AbortSignal, maxBytes: number, cookie?: string) {
-  return new Promise<{ status: number; location: string | null; cookies: string[]; contentType: string | null; body: string; truncated: boolean }>(
-    (resolve, reject) => {
-      const mod = url.protocol === "https:" ? https : http;
-      const req = mod.request(
-        url,
-        {
-          method: "GET",
-          lookup: safeLookup,
-          signal,
-          headers: {
-            "user-agent": "Mozilla/5.0 (compatible; WouldThisWinCheck/1.0)",
-            accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
-            ...(cookie ? { cookie } : {}),
-          },
+  return new Promise<{
+    status: number;
+    location: string | null;
+    cookies: string[];
+    contentType: string | null;
+    body: string;
+    truncated: boolean;
+  }>((resolve, reject) => {
+    const mod = url.protocol === "https:" ? https : http;
+    const req = mod.request(
+      url,
+      {
+        method: "GET",
+        lookup: safeLookup,
+        signal,
+        headers: {
+          "user-agent": "Mozilla/5.0 (compatible; WouldThisWinCheck/1.0)",
+          accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+          ...(cookie ? { cookie } : {}),
         },
-        (res) => {
-          const status = res.statusCode ?? 0;
-          const location = typeof res.headers.location === "string" ? res.headers.location : null;
-          const cookies = res.headers["set-cookie"] ?? [];
-          const contentType = typeof res.headers["content-type"] === "string" ? res.headers["content-type"] : null;
-          if (status >= 300 && status < 400) {
-            res.destroy();
-            return resolve({ status, location, cookies, contentType, body: "", truncated: false });
-          }
-          if (!contentType || !TEXTUAL.test(contentType)) {
-            res.destroy();
-            return resolve({ status, location, cookies, contentType, body: "", truncated: false });
-          }
-          readBody(res, maxBytes).then(({ body, truncated }) => resolve({ status, location, cookies, contentType, body, truncated }));
-        },
-      );
-      req.on("error", reject);
-      req.end();
-    },
-  );
+      },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        const location = typeof res.headers.location === "string" ? res.headers.location : null;
+        const cookies = res.headers["set-cookie"] ?? [];
+        const contentType =
+          typeof res.headers["content-type"] === "string" ? res.headers["content-type"] : null;
+        if (status >= 300 && status < 400) {
+          res.destroy();
+          return resolve({ status, location, cookies, contentType, body: "", truncated: false });
+        }
+        if (!contentType || !TEXTUAL.test(contentType)) {
+          res.destroy();
+          return resolve({ status, location, cookies, contentType, body: "", truncated: false });
+        }
+        readBody(res, maxBytes).then(({ body, truncated }) =>
+          resolve({ status, location, cookies, contentType, body, truncated }),
+        );
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
 }
 
 /**
@@ -413,7 +435,11 @@ function pageOnce(url: URL, signal: AbortSignal, maxBytes: number, cookie?: stri
  */
 export async function fetchPage(input: string, options: PageOptions = {}): Promise<Page> {
   const o = { ...PAGE_DEFAULTS, ...options };
-  const fail = (reason: DemoCheck["reason"], status: number | null = null, finalUrl: string | null = null): Page => ({
+  const fail = (
+    reason: DemoCheck["reason"],
+    status: number | null = null,
+    finalUrl: string | null = null,
+  ): Page => ({
     ok: false,
     status,
     finalUrl,

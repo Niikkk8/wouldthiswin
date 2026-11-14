@@ -25,7 +25,12 @@ export function SubmissionFields({
   return (
     <details className="group mt-2">
       <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-[14px] text-text-muted underline decoration-1 underline-offset-4 hover:text-text [&::-webkit-details-marker]:hidden">
-        <ChevronRight aria-hidden size={15} strokeWidth={1.75} className="transition-transform duration-200 group-open:rotate-90" />
+        <ChevronRight
+          aria-hidden
+          size={15}
+          strokeWidth={1.75}
+          className="transition-transform duration-200 group-open:rotate-90"
+        />
         {S.toggle}
       </summary>
       <div className="mt-3 grid gap-3">
@@ -52,7 +57,9 @@ export function SubmissionFields({
           <textarea
             id={`${id}-text`}
             value={value.text}
-            onChange={(e) => onChange({ ...value, text: e.target.value.slice(0, MAX_SUBMISSION_CHARS) })}
+            onChange={(e) =>
+              onChange({ ...value, text: e.target.value.slice(0, MAX_SUBMISSION_CHARS) })
+            }
             placeholder={S.textPlaceholder}
             rows={4}
             maxLength={MAX_SUBMISSION_CHARS}

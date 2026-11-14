@@ -32,7 +32,9 @@ export function progressLine(p: ScanProgress): string {
     case "cached":
       return s.cached;
     case "claims":
-      return p.claims.length ? fill(s.claims, { n: p.claims.length, s: p.claims.length === 1 ? "" : "s" }) : s.noClaims;
+      return p.claims.length
+        ? fill(s.claims, { n: p.claims.length, s: p.claims.length === 1 ? "" : "s" })
+        : s.noClaims;
     case "reading":
       return fill(s.reading, { path: p.path });
     case "read":

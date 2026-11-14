@@ -3,6 +3,7 @@
 // backing off, then a SwampedError the routes turn into "The panel's swamped".
 
 import Anthropic from "@anthropic-ai/sdk";
+import { log } from "./log";
 
 type APIError = InstanceType<typeof Anthropic.APIError>;
 
@@ -44,11 +45,16 @@ export async function withRetry<T>(
     } catch (err) {
       if (!isBusy(err)) throw err;
       if (attempt >= MAX_RETRIES) {
-        console.error(JSON.stringify({ event: "anthropic.swamped", call: label, status: err.status }));
+        log.error("anthropic.swamped", { call: label, status: err.status });
         throw new SwampedError(err.status ?? 529);
       }
       const ms = waitFor(err, attempt);
-      console.warn(JSON.stringify({ event: "anthropic.busy", call: label, status: err.status, retry: attempt + 1, wait_ms: ms }));
+      log.warn("anthropic.busy", {
+        call: label,
+        status: err.status,
+        retry: attempt + 1,
+        wait_ms: ms,
+      });
       await sleep(ms);
     }
   }

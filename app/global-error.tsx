@@ -4,7 +4,12 @@ import { copy } from "@/lib/copy";
 import "./globals.css";
 
 /** When the root layout itself fails: no fonts or providers, same look. */
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <html lang="en">
       <body className="min-h-dvh">
@@ -22,7 +27,10 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
             </button>
             {/* A plain link: the router may be the thing that failed. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a href="/" className="flex h-12 items-center rounded-control border border-border-strong px-6 text-[17px] font-bold">
+            <a
+              href="/"
+              className="flex h-12 items-center rounded-control border border-border-strong px-6 text-[17px] font-bold"
+            >
               {copy.serverError.home}
             </a>
           </div>

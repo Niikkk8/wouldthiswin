@@ -43,7 +43,10 @@ export type SendResult = {
  * Sends one action to the server and mirrors the view it returns. With `onProgress`, the
  * response is streamed and each real progress event is passed on as it arrives (the scan).
  */
-export type Send = (a: SessionAction, opts?: { onProgress?: (p: ScanProgress) => void }) => Promise<SendResult>;
+export type Send = (
+  a: SessionAction,
+  opts?: { onProgress?: (p: ScanProgress) => void },
+) => Promise<SendResult>;
 
 /** Reads an NDJSON body: progress lines go to `onProgress`; returns the final result line. */
 async function readStream(
@@ -87,11 +90,17 @@ export type Transport = (
 const fetchTransport: Transport = async (id, a, onProgress) => {
   const res = await fetch(`/api/sessions/${id}`, {
     method: "POST",
-    headers: { "content-type": "application/json", ...(onProgress ? { accept: "application/x-ndjson" } : {}) },
+    headers: {
+      "content-type": "application/json",
+      ...(onProgress ? { accept: "application/x-ndjson" } : {}),
+    },
     body: JSON.stringify(a),
   });
-  const isStream = !!onProgress && !!res.body && (res.headers.get("content-type") ?? "").includes("ndjson");
-  return isStream ? readStream(res, onProgress!) : { status: res.status, body: await res.json().catch(() => ({})) };
+  const isStream =
+    !!onProgress && !!res.body && (res.headers.get("content-type") ?? "").includes("ndjson");
+  return isStream
+    ? readStream(res, onProgress!)
+    : { status: res.status, body: await res.json().catch(() => ({})) };
 };
 
 // The reducer only mirrors the server: every change to the session arrives as a new view.
@@ -197,7 +206,14 @@ export function SessionShell({
       );
       break;
     case "deliberation":
-      act = <DeliberationAct view={view} send={send} onNext={advance("deliberation")} pending={pending} />;
+      act = (
+        <DeliberationAct
+          view={view}
+          send={send}
+          onNext={advance("deliberation")}
+          pending={pending}
+        />
+      );
       break;
     case "verdict":
       act = <VerdictAct view={view} onNext={advance("verdict")} pending={pending} demo={demo} />;
@@ -210,7 +226,11 @@ export function SessionShell({
   return (
     <ActFrame
       resetKey={view.act}
-      step={view.act === "share" ? copy.header.share : fill(copy.header.act, { n: ACTS.indexOf(view.act) + 1 })}
+      step={
+        view.act === "share"
+          ? copy.header.share
+          : fill(copy.header.act, { n: ACTS.indexOf(view.act) + 1 })
+      }
       header={
         <SiteHeader
           repo={demo ? fill(copy.demo.header, { repo: view.repo }) : view.repo}

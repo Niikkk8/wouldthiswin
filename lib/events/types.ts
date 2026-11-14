@@ -4,7 +4,10 @@
 
 import { z } from "zod";
 
-const Slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(60);
+const Slug = z
+  .string()
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  .max(60);
 
 const Criterion = z.object({
   key: Slug,
@@ -42,7 +45,9 @@ export const EventPreset = z
     /** A short note appended server-side to the judges' prompts. Our text, not the team's. */
     judgeContext: z.string().max(600).default(""),
   })
-  .refine((e) => e.endsAt !== null || e.deadlineText !== null, { message: "an event needs endsAt or deadlineText" })
+  .refine((e) => e.endsAt !== null || e.deadlineText !== null, {
+    message: "an event needs endsAt or deadlineText",
+  })
   .refine((e) => new Set(e.rubric.criteria.map((c) => c.key)).size === e.rubric.criteria.length, {
     message: "rubric keys must be unique",
   });

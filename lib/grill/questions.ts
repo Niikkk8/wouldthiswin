@@ -18,8 +18,15 @@ export const MAX_QUESTION_CHARS = 220;
 /** The order judges ask in: the Tired Judge warms up, the Investor, then the Engineer goes for the gap. */
 export const ASK_ORDER: readonly Judge[] = ["tired", "investor", "engineer"];
 
-const ModelQuestion = z.object({ text: z.string(), caught: z.string().nullable(), kind: z.enum(QUESTION_KINDS), finding: z.string().nullable() });
-export const QuestionsOutput = z.object({ questions: z.object({ engineer: ModelQuestion, investor: ModelQuestion, tired: ModelQuestion }) });
+const ModelQuestion = z.object({
+  text: z.string(),
+  caught: z.string().nullable(),
+  kind: z.enum(QUESTION_KINDS),
+  finding: z.string().nullable(),
+});
+export const QuestionsOutput = z.object({
+  questions: z.object({ engineer: ModelQuestion, investor: ModelQuestion, tired: ModelQuestion }),
+});
 
 export type WrittenQuestion = Omit<Question, "issuedAt">;
 
@@ -40,7 +47,8 @@ export function validateQuestions(
     const q = ModelQuestion.safeParse(top.data.questions[judge]);
     if (!q.success) return { ok: false, reason: `question.${judge}` };
     const text = oneLine(q.data.text);
-    if (!text || text.length > MAX_QUESTION_CHARS) return { ok: false, reason: `question.${judge}.length` };
+    if (!text || text.length > MAX_QUESTION_CHARS)
+      return { ok: false, reason: `question.${judge}.length` };
     const caught = q.data.caught ? oneLine(q.data.caught) : null;
     questions.push({
       judge,
@@ -48,11 +56,19 @@ export function validateQuestions(
       kind: q.data.kind,
       // A question may only cite a finding that was routed to its judge.
       findingId: q.data.finding && routed[judge]?.includes(q.data.finding) ? q.data.finding : null,
-      caught: caught && caught.length <= 80 && caught.length < text.length * 0.6 && text.includes(caught) ? caught : null,
+      caught:
+        caught && caught.length <= 80 && caught.length < text.length * 0.6 && text.includes(caught)
+          ? caught
+          : null,
     });
   }
   if (questions.length !== QUESTION_COUNT) return { ok: false, reason: "questions" };
-  return { ok: true, questions: [...questions].sort((a, b) => ASK_ORDER.indexOf(a.judge) - ASK_ORDER.indexOf(b.judge)) };
+  return {
+    ok: true,
+    questions: [...questions].sort(
+      (a, b) => ASK_ORDER.indexOf(a.judge) - ASK_ORDER.indexOf(b.judge),
+    ),
+  };
 }
 
 const SYSTEM = `You write a hackathon judging panel's questions, one per judge, after the project's claims were checked against its code.
@@ -80,10 +96,16 @@ const FINDING: Record<string, string> = {
 
 /** Who asks about what: the Engineer the code, AI and claims; the Investor users and impact; the Tired Judge the demo, the README and clarity. */
 export function routeFindings(findings: readonly Finding[]): Record<Judge, Finding[]> {
-  const open = findings.filter((f) => f.outcome !== "pass" && f.check !== "secrets" && f.check !== "history");
+  const open = findings.filter(
+    (f) => f.outcome !== "pass" && f.check !== "secrets" && f.check !== "history",
+  );
   return {
     engineer: open.filter((f) => ["claim", "ai", "setup", "sponsors", "hygiene"].includes(f.check)),
-    investor: open.filter((f) => f.check === "claim" && /\b(user|customer|people|team|clinic|business|market|pay|price)/i.test(f.title)),
+    investor: open.filter(
+      (f) =>
+        f.check === "claim" &&
+        /\b(user|customer|people|team|clinic|business|market|pay|price)/i.test(f.title),
+    ),
     tired: open.filter((f) => ["demo", "readme", "template", "timeline"].includes(f.check)),
   };
 }
@@ -99,7 +121,11 @@ export function buildQuestionsPrompt(input: {
 }): { system: string; user: string } {
   const findings = input.claims
     .map((c) => {
-      const where = c.citations?.length ? ` (${c.citations.map((x) => `${x.path}:${x.start}`).join(", ")})` : c.file ? ` (${c.file})` : "";
+      const where = c.citations?.length
+        ? ` (${c.citations.map((x) => `${x.path}:${x.start}`).join(", ")})`
+        : c.file
+          ? ` (${c.file})`
+          : "";
       return `- [${c.weight}] ${esc(c.claim)}: ${FINDING[c.verdict ?? ""] ?? c.status}. ${esc(c.evidence)}${where}`;
     })
     .join("\n");
@@ -127,7 +153,16 @@ function routedBlocks(routed: Partial<Record<Judge, readonly Finding[]>>): strin
     const list = (routed[j] ?? []).slice(0, 6);
     if (!list.length) return [];
     const lines = list.map((f) => {
-      const where = f.evidence.map((e) => (e.kind === "file" ? `${e.path}${e.startLine ? `:${e.startLine}` : ""}` : e.kind === "url" ? e.url : "")).filter(Boolean).join(", ");
+      const where = f.evidence
+        .map((e) =>
+          e.kind === "file"
+            ? `${e.path}${e.startLine ? `:${e.startLine}` : ""}`
+            : e.kind === "url"
+              ? e.url
+              : "",
+        )
+        .filter(Boolean)
+        .join(", ");
       return `- ${f.id}: ${esc(f.title)}. ${esc(f.detail)}${where ? ` (${esc(where)})` : ""}`;
     });
     return [`<untrusted_findings judge="${j}">\n${lines.join("\n")}\n</untrusted_findings>`];
@@ -151,7 +186,15 @@ export async function writeQuestions(
   prompt: { system: string; user: string; routed?: Partial<Record<Judge, readonly string[]>> },
   usage: Usage,
   call: QuestionsCall = (system, user) =>
-    createMessage({ model: HAIKU, step: "questions", system, user, maxTokens: 3000, format: zodOutputFormat(QuestionsOutput), timeoutMs: 20_000 }),
+    createMessage({
+      model: HAIKU,
+      step: "questions",
+      system,
+      user,
+      maxTokens: 3000,
+      format: zodOutputFormat(QuestionsOutput),
+      timeoutMs: 20_000,
+    }),
 ): Promise<WrittenQuestion[]> {
   let last = "unknown";
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -160,7 +203,11 @@ export async function writeQuestions(
     try {
       res = await call(prompt.system, prompt.user);
     } catch (err) {
-      throw new QuestionsError(`questions failed: ${String(err)}`, usage, err instanceof SwampedError);
+      throw new QuestionsError(
+        `questions failed: ${String(err)}`,
+        usage,
+        err instanceof SwampedError,
+      );
     }
     recordCall(usage, "questions", HAIKU, res, Date.now() - started);
     if (res.stop_reason === "refusal") throw new QuestionsError("model refused", usage);

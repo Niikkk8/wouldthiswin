@@ -14,7 +14,15 @@ const R = copy.review.rubric;
 const tone = (score: number) => (score >= 7 ? "bg-gain" : score >= 4 ? "bg-unclear" : "bg-loss");
 
 /** One piece of evidence: a link pinned to the scanned commit, or the check's own words. */
-function EvidenceLink({ finding, repo, commit }: { finding: Finding; repo: string; commit: string | null }) {
+function EvidenceLink({
+  finding,
+  repo,
+  commit,
+}: {
+  finding: Finding;
+  repo: string;
+  commit: string | null;
+}) {
   return (
     <li className="min-w-0">
       <p className="text-[14px] leading-snug text-text-muted">{finding.title}</p>
@@ -70,7 +78,9 @@ export function RubricBreakdown({
         <p className="font-mono text-[14px] tabular-nums">
           {fill(R.aggregate, { n: rubric.aggregate })}
           {rubric.delta !== 0 && (
-            <span className={cn("ml-2", rubric.delta > 0 ? "text-gain" : "text-loss")}>{signed(rubric.delta)}</span>
+            <span className={cn("ml-2", rubric.delta > 0 ? "text-gain" : "text-loss")}>
+              {signed(rubric.delta)}
+            </span>
           )}
         </p>
       </header>
@@ -92,12 +102,19 @@ export function RubricBreakdown({
                       />
                       {R.why}
                       <span aria-hidden>·</span>
-                      <span aria-hidden>{fill(R.weight, { n: Math.round((c.weight / total) * 100) })}</span>
-                      <span className="sr-only">{fill(R.weightLabel, { n: Math.round((c.weight / total) * 100) })}</span>
+                      <span aria-hidden>
+                        {fill(R.weight, { n: Math.round((c.weight / total) * 100) })}
+                      </span>
+                      <span className="sr-only">
+                        {fill(R.weightLabel, { n: Math.round((c.weight / total) * 100) })}
+                      </span>
                     </span>
                   </span>
                   <span className="flex items-center gap-3">
-                    <span aria-hidden className="h-1.5 w-20 overflow-hidden rounded-full bg-border-strong sm:w-28">
+                    <span
+                      aria-hidden
+                      className="h-1.5 w-20 overflow-hidden rounded-full bg-border-strong sm:w-28"
+                    >
                       <span
                         className={cn("block h-full origin-left rounded-full", tone(c.score))}
                         style={{ transform: `scaleX(${c.score / CRITERION_MAX})` }}

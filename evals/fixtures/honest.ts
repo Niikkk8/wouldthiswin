@@ -24,11 +24,13 @@ npm install
 npm run dev
 `,
   files: {
-    "package.json": '{ "name": "queueless", "scripts": { "dev": "next dev", "test": "vitest" }, "dependencies": { "next": "16" } }',
+    "package.json":
+      '{ "name": "queueless", "scripts": { "dev": "next dev", "test": "vitest" }, "dependencies": { "next": "16" } }',
     "package-lock.json": "{}",
     ".env.example": "DATABASE_URL=\n",
     "app/layout.tsx": 'export const metadata = { title: "Queueless" };',
-    "lib/queue.ts": "export const join = (db, id) => db.ticket.create({ data: { id, url: process.env.DATABASE_URL } });",
+    "lib/queue.ts":
+      "export const join = (db, id) => db.ticket.create({ data: { id, url: process.env.DATABASE_URL } });",
     "lib/queue.test.ts": "test('joins', () => {});",
     ".github/workflows/ci.yml": "on: push",
     LICENSE: "MIT",

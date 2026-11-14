@@ -1,6 +1,8 @@
 // Fonts for the share card. Satori needs TTF/OTF data, so they're fetched from Google Fonts
 // once per server instance (the CSS API serves TTF to clients that don't ask for woff2).
 
+import { log } from "./log";
+
 type Font = { name: string; data: ArrayBuffer; weight: 500 | 800 | 900; style: "normal" };
 
 const FAMILIES = [
@@ -19,7 +21,9 @@ async function load(): Promise<Font[]> {
       const blocks = css.split("@font-face").filter((b) => b.includes(`font-weight: ${w}`));
       const url = blocks.at(-1)?.match(/src:\s*url\(([^)]+)\)/)?.[1];
       if (!url) continue;
-      const data = await fetch(url, { signal: AbortSignal.timeout(5000) }).then((r) => r.arrayBuffer());
+      const data = await fetch(url, { signal: AbortSignal.timeout(5000) }).then((r) =>
+        r.arrayBuffer(),
+      );
       fonts.push({ name: f.name, data, weight: w, style: "normal" });
     }
   }
@@ -31,7 +35,7 @@ let cached: Promise<Font[]> | null = null;
 /** Never throws: without the fonts, the card falls back to the default face. */
 export function ogFonts(): Promise<Font[]> {
   cached ??= load().catch((err) => {
-    console.warn(JSON.stringify({ event: "og.fonts", error: String(err) }));
+    log.warn("og.fonts", { error: String(err) });
     cached = null;
     return [];
   });

@@ -14,7 +14,15 @@ import { startSession, type AsleepInfo } from "@/lib/start-session";
  * checks each fix it asked for against what changed. Errors (nothing new pushed, the daily
  * limit) show inline, next to the button, with what to do next.
  */
-export function ReReview({ id, repo, className }: { id: string; repo: string; className?: string }) {
+export function ReReview({
+  id,
+  repo,
+  className,
+}: {
+  id: string;
+  repo: string;
+  className?: string;
+}) {
   const c = copy.iteration.again;
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -40,12 +48,19 @@ export function ReReview({ id, repo, className }: { id: string; repo: string; cl
       className={cn("rounded-panel border border-border bg-surface px-5 py-5 sm:px-6", className)}
     >
       <div className="flex items-start gap-3">
-        <GitPullRequestArrow aria-hidden size={20} strokeWidth={1.75} className="mt-0.5 shrink-0 text-gain" />
+        <GitPullRequestArrow
+          aria-hidden
+          size={20}
+          strokeWidth={1.75}
+          className="mt-0.5 shrink-0 text-gain"
+        />
         <div className="min-w-0">
           <h2 id="re-review" className="text-[17px] font-bold text-balance">
             {c.heading}
           </h2>
-          <p className="mt-1 max-w-[620px] text-[15px] leading-snug text-text-muted text-pretty">{c.body}</p>
+          <p className="mt-1 max-w-[620px] text-[15px] leading-snug text-text-muted text-pretty">
+            {c.body}
+          </p>
         </div>
       </div>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -58,7 +73,11 @@ export function ReReview({ id, repo, className }: { id: string; repo: string; cl
         >
           {pending ? c.busy : c.button}
         </button>
-        <p id="re-review-error" aria-live="polite" className="text-[14px] leading-snug text-loss empty:hidden">
+        <p
+          id="re-review-error"
+          aria-live="polite"
+          className="text-[14px] leading-snug text-loss empty:hidden"
+        >
           {error}
         </p>
       </div>

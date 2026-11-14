@@ -66,7 +66,13 @@ export function breadcrumbs(items: readonly { name: string; path: string }[]) {
 }
 
 /** A guide, with its author and both dates. */
-export function article(g: { title: string; description: string; date: string; updated?: string; url: string }) {
+export function article(g: {
+  title: string;
+  description: string;
+  date: string;
+  updated?: string;
+  url: string;
+}) {
   return {
     "@context": "https://schema.org",
     "@type": "Article",

@@ -19,7 +19,11 @@ const extraRepos = args.flatMap((a, i) => (args[i - 1] === "--repo" ? [a.toLower
 const TEST_RANGES = ["192.0.2", "198.51.100", "203.0.113"];
 // Loopback: local dev before the platform-only IP rule. Never a production visitor.
 const LOOPBACK = ["127.0.0.1", "::1", "::ffff:127.0.0.1"];
-const testIps = [UNKNOWN_IP, ...LOOPBACK, ...TEST_RANGES.flatMap((r) => Array.from({ length: 256 }, (_, i) => `${r}.${i}`))];
+const testIps = [
+  UNKNOWN_IP,
+  ...LOOPBACK,
+  ...TEST_RANGES.flatMap((r) => Array.from({ length: 256 }, (_, i) => `${r}.${i}`)),
+];
 
 async function main() {
   const host = new URL(process.env.SUPABASE_URL ?? "http://missing").host;
@@ -40,7 +44,10 @@ async function main() {
   const testRepos = new Set(sessions.map((s) => s.repo_url));
   const testHashes = new Set(hashes);
   if (testRepos.size) {
-    const { data: uses, error } = await db().from("sessions").select("repo_url, ip_hash").in("repo_url", [...testRepos]);
+    const { data: uses, error } = await db()
+      .from("sessions")
+      .select("repo_url, ip_hash")
+      .in("repo_url", [...testRepos]);
     if (error) throw error;
     for (const r of uses) if (!testHashes.has(r.ip_hash)) testRepos.delete(r.repo_url);
   }
@@ -57,20 +64,31 @@ async function main() {
   }
 
   console.log(`\nTest sessions: ${sessions.length}`);
-  for (const s of sessions) console.log(`  ${s.id}  ${s.act.padEnd(12)} ${s.created_at}  ${s.repo_url}`);
+  for (const s of sessions)
+    console.log(`  ${s.id}  ${s.act.padEnd(12)} ${s.created_at}  ${s.repo_url}`);
   console.log(`\nScan cache rows: ${cache.length}`);
-  for (const c of cache) console.log(`  ${c.repo_url}  ${c.latest_sha.slice(0, 7)}  ${c.created_at}`);
+  for (const c of cache)
+    console.log(`  ${c.repo_url}  ${c.latest_sha.slice(0, 7)}  ${c.created_at}`);
 
   if (!apply) {
     console.log("\nDry run. Re-run with --yes to delete these.");
     return;
   }
   for (let i = 0; i < sessions.length; i += 200) {
-    const { error } = await db().from("sessions").delete().in("id", sessions.slice(i, i + 200).map((s) => s.id));
+    const { error } = await db()
+      .from("sessions")
+      .delete()
+      .in(
+        "id",
+        sessions.slice(i, i + 200).map((s) => s.id),
+      );
     if (error) throw error;
   }
   if (cache.length) {
-    const { error } = await db().from("scan_cache").delete().in("repo_url", [...testRepos]);
+    const { error } = await db()
+      .from("scan_cache")
+      .delete()
+      .in("repo_url", [...testRepos]);
     if (error) throw error;
   }
   console.log(`\nDeleted ${sessions.length} sessions and ${cache.length} cache rows.`);

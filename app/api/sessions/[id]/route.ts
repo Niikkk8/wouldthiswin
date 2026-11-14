@@ -33,7 +33,11 @@ import {
 // The scan: GitHub (~5s), demo check in parallel, up to two model calls.
 export const maxDuration = 60;
 
-const Question = z.number().int().min(0).max(MAX_QUESTIONS - 1);
+const Question = z
+  .number()
+  .int()
+  .min(0)
+  .max(MAX_QUESTIONS - 1);
 
 const Body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("scan") }),
@@ -50,7 +54,11 @@ const Body = z.discriminatedUnion("action", [
 const ok = (s: SessionState) => Response.json({ view: toView(s, Date.now()) });
 
 /** Scores any recorded-but-unscored answers in order. Safe to call twice: each is scored once. */
-async function finishPending(id: string, owner: string | null, s: SessionState): Promise<MutateResult> {
+async function finishPending(
+  id: string,
+  owner: string | null,
+  s: SessionState,
+): Promise<MutateResult> {
   let r: MutateResult = { ok: true, session: s };
   for (let i = 0; i < s.answers.length; i++) {
     if (!r.ok) return r;
@@ -98,7 +106,12 @@ async function deliberate(id: string, owner: string | null): Promise<Deliberatio
   try {
     const out = await runPanel(s);
     await addUsage(id, out.usage);
-    log.info("panel.done", { id, dropped: out.dropped, input_tokens: out.usage.inputTokens, output_tokens: out.usage.outputTokens });
+    log.info("panel.done", {
+      id,
+      dropped: out.dropped,
+      input_tokens: out.usage.inputTokens,
+      output_tokens: out.usage.outputTokens,
+    });
     const r = await mutate(id, owner, (cur) => applyPanel(cur, out.panel));
     if (r.ok) return { kind: "done", session: r.session };
     return r.session ? { kind: "done", session: r.session } : { kind: "notFound" };
@@ -106,7 +119,11 @@ async function deliberate(id: string, owner: string | null): Promise<Deliberatio
     if (err instanceof PanelError) await addUsage(id, err.usage);
     log.error("panel.failed", { id, error: errorText(err) });
     await releasePanel(id);
-    return { kind: "failed", session: s, error: err instanceof PanelError && err.swamped ? "swamped" : "judgeFailed" };
+    return {
+      kind: "failed",
+      session: s,
+      error: err instanceof PanelError && err.swamped ? "swamped" : "judgeFailed",
+    };
   }
 }
 
@@ -119,7 +136,10 @@ async function scanResponse(id: string, owner: string | null, emit?: Emit): Prom
     case "done":
       return ok(out.session);
     case "pending":
-      return Response.json({ pending: true, view: toView(out.session, Date.now()) }, { status: 202 });
+      return Response.json(
+        { pending: true, view: toView(out.session, Date.now()) },
+        { status: 202 },
+      );
     case "stale":
       return fail("stale", out.session);
     case "notFound":
@@ -160,7 +180,11 @@ function streamScan(id: string, owner: string | null): Response {
     },
   });
   return new Response(stream, {
-    headers: { "content-type": `${NDJSON}; charset=utf-8`, "cache-control": "no-store", "x-accel-buffering": "no" },
+    headers: {
+      "content-type": `${NDJSON}; charset=utf-8`,
+      "cache-control": "no-store",
+      "x-accel-buffering": "no",
+    },
   });
 }
 
@@ -189,7 +213,10 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
           case "done":
             return ok(out.session);
           case "pending":
-            return Response.json({ pending: true, view: toView(out.session, now) }, { status: 202 });
+            return Response.json(
+              { pending: true, view: toView(out.session, now) },
+              { status: 202 },
+            );
           case "notFound":
             return fail("notFound");
           case "failed":
@@ -223,7 +250,11 @@ export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]">
 
     return r.ok ? ok(r.session) : failMutation(r);
   } catch (err) {
-    log.error("session.action.error", { id, action: body.action, error: err instanceof Error ? err.message : JSON.stringify(err) });
+    log.error("session.action.error", {
+      id,
+      action: body.action,
+      error: err instanceof Error ? err.message : JSON.stringify(err),
+    });
     return fail("judgeFailed");
   }
 }

@@ -6,7 +6,17 @@ import { copy } from "@/lib/copy";
 const S = copy.landing.submission;
 
 /** An event's sponsor tracks, for the team to say which ones it's entering. */
-export function TrackPicker({ id, tracks, value, onChange }: { id: string; tracks: readonly string[]; value: readonly string[]; onChange: (v: string[]) => void }) {
+export function TrackPicker({
+  id,
+  tracks,
+  value,
+  onChange,
+}: {
+  id: string;
+  tracks: readonly string[];
+  value: readonly string[];
+  onChange: (v: string[]) => void;
+}) {
   return (
     <fieldset className="mt-4">
       <legend className="text-[14px] font-semibold">{S.tracks}</legend>
@@ -17,7 +27,9 @@ export function TrackPicker({ id, tracks, value, onChange }: { id: string; track
             <Checkbox
               id={`${id}-track-${i}`}
               checked={value.includes(t)}
-              onCheckedChange={(v) => onChange(v === true ? [...value, t] : value.filter((x) => x !== t))}
+              onCheckedChange={(v) =>
+                onChange(v === true ? [...value, t] : value.filter((x) => x !== t))
+              }
               className="mt-0.5"
             />
             <label htmlFor={`${id}-track-${i}`} className="text-[15px] leading-snug">

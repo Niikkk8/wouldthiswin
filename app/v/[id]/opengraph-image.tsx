@@ -13,7 +13,10 @@ export const contentType = "image/png";
 
 async function draw(review: Review): Promise<ArrayBuffer> {
   const delta = review.iteration ? review.odds - review.iteration.previousOdds : null;
-  return new ImageResponse(<VerdictCard r={review} delta={delta} />, { ...size, fonts: await ogFonts() }).arrayBuffer();
+  return new ImageResponse(<VerdictCard r={review} delta={delta} />, {
+    ...size,
+    fonts: await ogFonts(),
+  }).arrayBuffer();
 }
 
 /**
@@ -27,9 +30,17 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     const review = await loadPublicReview(id);
     if (!review) throw new Error("not shareable");
     const png = await draw(review);
-    return new Response(png, { headers: { "content-type": contentType, "cache-control": "public, max-age=3600, s-maxage=3600" } });
+    return new Response(png, {
+      headers: {
+        "content-type": contentType,
+        "cache-control": "public, max-age=3600, s-maxage=3600",
+      },
+    });
   } catch (err) {
-    log.warn("og.verdict.fallback", { id, error: err instanceof Error ? err.message : String(err) });
+    log.warn("og.verdict.fallback", {
+      id,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return Response.redirect(`${SITE_URL}/opengraph-image`, 302);
   }
 }

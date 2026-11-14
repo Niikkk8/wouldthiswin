@@ -44,7 +44,9 @@ const Body = z.object({
  */
 async function asleep(status: Exclude<LimitStatus, "ok">): Promise<Response> {
   const lastReview = await lastReviewOf(await ownerHash()).catch(() => null);
-  return fail(status, undefined, { asleep: { resetAt: nextReset(new Date()).toISOString(), lastReview } });
+  return fail(status, undefined, {
+    asleep: { resetAt: nextReset(new Date()).toISOString(), lastReview },
+  });
 }
 
 /**
@@ -78,10 +80,13 @@ export async function POST(req: Request) {
   const submissionText = body.submissionText?.trim() || null;
 
   const event = body.eventSlug ? eventBySlug(body.eventSlug) : null;
-  if (body.eventSlug && (!event || eventStatus(event, Date.now()) !== "open")) return fail("eventClosed");
+  if (body.eventSlug && (!event || eventStatus(event, Date.now()) !== "open"))
+    return fail("eventClosed");
 
   try {
-    const previous = body.previousId ? await loadOwnReview(body.previousId, await ownerHash()) : null;
+    const previous = body.previousId
+      ? await loadOwnReview(body.previousId, await ownerHash())
+      : null;
     if (body.previousId && !previous) return fail("notReviewed");
     if (previous && previous.loaded.repoUrl !== ref.url) return fail("notReviewed");
     // A re-judge stays with the event the first round was for.
@@ -95,7 +100,15 @@ export async function POST(req: Request) {
     const owner = await ensureOwner();
     const id = newId();
     const repo = `${ref.owner}/${ref.repo}`;
-    const reserved = await reserveSession({ id, repoUrl: ref.url, repo, latestSha, owner, ipHash, eventSlug });
+    const reserved = await reserveSession({
+      id,
+      repoUrl: ref.url,
+      repo,
+      latestSha,
+      owner,
+      ipHash,
+      eventSlug,
+    });
     if (reserved !== "ok") return await asleep(reserved);
     // A re-review keeps the demo link the team gave last round, unless they gave a new one.
     const demoUrl = demo?.url ?? previous?.loaded.demoUrl ?? null;
@@ -105,12 +118,22 @@ export async function POST(req: Request) {
     const known = new Set(event?.sponsorSignatures.map((s) => s.track) ?? []);
     const tracks = (body.tracks ?? []).filter((t) => known.has(t));
     if (devpostUrl || submissionText || body.windowStart || body.windowEnd || tracks.length) {
-      await setSubmission(id, { devpostUrl, text: submissionText, start: body.windowStart ?? null, end: body.windowEnd ?? null, tracks });
+      await setSubmission(id, {
+        devpostUrl,
+        text: submissionText,
+        start: body.windowStart ?? null,
+        end: body.windowEnd ?? null,
+        tracks,
+      });
     }
     const prefs = await loadPrefs(owner);
     if (prefs.extendedTime) await setSettings(id, prefs);
 
-    log.info("session.start", { id, repo: ref.url, ...(previous ? { previousId: body.previousId } : {}) });
+    log.info("session.start", {
+      id,
+      repo: ref.url,
+      ...(previous ? { previousId: body.previousId } : {}),
+    });
     return Response.json({ id });
   } catch (err) {
     if (err instanceof GitHubError) {
@@ -119,7 +142,10 @@ export async function POST(req: Request) {
       }
       return fail(err.code);
     }
-    log.error("session.error", { repo: ref.url, error: err instanceof Error ? err.message : JSON.stringify(err) });
+    log.error("session.error", {
+      repo: ref.url,
+      error: err instanceof Error ? err.message : JSON.stringify(err),
+    });
     return fail("judgeFailed");
   }
 }

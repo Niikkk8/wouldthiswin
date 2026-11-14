@@ -3,8 +3,13 @@
 
 import { z } from "zod";
 
-export const SHARE_KINDS = ["share_image", "x_clicked", "linkedin_clicked", "download", "caption_copied"] as const;
-export type ShareKind = (typeof SHARE_KINDS)[number];
+export const SHARE_KINDS = [
+  "share_image",
+  "x_clicked",
+  "linkedin_clicked",
+  "download",
+  "caption_copied",
+] as const;
 
 /** Mirrors POST_FORMATS in the share card; kept here so the route doesn't import a component. */
 export const SHARE_EVENT_FORMATS = ["landscape", "portrait", "story"] as const;

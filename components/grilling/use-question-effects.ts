@@ -27,7 +27,12 @@ export function useDoze(asking: boolean, text: string) {
  * The reaction: the chip sits by it, flies to the widget, then the next question comes.
  * Returns whether the chip is still by the reaction.
  */
-export function useReaction(reacting: boolean, reduce: boolean, onSettled: () => void, onDone: () => void): boolean {
+export function useReaction(
+  reacting: boolean,
+  reduce: boolean,
+  onSettled: () => void,
+  onDone: () => void,
+): boolean {
   const [chipHere, setChipHere] = useState(true);
   useEffect(() => {
     if (!reacting) return;
@@ -76,7 +81,10 @@ export function useAutoAnswer({
     const step = () => {
       i = reduce ? autoAnswer.length : i + 1;
       setText(autoAnswer.slice(0, i));
-      t = i < autoAnswer.length ? setTimeout(step, AUTO_CHAR_MS) : setTimeout(() => submitRef.current(autoAnswer), 500);
+      t =
+        i < autoAnswer.length
+          ? setTimeout(step, AUTO_CHAR_MS)
+          : setTimeout(() => submitRef.current(autoAnswer), 500);
     };
     t = setTimeout(step, reduce ? 0 : AUTO_START_MS);
     return () => clearTimeout(t);

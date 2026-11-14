@@ -16,8 +16,6 @@ type Slots = { left: HTMLElement | null; right: HTMLElement | null };
 const BarSlots = createContext<Slots | null>(null);
 
 /** The act's own scroll area, so the page itself never scrolls. */
-export const ActScroll = createContext<React.RefObject<HTMLElement | null> | null>(null);
-export const useActScroll = () => useContext(ActScroll);
 
 export function ActFrame({
   header,
@@ -36,8 +34,14 @@ export function ActFrame({
   const scroller = useRef<HTMLElement>(null);
   const [fade, setFade] = useState(false);
   // Stable, so React doesn't detach and reattach them (and set state) on every render.
-  const leftRef = useCallback((left: HTMLDivElement | null) => setSlots((s) => (s.left === left ? s : { ...s, left })), []);
-  const rightRef = useCallback((right: HTMLDivElement | null) => setSlots((s) => (s.right === right ? s : { ...s, right })), []);
+  const leftRef = useCallback(
+    (left: HTMLDivElement | null) => setSlots((s) => (s.left === left ? s : { ...s, left })),
+    [],
+  );
+  const rightRef = useCallback(
+    (right: HTMLDivElement | null) => setSlots((s) => (s.right === right ? s : { ...s, right })),
+    [],
+  );
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
@@ -61,49 +65,48 @@ export function ActFrame({
 
   return (
     <BarSlots.Provider value={slots}>
-      <ActScroll.Provider value={scroller}>
-        <div className="flex h-dvh flex-col overflow-hidden">
-          {header}
-          <div className="relative min-h-0 flex-1">
-            {/* The act is the page's main content; the bar below is its controls. */}
-            <main
-              id="main"
-              tabIndex={-1}
-              ref={scroller}
-              data-act-scroll
-              className="h-full overflow-x-hidden overflow-y-auto overscroll-contain focus-visible:outline-none"
-            >
-              <div className="page-x flex min-h-full flex-col">
-                <div className="relative my-auto w-full py-6 lg:py-10">{children}</div>
-              </div>
-            </main>
-            <div
-              aria-hidden
-              className={cn(
-                "pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-bg to-transparent transition-opacity duration-200",
-                fade ? "opacity-100" : "opacity-0",
-              )}
-            />
-          </div>
-          <div className="shrink-0 border-t border-border bg-bg">
-            <div className="page-x flex flex-col gap-3 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:min-h-[84px] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:py-4">
-              <div className="flex min-w-0 items-center justify-between gap-6 sm:justify-start">
-                <p className="label-mono shrink-0 uppercase" data-act-step>
-                  {step}
-                </p>
-                <div ref={leftRef} className="min-w-0" />
-              </div>
-              <div ref={rightRef} data-action className="sm:shrink-0" />
+      <div className="flex h-dvh flex-col overflow-hidden">
+        {header}
+        <div className="relative min-h-0 flex-1">
+          {/* The act is the page's main content; the bar below is its controls. */}
+          <main
+            id="main"
+            tabIndex={-1}
+            ref={scroller}
+            data-act-scroll
+            className="h-full overflow-x-hidden overflow-y-auto overscroll-contain focus-visible:outline-none"
+          >
+            <div className="page-x flex min-h-full flex-col">
+              <div className="relative my-auto w-full py-6 lg:py-10">{children}</div>
             </div>
+          </main>
+          <div
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-bg to-transparent transition-opacity duration-200",
+              fade ? "opacity-100" : "opacity-0",
+            )}
+          />
+        </div>
+        <div className="shrink-0 border-t border-border bg-bg">
+          <div className="page-x flex flex-col gap-3 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:min-h-[84px] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:py-4">
+            <div className="flex min-w-0 items-center justify-between gap-6 sm:justify-start">
+              <p className="label-mono shrink-0 uppercase" data-act-step>
+                {step}
+              </p>
+              <div ref={leftRef} className="min-w-0" />
+            </div>
+            <div ref={rightRef} data-action className="sm:shrink-0" />
           </div>
         </div>
-      </ActScroll.Provider>
+      </div>
     </BarSlots.Provider>
   );
 }
 
 const typing = (t: EventTarget | null) =>
-  t instanceof HTMLElement && (t.isContentEditable || !!t.closest("input, textarea, select, button, a, [role=button]"));
+  t instanceof HTMLElement &&
+  (t.isContentEditable || !!t.closest("input, textarea, select, button, a, [role=button]"));
 
 /**
  * The act's one way forward, in the bar. Until `ready` the button is disabled and says what
@@ -152,7 +155,16 @@ export function ActionBar({
   useEffect(() => {
     if (!enabled || href) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Enter" || e.repeat || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (
+        e.key !== "Enter" ||
+        e.repeat ||
+        e.isComposing ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        e.shiftKey
+      )
+        return;
       if (typing(e.target)) return;
       e.preventDefault();
       onNextRef.current?.();
@@ -168,7 +180,11 @@ export function ActionBar({
       {slots.left &&
         skip &&
         createPortal(
-          <button type="button" onClick={skip.onClick} className="label-mono underline underline-offset-4 hover:text-text">
+          <button
+            type="button"
+            onClick={skip.onClick}
+            className="label-mono underline underline-offset-4 hover:text-text"
+          >
             {skip.label}
           </button>,
           slots.left,

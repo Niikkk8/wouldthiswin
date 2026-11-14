@@ -16,7 +16,13 @@ export function fit(text: string, max: number): string {
   return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[,.;:\s]+$/, "")}…`;
 }
 
-export function pageMeta(p: { title: string; description: string; path: string; index?: boolean; type?: "website" | "article" }): Metadata {
+export function pageMeta(p: {
+  title: string;
+  description: string;
+  path: string;
+  index?: boolean;
+  type?: "website" | "article";
+}): Metadata {
   const title = fit(p.title, MAX_TITLE);
   const description = fit(p.description, MAX_DESCRIPTION);
   const url = `${SITE_URL}${p.path}`;

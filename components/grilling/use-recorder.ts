@@ -9,7 +9,11 @@ export type RecorderState = "idle" | "starting" | "recording" | "denied" | "unsu
 const TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
 
 export function recordingType(): string | null {
-  if (typeof window === "undefined" || typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+  if (
+    typeof window === "undefined" ||
+    typeof MediaRecorder === "undefined" ||
+    !navigator.mediaDevices?.getUserMedia
+  ) {
     return null;
   }
   return TYPES.find((t) => MediaRecorder.isTypeSupported(t)) ?? null;
@@ -30,7 +34,13 @@ export function useRecorder({
   maxMs?: number;
 }) {
   const [state, setState] = useState<RecorderState>("idle");
-  const live = useRef<{ recorder: MediaRecorder; stream: MediaStream; ctx: AudioContext; raf: number; cap: number } | null>(null);
+  const live = useRef<{
+    recorder: MediaRecorder;
+    stream: MediaStream;
+    ctx: AudioContext;
+    raf: number;
+    cap: number;
+  } | null>(null);
   const handlers = useRef({ onAudio, onLevel });
   useEffect(() => {
     handlers.current = { onAudio, onLevel };
@@ -62,9 +72,13 @@ export function useRecorder({
     setState("starting");
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
     } catch (err) {
-      const denied = err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "SecurityError");
+      const denied =
+        err instanceof DOMException &&
+        (err.name === "NotAllowedError" || err.name === "SecurityError");
       setState(denied ? "denied" : "unsupported");
       return false;
     }

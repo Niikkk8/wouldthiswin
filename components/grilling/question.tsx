@@ -62,7 +62,11 @@ export function Question({
   const [phase, setPhase] = useState<Phase>("asking");
   const sent = useRef(false);
   // Typing before hydration would be lost, so the field opens once React is running.
-  const ready = useSyncExternalStore(noop, () => true, () => false);
+  const ready = useSyncExternalStore(
+    noop,
+    () => true,
+    () => false,
+  );
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -133,7 +137,15 @@ export function Question({
     if (!autoAnswer) inputRef.current?.focus({ preventScroll: true });
   }, [autoAnswer]);
 
-  useAutoAnswer({ autoAnswer, frozen, asking: phase === "asking", talking, reduce, setText, submit: (t) => submitRef.current(t) });
+  useAutoAnswer({
+    autoAnswer,
+    frozen,
+    asking: phase === "asking",
+    talking,
+    reduce,
+    setText,
+    submit: (t) => submitRef.current(t),
+  });
   const keepInView = useKeepInView(inputRef, formRef, reduce);
 
   const judge = copy.judges[q.judge];
@@ -157,7 +169,9 @@ export function Question({
         <p className="flex items-center gap-2.5 font-mono text-[13px]">
           <span aria-hidden className="size-2 rounded-full bg-loss" />
           {judge.name}
-          {q.followUp && <span className="label-mono uppercase">{copy.acts.grilling.followUp}</span>}
+          {q.followUp && (
+            <span className="label-mono uppercase">{copy.acts.grilling.followUp}</span>
+          )}
         </p>
         <h1 className="mt-5 max-w-[1120px] text-[36px] leading-[1.02] font-extrabold tracking-[-0.035em] text-balance lg:mt-6 lg:text-question">
           <QuestionText text={q.text} caught={q.caught} onTyped={typed} />
@@ -226,7 +240,11 @@ export function Question({
                   ) : live && voice.note ? (
                     <p className="text-[14px] text-text-subtle">
                       {voice.note}{" "}
-                      <button type="button" onClick={voice.turnOn} className="underline decoration-1 underline-offset-4 hover:text-text">
+                      <button
+                        type="button"
+                        onClick={voice.turnOn}
+                        className="underline decoration-1 underline-offset-4 hover:text-text"
+                      >
                         {copy.acts.grilling.voice.turnOn}
                       </button>
                     </p>
@@ -234,7 +252,12 @@ export function Question({
                 }
               />
               <div className="flex flex-col items-end gap-3">
-                <Timer left={clock.left} readLeft={clock.readLeft} windowMs={clock.windowMs} stopped={stopped} />
+                <Timer
+                  left={clock.left}
+                  readLeft={clock.readLeft}
+                  windowMs={clock.windowMs}
+                  stopped={stopped}
+                />
                 {live && q.lifeline && <LifelineLine />}
                 {live && lifelineAvailable && !q.lifeline && phase === "asking" && (
                   <LifelineButton

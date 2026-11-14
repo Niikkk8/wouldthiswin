@@ -18,11 +18,22 @@ const STATUS: Record<VerdictStatus, ClaimStatus> = {
 
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
 
-export function toClaims(extracted: readonly ExtractedClaim[], verdicts: readonly Verdict[], files: ReadonlyMap<string, string>): Claim[] {
+export function toClaims(
+  extracted: readonly ExtractedClaim[],
+  verdicts: readonly Verdict[],
+  files: ReadonlyMap<string, string>,
+): Claim[] {
   return extracted.map((c) => {
-    const v = verdicts.find((x) => x.id === c.id) ?? { id: c.id, status: "cant_verify" as const, reason: copy.evidence.notChecked, citations: [] };
+    const v = verdicts.find((x) => x.id === c.id) ?? {
+      id: c.id,
+      status: "cant_verify" as const,
+      reason: copy.evidence.notChecked,
+      citations: [],
+    };
     const first = v.citations[0];
-    const quote = first ? (files.get(first.path)?.split(/\r?\n/)[first.start - 1]?.trim().slice(0, 120) ?? null) : null;
+    const quote = first
+      ? (files.get(first.path)?.split(/\r?\n/)[first.start - 1]?.trim().slice(0, 120) ?? null)
+      : null;
     const name = clip(c.text, 50);
     const label = {
       supported: fill(copy.scan.foundLabel, { claim: name }),
@@ -54,14 +65,23 @@ export function toClaims(extracted: readonly ExtractedClaim[], verdicts: readonl
  * The files the review may quote: those the agent read, most-cited first, at most 10, each
  * cut the way the scan always cut them.
  */
-export function sourcesFrom(files: ReadonlyMap<string, string>, verdicts: readonly Verdict[], limit = 10): Source[] {
+export function sourcesFrom(
+  files: ReadonlyMap<string, string>,
+  verdicts: readonly Verdict[],
+  limit = 10,
+): Source[] {
   const cites = new Map<string, number>();
-  for (const v of verdicts) for (const c of v.citations) cites.set(c.path, (cites.get(c.path) ?? 0) + 1);
+  for (const v of verdicts)
+    for (const c of v.citations) cites.set(c.path, (cites.get(c.path) ?? 0) + 1);
   return [...files.keys()]
     .sort((a, b) => (cites.get(b) ?? 0) - (cites.get(a) ?? 0))
     .slice(0, limit)
     .map((path) => {
       const text = files.get(path)!;
-      return { path, text: text.slice(0, SOURCE_CHARS), ...(text.length > SOURCE_CHARS ? { truncated: true } : {}) };
+      return {
+        path,
+        text: text.slice(0, SOURCE_CHARS),
+        ...(text.length > SOURCE_CHARS ? { truncated: true } : {}),
+      };
     });
 }

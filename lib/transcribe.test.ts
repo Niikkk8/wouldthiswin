@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, test } from "vitest";
-import { TRANSCRIBE_MODEL, TranscribeError, audioType, cleanTranscript, transcribe } from "./transcribe";
+import {
+  TRANSCRIBE_MODEL,
+  TranscribeError,
+  audioType,
+  cleanTranscript,
+  transcribe,
+} from "./transcribe";
 
 describe("audio types", () => {
   test("MediaRecorder's types, codecs dropped", () => {
@@ -18,7 +24,10 @@ describe("audio types", () => {
 
 describe("transcript cleanup", () => {
   test("one line, whitespace collapsed", () => {
-    assert.equal(cleanTranscript("  We poll\n every   sixty seconds. ", 100), "We poll every sixty seconds.");
+    assert.equal(
+      cleanTranscript("  We poll\n every   sixty seconds. ", 100),
+      "We poll every sixty seconds.",
+    );
   });
 
   test("cut at a word near the limit", () => {
@@ -43,15 +52,27 @@ describe("transcribe", () => {
   });
 
   test("no key is a configuration error, not a crash", async () => {
-    await assert.rejects(transcribe(new Blob(["x"]), "audio/webm", { apiKey: "" }), (e) => e instanceof TranscribeError && e.reason === "unconfigured");
+    await assert.rejects(
+      transcribe(new Blob(["x"]), "audio/webm", { apiKey: "" }),
+      (e) => e instanceof TranscribeError && e.reason === "unconfigured",
+    );
   });
 
   test("an upstream error or a malformed body is reported as upstream", async () => {
-    await assert.rejects(transcribe(new Blob(["x"]), "audio/mp4", { apiKey: "k", fetch: ok({}, 500) }), /upstream/);
-    await assert.rejects(transcribe(new Blob(["x"]), "audio/mp4", { apiKey: "k", fetch: ok({ words: [] }) }), /upstream/);
+    await assert.rejects(
+      transcribe(new Blob(["x"]), "audio/mp4", { apiKey: "k", fetch: ok({}, 500) }),
+      /upstream/,
+    );
+    await assert.rejects(
+      transcribe(new Blob(["x"]), "audio/mp4", { apiKey: "k", fetch: ok({ words: [] }) }),
+      /upstream/,
+    );
   });
 
   test("silence comes back as empty", async () => {
-    await assert.rejects(transcribe(new Blob(["x"]), "audio/mp4", { apiKey: "k", fetch: ok({ text: "  " }) }), /empty/);
+    await assert.rejects(
+      transcribe(new Blob(["x"]), "audio/mp4", { apiKey: "k", fetch: ok({ text: "  " }) }),
+      /empty/,
+    );
   });
 });

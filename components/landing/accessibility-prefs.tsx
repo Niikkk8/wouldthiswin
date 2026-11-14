@@ -48,9 +48,17 @@ export function AccessibilityPrefs({ id }: { id: string }) {
   }
 
   return (
-    <details className="group mt-2" onToggle={(e) => (e.currentTarget as HTMLDetailsElement).open && void load()}>
+    <details
+      className="group mt-2"
+      onToggle={(e) => (e.currentTarget as HTMLDetailsElement).open && void load()}
+    >
       <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-[14px] text-text-muted underline decoration-1 underline-offset-4 hover:text-text [&::-webkit-details-marker]:hidden">
-        <ChevronRight aria-hidden size={15} strokeWidth={1.75} className="transition-transform duration-200 group-open:rotate-90" />
+        <ChevronRight
+          aria-hidden
+          size={15}
+          strokeWidth={1.75}
+          className="transition-transform duration-200 group-open:rotate-90"
+        />
         {P.toggle}
       </summary>
       <div className="mt-3 flex items-start gap-3">

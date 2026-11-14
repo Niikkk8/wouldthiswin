@@ -265,24 +265,39 @@ const rgbPng = (buf: Buffer, w: number, h: number) =>
   sharp(buf, { raw: { width: w, height: h, channels: 3 } }).png({ compressionLevel: 9 });
 
 /** Lossless when the image already has 256 colours or fewer. */
-const PALETTE = { palette: true, colours: 256, dither: 0, effort: 10, compressionLevel: 9 } as const;
+const PALETTE = {
+  palette: true,
+  colours: 256,
+  dither: 0,
+  effort: 10,
+  compressionLevel: 9,
+} as const;
 
 async function processJudge(judge: Judge) {
   const frames = FRAMES[judge] as readonly string[];
   const imgs = await Promise.all(frames.map((f) => load(path.join(SRC, judge, `${f}.png`))));
   const base = imgs[0];
   for (const [i, img] of imgs.entries())
-    if (img.w !== img.h || img.w !== base.w) throw new Error(`${judge}/${frames[i]}.png isn't the size of base.png`);
+    if (img.w !== img.h || img.w !== base.w)
+      throw new Error(`${judge}/${frames[i]}.png isn't the size of base.png`);
 
   const sprites: RGB[][] = [];
   if (base.w === N) {
     console.log(`${judge}: already ${N}x${N}, packing as is`);
-    for (const img of imgs) sprites.push(Array.from({ length: N * N }, (_, i) => [img.data[i * 3], img.data[i * 3 + 1], img.data[i * 3 + 2]] as RGB));
+    for (const img of imgs)
+      sprites.push(
+        Array.from(
+          { length: N * N },
+          (_, i) => [img.data[i * 3], img.data[i * 3 + 1], img.data[i * 3 + 2]] as RGB,
+        ),
+      );
   } else {
     const grid = findGrid(base);
     // The background, read from the base frame's top-left corner.
     const bg = snap(base, grid, { dx: 0, dy: 0 }).px[2 * N + 2];
-    console.log(`${judge}: grid pitch ${grid.pitch}, offset ${grid.ox},${grid.oy}; background ${bg.join(",")}`);
+    console.log(
+      `${judge}: grid pitch ${grid.pitch}, offset ${grid.ox},${grid.oy}; background ${bg.join(",")}`,
+    );
     for (let i = 0; i < frames.length; i++) {
       const d = i === 0 ? { dx: 0, dy: 0 } : align(base, imgs[i]);
       const { px, touched } = snap(imgs[i], grid, d);
@@ -307,7 +322,9 @@ async function processJudge(judge: Judge) {
   const q = await sharp(sheetPng).removeAlpha().raw().toBuffer();
   let changed = 0;
   for (let i = 0; i < flat.length; i++) if (q[i] !== flat[i]) changed++;
-  console.log(`  palette: ${changed ? `${((changed / flat.length) * 100).toFixed(1)}% of channel values moved` : "lossless"}`);
+  console.log(
+    `  palette: ${changed ? `${((changed / flat.length) * 100).toFixed(1)}% of channel values moved` : "lossless"}`,
+  );
   sprites.forEach((px, f) => {
     for (let y = 0; y < N; y++)
       for (let x = 0; x < N; x++) {
@@ -316,12 +333,18 @@ async function processJudge(judge: Judge) {
       }
   });
   for (const [i, px] of sprites.entries())
-    await rgbPng(raw(px), N, N).png(PALETTE).toFile(path.join(SRC, judge, `${frames[i]}.png`));
+    await rgbPng(raw(px), N, N)
+      .png(PALETTE)
+      .toFile(path.join(SRC, judge, `${frames[i]}.png`));
 
   // The share card draws the head at CARD_HEAD px; scale it here, nearest neighbour, so
   // the card never resamples it.
   const h = HEAD_CROP[judge];
-  const head = await sharp(await rgbPng(raw(sprites[0]), N, N).extract({ left: h.x, top: h.y, width: h.size, height: h.size }).toBuffer())
+  const head = await sharp(
+    await rgbPng(raw(sprites[0]), N, N)
+      .extract({ left: h.x, top: h.y, width: h.size, height: h.size })
+      .toBuffer(),
+  )
     .resize(CARD_HEAD, CARD_HEAD, { kernel: "nearest" })
     .png(PALETTE)
     .toBuffer();
@@ -329,7 +352,10 @@ async function processJudge(judge: Judge) {
   // The share images draw the whole base frame at whole multiples, scaled here likewise.
   const faces: Record<number, string> = {};
   for (const size of FACE_SIZES) {
-    const png = await rgbPng(raw(sprites[0]), N, N).resize(size, size, { kernel: "nearest" }).png(PALETTE).toBuffer();
+    const png = await rgbPng(raw(sprites[0]), N, N)
+      .resize(size, size, { kernel: "nearest" })
+      .png(PALETTE)
+      .toBuffer();
     faces[size] = `data:image/png;base64,${png.toString("base64")}`;
   }
 
@@ -386,7 +412,11 @@ async function main() {
     "};",
     "",
     "export const JUDGE_FACES: Record<FaceSize, Record<Judge, string>> = {",
-    ...FACE_SIZES.flatMap((size) => [`  ${size}: {`, ...JUDGES.map((j) => `    ${j}: "${out[j].faces[size]}",`), "  },"]),
+    ...FACE_SIZES.flatMap((size) => [
+      `  ${size}: {`,
+      ...JUDGES.map((j) => `    ${j}: "${out[j].faces[size]}",`),
+      "  },",
+    ]),
     "};",
     "",
   ].join("\n");

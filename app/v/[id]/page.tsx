@@ -23,7 +23,10 @@ export async function generateMetadata({ params }: PageProps<"/v/[id]">): Promis
   const review = await loadPublicReview(id).catch(() => null);
   if (!review) return { robots: { index: false, follow: false } };
   const title = `${projectName(review.repo)}: ${review.odds}% chance to win`.slice(0, 60);
-  const description = `${shareText(review)} ${copy.review.remember} "${review.oneLiner}"`.slice(0, 155);
+  const description = `${shareText(review)} ${copy.review.remember} "${review.oneLiner}"`.slice(
+    0,
+    155,
+  );
   const url = SITE_URL + verdictPath(id);
   return {
     title,
@@ -53,7 +56,15 @@ async function Verdict({ params }: { params: PageProps<"/v/[id]">["params"] }) {
       <main id="main" tabIndex={-1} className="page-x flex-1 pb-16 lg:pb-20">
         <VerdictSummary
           review={review}
-          delta={review.iteration && <OddsDelta from={review.iteration.previousOdds} to={review.odds} className="mt-2 text-[17px] lg:justify-end" />}
+          delta={
+            review.iteration && (
+              <OddsDelta
+                from={review.iteration.previousOdds}
+                to={review.odds}
+                className="mt-2 text-[17px] lg:justify-end"
+              />
+            )
+          }
         />
         <ShareLinks review={review} className="mt-12" />
         <BadgeSnippet repo={review.repo} id={review.id} className="mt-12 max-w-[720px]" />

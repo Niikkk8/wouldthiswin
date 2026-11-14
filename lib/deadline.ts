@@ -12,7 +12,11 @@
 export const QUESTION_KINDS = ["fact", "decision", "tradeoff"] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
 
-export const WINDOW_MS: Record<QuestionKind, number> = { fact: 45_000, decision: 75_000, tradeoff: 90_000 };
+export const WINDOW_MS: Record<QuestionKind, number> = {
+  fact: 45_000,
+  decision: 75_000,
+  tradeoff: 90_000,
+};
 export const READ_GRACE_MS = 3_000;
 export const EXTENDED_FACTOR = 2;
 export const LIFELINE_MS = 30_000;
@@ -37,7 +41,10 @@ export function typingMs(text: string, caught: string | null): number {
   if (!caughtWords) return Math.max(0, plainWords - 1) * WORD_MS + WORD_IN_MS;
   const caughtStart = (plainWords + 2) * WORD_MS;
   const lineStart = caughtStart + caughtWords * WORD_MS + 120;
-  return Math.max(caughtStart + (caughtWords - 1) * WORD_MS + WORD_IN_MS, lineStart + caughtWords * UNDERLINE_WORD_MS);
+  return Math.max(
+    caughtStart + (caughtWords - 1) * WORD_MS + WORD_IN_MS,
+    lineStart + caughtWords * UNDERLINE_WORD_MS,
+  );
 }
 
 export type Clock = {
@@ -75,14 +82,29 @@ export function acceptsRecordingStart(q: Clock, settings: ClockSettings, now: nu
 }
 
 /** The audio upload: the recording started before the buzzer, and it arrives within the upload grace. */
-export function acceptsUpload(q: Clock, settings: ClockSettings, recordingStartedAt: number | null, now: number): boolean {
+export function acceptsUpload(
+  q: Clock,
+  settings: ClockSettings,
+  recordingStartedAt: number | null,
+  now: number,
+): boolean {
   const deadline = deadlineOf(q, settings);
-  return recordingStartedAt !== null && recordingStartedAt < deadline && now <= deadline + UPLOAD_GRACE_MS;
+  return (
+    recordingStartedAt !== null &&
+    recordingStartedAt < deadline &&
+    now <= deadline + UPLOAD_GRACE_MS
+  );
 }
 
 /** The answer after a voice recording: the upload grace plus the network grace. */
-export function acceptsSpoken(q: Clock, settings: ClockSettings, recordingStartedAt: number | null, now: number): boolean {
-  if (recordingStartedAt === null || recordingStartedAt >= deadlineOf(q, settings)) return acceptsTyped(q, settings, now);
+export function acceptsSpoken(
+  q: Clock,
+  settings: ClockSettings,
+  recordingStartedAt: number | null,
+  now: number,
+): boolean {
+  if (recordingStartedAt === null || recordingStartedAt >= deadlineOf(q, settings))
+    return acceptsTyped(q, settings, now);
   return now <= deadlineOf(q, settings) + UPLOAD_GRACE_MS + SUBMIT_GRACE_MS;
 }
 

@@ -18,9 +18,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/demo`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/guides`, changeFrequency: "weekly", priority: 0.6 },
-    ...guides.map((g) => ({ url: SITE_URL + guidePath(g.slug), lastModified: g.updated ?? g.date, changeFrequency: "monthly" as const, priority: 0.6 })),
-    ...allEvents().map((e) => ({ url: `${SITE_URL}/hackathons/${e.slug}`, changeFrequency: "weekly" as const, priority: 0.5 })),
-    ...verdicts.map((v) => ({ url: SITE_URL + verdictPath(v.id), lastModified: v.updatedAt, changeFrequency: "monthly" as const, priority: 0.3 })),
+    ...guides.map((g) => ({
+      url: SITE_URL + guidePath(g.slug),
+      lastModified: g.updated ?? g.date,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
+    ...allEvents().map((e) => ({
+      url: `${SITE_URL}/hackathons/${e.slug}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.5,
+    })),
+    ...verdicts.map((v) => ({
+      url: SITE_URL + verdictPath(v.id),
+      lastModified: v.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.3,
+    })),
     { url: `${SITE_URL}/privacy`, changeFrequency: "yearly", priority: 0.2 },
   ];
 }

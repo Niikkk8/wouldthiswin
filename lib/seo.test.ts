@@ -40,7 +40,10 @@ describe("metadata", () => {
       const title = src.match(/title:\s*"([^"]+)"/)?.[1] ?? "";
       const description = src.match(/description:\s*"([^"]+)"/)?.[1] ?? "";
       assert.ok(title && title.length <= MAX_TITLE, `${f}: ${title}`);
-      assert.ok(description && description.length <= MAX_DESCRIPTION, `${f}: ${description.length}`);
+      assert.ok(
+        description && description.length <= MAX_DESCRIPTION,
+        `${f}: ${description.length}`,
+      );
     }
   });
 });
@@ -56,7 +59,10 @@ describe("structured data", () => {
 
   test("breadcrumbs start at home and number from 1", () => {
     const b = breadcrumbs([{ name: "Guides", path: "/guides" }]);
-    assert.deepEqual(b.itemListElement.map((i) => i.position), [1, 2]);
+    assert.deepEqual(
+      b.itemListElement.map((i) => i.position),
+      [1, 2],
+    );
   });
 });
 
@@ -70,10 +76,15 @@ describe("guide drafts", () => {
 
   test("every guide links two others that exist, and home", () => {
     const dir = path.join(process.cwd(), "content/guides");
-    const slugs = fs.readdirSync(dir).filter((x) => x.endsWith(".mdx")).map((x) => x.slice(0, -4));
+    const slugs = fs
+      .readdirSync(dir)
+      .filter((x) => x.endsWith(".mdx"))
+      .map((x) => x.slice(0, -4));
     for (const slug of slugs) {
       const src = fs.readFileSync(path.join(dir, `${slug}.mdx`), "utf8");
-      const related = [...(src.match(/related:\s*\[([^\]]*)\]/)?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+      const related = [
+        ...(src.match(/related:\s*\[([^\]]*)\]/)?.[1] ?? "").matchAll(/"([^"]+)"/g),
+      ].map((m) => m[1]);
       assert.ok(related.length >= 2 && related.every((r) => slugs.includes(r)), slug);
       if (/draft:\s*true/.test(src)) assert.match(src, /\]\(\/\)/, `${slug} links home`);
       assert.doesNotMatch(src, /\u2014/, `${slug} has no em dashes`);

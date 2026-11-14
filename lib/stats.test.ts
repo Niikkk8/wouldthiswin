@@ -2,14 +2,24 @@ import assert from "node:assert/strict";
 import { describe, test } from "vitest";
 import { computeStats, percentile, type SessionRow, type UsageRow } from "./stats";
 
-const session = (id: string, day: string, act: SessionRow["act"], shareable = false): SessionRow => ({
+const session = (
+  id: string,
+  day: string,
+  act: SessionRow["act"],
+  shareable = false,
+): SessionRow => ({
   id,
   created_at: `${day}T10:00:00Z`,
   act,
   shareable,
 });
 
-const call = (session_id: string | null, step: string, usd: number, tokens: Partial<UsageRow> = {}): UsageRow => ({
+const call = (
+  session_id: string | null,
+  step: string,
+  usd: number,
+  tokens: Partial<UsageRow> = {},
+): UsageRow => ({
   session_id,
   step,
   model: "claude-haiku-5-5",
@@ -76,7 +86,12 @@ describe("stats", () => {
   });
 
   test("the funnel narrows act by act", () => {
-    assert.deepEqual(s.funnel, { started: 5, finishedGrilling: 3, reachedVerdict: 2, madeShareable: 1 });
+    assert.deepEqual(s.funnel, {
+      started: 5,
+      finishedGrilling: 3,
+      reachedVerdict: 2,
+      madeShareable: 1,
+    });
   });
 
   test("an empty database is all zeros, not NaN", () => {

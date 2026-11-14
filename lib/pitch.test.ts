@@ -4,17 +4,33 @@ import { buildPitch, setupSteps } from "./pitch";
 import type { Claim } from "./session";
 
 const claim = (text: string, verdict: Claim["verdict"], file: string | null = null): Claim => ({
-  claim: text, status: verdict === "supported" ? "backed" : "unclear", weight: "core", file, evidence: "", label: "", missing: null, searched: [], verdict,
+  claim: text,
+  status: verdict === "supported" ? "backed" : "unclear",
+  weight: "core",
+  file,
+  evidence: "",
+  label: "",
+  missing: null,
+  searched: [],
+  verdict,
 });
 const claims = [
   claim("Join the queue by scanning a QR code", "supported", "server/queue.ts"),
   claim("Real-time streaming of crowd data", "partial"),
   claim("Custom ML model predicts density", "unsupported"),
 ];
-const facts = { stack: ["TypeScript", "Next.js"], setup: ["git clone https://github.com/t/q && cd q", "pnpm install", "pnpm dev"] };
+const facts = {
+  stack: ["TypeScript", "Next.js"],
+  setup: ["git clone https://github.com/t/q && cd q", "pnpm install", "pnpm dev"],
+};
 
 describe("honest pitch", () => {
-  const p = buildPitch({ repo: "team/queueless", oneLiner: "the one that put the waiting room on a QR code", claims, facts });
+  const p = buildPitch({
+    repo: "team/queueless",
+    oneLiner: "the one that put the waiting room on a QR code",
+    claims,
+    facts,
+  });
 
   test("the README has only what the code backs, with its file", () => {
     assert.match(p.readme, /- Join the queue by scanning a QR code \(`server\/queue\.ts`\)/);
@@ -23,13 +39,18 @@ describe("honest pitch", () => {
   });
 
   test("everything else is listed as left out, never pitched", () => {
-    assert.deepEqual(p.leftOut, ["Real-time streaming of crowd data", "Custom ML model predicts density"]);
+    assert.deepEqual(p.leftOut, [
+      "Real-time streaming of crowd data",
+      "Custom ML model predicts density",
+    ]);
     assert.doesNotMatch(p.submission, /What works today:[^.]*(real-time|custom ml)/i);
     assert.match(p.submission, /Not done yet, and we won't claim it until it is/);
   });
 
   test("the submission never runs past 250 words", () => {
-    const many = Array.from({ length: 40 }, (_, i) => claim(`Supported feature number ${i} that does a useful thing`, "supported"));
+    const many = Array.from({ length: 40 }, (_, i) =>
+      claim(`Supported feature number ${i} that does a useful thing`, "supported"),
+    );
     assert.ok(buildPitch({ repo: "t/a", oneLiner: "x", claims: many, facts }).words <= 250);
   });
 
@@ -40,12 +61,27 @@ describe("honest pitch", () => {
 
 describe("setup steps", () => {
   test("the repo's own package manager and scripts", () => {
-    const raw = { ref: { owner: "t", repo: "q", url: "" }, packageJson: '{"scripts":{"dev":"next dev"}}', requirementsTxt: null, headFilePaths: ["pnpm-lock.yaml", ".env.example"] };
-    assert.deepEqual(setupSteps(raw), ["git clone https://github.com/t/q && cd q", "cp .env.example .env  # then fill in the values", "pnpm install", "pnpm dev"]);
+    const raw = {
+      ref: { owner: "t", repo: "q", url: "" },
+      packageJson: '{"scripts":{"dev":"next dev"}}',
+      requirementsTxt: null,
+      headFilePaths: ["pnpm-lock.yaml", ".env.example"],
+    };
+    assert.deepEqual(setupSteps(raw), [
+      "git clone https://github.com/t/q && cd q",
+      "cp .env.example .env  # then fill in the values",
+      "pnpm install",
+      "pnpm dev",
+    ]);
   });
 
   test("python repos", () => {
-    const raw = { ref: { owner: "t", repo: "q", url: "" }, packageJson: null, requirementsTxt: "flask", headFilePaths: [] };
+    const raw = {
+      ref: { owner: "t", repo: "q", url: "" },
+      packageJson: null,
+      requirementsTxt: "flask",
+      headFilePaths: [],
+    };
     assert.deepEqual(setupSteps(raw).slice(1), ["pip install -r requirements.txt"]);
   });
 });

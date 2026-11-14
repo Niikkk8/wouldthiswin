@@ -14,7 +14,10 @@ export type PreviousRound = {
 };
 
 export function snapshotOf(s: SessionState): PreviousRound {
-  const fixes = fixItems(findingsOf(s), s.repo, s.signals?.commit ?? null).map((f) => ({ id: f.id, title: f.title }));
+  const fixes = fixItems(findingsOf(s), s.repo, s.signals?.commit ?? null).map((f) => ({
+    id: f.id,
+    title: f.title,
+  }));
   const criteria = (s.panel?.criteria ?? []).map((c) => ({ key: c.key, score: c.score }));
   return { fixes, criteria };
 }
@@ -31,9 +34,15 @@ export type RejudgeDelta = {
 };
 
 // Claim ids are renumbered every scan, so a fix item is matched by what it says.
-const key = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const key = (title: string) =>
+  title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 
-export function rejudgeDelta(r: Pick<Review, "odds" | "iteration" | "findings" | "repo" | "commit" | "rubric">): RejudgeDelta | null {
+export function rejudgeDelta(
+  r: Pick<Review, "odds" | "iteration" | "findings" | "repo" | "commit" | "rubric">,
+): RejudgeDelta | null {
   const it = r.iteration;
   if (!it) return null;
   const now = new Set(fixItems(r.findings, r.repo, r.commit).map((f) => key(f.title)));
@@ -41,7 +50,9 @@ export function rejudgeDelta(r: Pick<Review, "odds" | "iteration" | "findings" |
   const moved = (r.rubric?.criteria ?? [])
     .flatMap((c) => {
       const prev = it.previous?.criteria.find((p) => p.key === c.key);
-      return prev && prev.score !== c.score ? [{ key: c.key, name: c.name, from: prev.score, to: c.score }] : [];
+      return prev && prev.score !== c.score
+        ? [{ key: c.key, name: c.name, from: prev.score, to: c.score }]
+        : [];
     })
     .sort((a, b) => Math.abs(b.to - b.from) - Math.abs(a.to - a.from));
   return {

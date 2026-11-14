@@ -207,7 +207,12 @@ const LIMIT_STATUSES: readonly LimitStatus[] = ["ok", "rateLimited", "dailyCap",
 
 function capArgs(ipHash: string) {
   const l = limitsFromEnv();
-  return { p_ip_hash: ipHash, p_user_limit: l.perUser, p_day_limit: l.perDay, p_spend_limit: l.spendUsd };
+  return {
+    p_ip_hash: ipHash,
+    p_user_limit: l.perUser,
+    p_day_limit: l.perDay,
+    p_spend_limit: l.spendUsd,
+  };
 }
 
 function asLimitStatus(data: unknown): LimitStatus {
@@ -251,7 +256,9 @@ export async function checkLimits(ipHash: string): Promise<LimitStatus> {
 }
 
 /** This browser's most recent finished review, for the "judges are asleep" screen. */
-export async function lastReviewOf(owner: string | null): Promise<{ id: string; repo: string } | null> {
+export async function lastReviewOf(
+  owner: string | null,
+): Promise<{ id: string; repo: string } | null> {
   if (!owner) return null;
   const { data, error } = await db()
     .from("sessions")
@@ -267,7 +274,13 @@ export async function lastReviewOf(owner: string | null): Promise<{ id: string; 
 }
 
 /** What the team added beyond the repo: a Devpost page and pasted submission text. Untrusted. */
-export type Submission = { devpostUrl: string | null; text: string | null; start?: string | null; end?: string | null; tracks?: string[] };
+export type Submission = {
+  devpostUrl: string | null;
+  text: string | null;
+  start?: string | null;
+  end?: string | null;
+  tracks?: string[];
+};
 
 const SubmissionShape = z.object({
   devpostUrl: z.string().nullable(),
@@ -284,7 +297,11 @@ export async function setSubmission(id: string, submission: Submission): Promise
 
 /** The submission a session was started with. Anything malformed reads as nothing. */
 export async function loadSubmission(id: string): Promise<Submission> {
-  const { data, error } = await db().from("sessions").select("submission").eq("id", id).maybeSingle<{ submission: unknown }>();
+  const { data, error } = await db()
+    .from("sessions")
+    .select("submission")
+    .eq("id", id)
+    .maybeSingle<{ submission: unknown }>();
   if (error) throw error;
   const parsed = SubmissionShape.safeParse(data?.submission);
   return parsed.success ? parsed.data : { devpostUrl: null, text: null, start: null, end: null };
@@ -310,9 +327,11 @@ export async function loadPrefs(owner: string | null): Promise<SessionSettings> 
 }
 
 export async function savePrefs(owner: string, prefs: SessionSettings): Promise<void> {
-  const { error } = await db()
-    .from("owner_prefs")
-    .upsert({ owner_hash: owner, extended_time: prefs.extendedTime, updated_at: new Date().toISOString() });
+  const { error } = await db().from("owner_prefs").upsert({
+    owner_hash: owner,
+    extended_time: prefs.extendedTime,
+    updated_at: new Date().toISOString(),
+  });
   if (error) throw error;
 }
 
@@ -349,13 +368,13 @@ export async function claimScan(id: string): Promise<boolean> {
 /** Lets a failed scan be retried straight away. */
 export async function releaseScan(id: string): Promise<void> {
   const { error } = await db().from("sessions").update({ scan_started_at: null }).eq("id", id);
-  if (error) console.error(JSON.stringify({ event: "scan.release", id, error: error.message }));
+  if (error) log.error("scan.release", { id, error: error.message });
 }
 
 /** A session that never cost anything shouldn't count toward the limits. */
 export async function deleteSession(id: string): Promise<void> {
   const { error } = await db().from("sessions").delete().eq("id", id);
-  if (error) console.error(JSON.stringify({ event: "session.delete", id, error: error.message }));
+  if (error) log.error("session.delete", { id, error: error.message });
 }
 
 /**
@@ -366,7 +385,11 @@ export async function deleteSession(id: string): Promise<void> {
 export async function addUsage(id: string, usage: Usage) {
   if (!usage.calls.length) return;
   const [totals, rows] = await Promise.all([
-    db().rpc("add_session_usage", { p_id: id, p_input: usage.inputTokens, p_output: usage.outputTokens }),
+    db().rpc("add_session_usage", {
+      p_id: id,
+      p_input: usage.inputTokens,
+      p_output: usage.outputTokens,
+    }),
     db()
       .from("session_usage")
       .insert(
@@ -383,12 +406,15 @@ export async function addUsage(id: string, usage: Usage) {
         })),
       ),
   ]);
-  for (const r of [totals, rows]) if (r.error) log.error("session.usage", { id, error: r.error.message });
+  for (const r of [totals, rows])
+    if (r.error) log.error("session.usage", { id, error: r.error.message });
 }
 
 /** How long a step without a model call took (fetching the repo, checking the demo). */
 export async function addStepTiming(id: string, step: string, ms: number) {
-  const { error } = await db().from("session_usage").insert({ session_id: id, step, duration_ms: Math.round(ms) });
+  const { error } = await db()
+    .from("session_usage")
+    .insert({ session_id: id, step, duration_ms: Math.round(ms) });
   if (error) log.error("session.step", { id, step, error: error.message });
 }
 
@@ -444,16 +470,23 @@ export async function claimPanel(id: string): Promise<boolean> {
 /** Lets a failed deliberation be retried straight away. */
 export async function releasePanel(id: string): Promise<void> {
   const { error } = await db().from("sessions").update({ panel_started_at: null }).eq("id", id);
-  if (error) console.error(JSON.stringify({ event: "panel.release", id, error: error.message }));
+  if (error) log.error("panel.release", { id, error: error.message });
 }
 
 /** Sets the owner's sharing opt-ins on a finished review. Null if it isn't theirs or isn't finished. */
-export async function setVisibility(id: string, owner: string | null, change: Partial<Visibility>): Promise<Visibility | null> {
+export async function setVisibility(
+  id: string,
+  owner: string | null,
+  change: Partial<Visibility>,
+): Promise<Visibility | null> {
   const loaded = await loadSession(id, owner);
   const s = loaded?.session;
   if (!s || (s.act !== "verdict" && s.act !== "share") || !s.panel) return null;
   const next = nextVisibility(s.visibility, change);
-  const { error } = await db().from("sessions").update({ shareable: next.shareable, listed: next.listed }).eq("id", id);
+  const { error } = await db()
+    .from("sessions")
+    .update({ shareable: next.shareable, listed: next.listed })
+    .eq("id", id);
   if (error) throw error;
   return next;
 }
@@ -462,9 +495,12 @@ export async function setVisibility(id: string, owner: string | null, change: Pa
  * A review for its share images: anyone's once it's shareable (cached publicly), and the
  * owner's own before that (cached privately, so a CDN never holds an unshared one).
  */
-export async function loadReviewForImage(id: string): Promise<{ review: Review; cache: string } | null> {
+export async function loadReviewForImage(
+  id: string,
+): Promise<{ review: Review; cache: string } | null> {
   const shared = await loadPublicReview(id);
-  if (shared) return { review: shared, cache: "public, max-age=86400, s-maxage=31536000, immutable" };
+  if (shared)
+    return { review: shared, cache: "public, max-age=86400, s-maxage=31536000, immutable" };
   const loaded = await loadSession(id, await ownerHash());
   const own = loaded ? reviewOf(loaded.session, "public") : null;
   return own ? { review: own, cache: "private, no-store" } : null;
@@ -479,16 +515,39 @@ export async function loadPublicReview(id: string): Promise<Review | null> {
   if (!ID_RE.test(id)) return null;
   const { data, error } = await db()
     .from("sessions")
-    .select("id, repo, act, claims, events, panel, signals, questions, answers, shareable, listed, event_slug")
+    .select(
+      "id, repo, act, claims, events, panel, signals, questions, answers, shareable, listed, event_slug",
+    )
     .eq("id", id)
     .eq("shareable", true)
-    .maybeSingle<Pick<Row, "id" | "repo" | "act" | "claims" | "events" | "panel" | "signals" | "questions" | "answers" | "shareable" | "listed" | "event_slug">>();
+    .maybeSingle<
+      Pick<
+        Row,
+        | "id"
+        | "repo"
+        | "act"
+        | "claims"
+        | "events"
+        | "panel"
+        | "signals"
+        | "questions"
+        | "answers"
+        | "shareable"
+        | "listed"
+        | "event_slug"
+      >
+    >();
   if (error) throw error;
   if (!data || (data.act !== "verdict" && data.act !== "share") || !data.panel) return null;
   // Only the parts the review uses; the chat, the questions' text and the answers' text stay
   // out even in memory. The judging sheet needs who asked and what each answer scored.
   const panel = { ...data.panel, chat: [] };
-  const questions = data.questions.map((q) => ({ judge: q.judge, text: "", caught: null, issuedAt: null }));
+  const questions = data.questions.map((q) => ({
+    judge: q.judge,
+    text: "",
+    caught: null,
+    issuedAt: null,
+  }));
   const answers = data.answers.map((a) => ({ ...a, text: "", reason: null }));
   return reviewOf({
     ...newSession(data.id, data.repo),
@@ -508,7 +567,9 @@ export async function loadPublicReview(id: string): Promise<Review | null> {
  * A repo's latest shareable verdict, for its README badge: the newest finished session on that
  * repo whose owner made it shareable. Null when there's none.
  */
-export async function loadLatestShareable(repo: string): Promise<{ id: string; odds: number } | null> {
+export async function loadLatestShareable(
+  repo: string,
+): Promise<{ id: string; odds: number } | null> {
   const { data, error } = await db()
     .from("sessions")
     .select("id, events")
@@ -536,12 +597,4 @@ export async function listedVerdicts(limit = 500): Promise<{ id: string; updated
     .returns<{ id: string; updated_at: string }[]>();
   if (error) throw error;
   return data.map((r) => ({ id: r.id, updatedAt: r.updated_at }));
-}
-
-/** True if this browser started the session. */
-export async function isOwner(id: string): Promise<boolean> {
-  const owner = await ownerHash();
-  if (!owner || !ID_RE.test(id)) return false;
-  const { data } = await db().from("sessions").select("owner_hash").eq("id", id).maybeSingle<{ owner_hash: string }>();
-  return data?.owner_hash === owner;
 }

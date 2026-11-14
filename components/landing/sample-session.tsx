@@ -54,7 +54,9 @@ function PinnedStage() {
   useEffect(() => {
     const el = outer.current;
     if (!el || near) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "100% 0px" });
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), {
+      rootMargin: "100% 0px",
+    });
     io.observe(el);
     return () => io.disconnect();
   }, [near]);
@@ -105,7 +107,10 @@ function PinnedStage() {
                 <li
                   key={i}
                   aria-current={i === step ? "step" : undefined}
-                  className={cn("h-1 w-6 rounded-full transition-colors", i <= step ? "bg-text" : "bg-border-strong")}
+                  className={cn(
+                    "h-1 w-6 rounded-full transition-colors",
+                    i <= step ? "bg-text" : "bg-border-strong",
+                  )}
                 />
               ))}
             </ol>
@@ -126,7 +131,10 @@ function PinnedStage() {
             </motion.div>
           </AnimatePresence>
           {/* The stage is cut off at the bottom; fade it rather than slice it. */}
-          <div aria-hidden className="pointer-events-none relative -mt-24 h-24 bg-gradient-to-t from-bg to-transparent" />
+          <div
+            aria-hidden
+            className="pointer-events-none relative -mt-24 h-24 bg-gradient-to-t from-bg to-transparent"
+          />
         </div>
       </div>
     </div>
@@ -141,14 +149,25 @@ function Block({ kind, caption, still }: { kind: Kind; caption: string | null; s
     if (seen) return;
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setSeen(true), { threshold: 0.25 });
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setSeen(true), {
+      threshold: 0.25,
+    });
     io.observe(el);
     return () => io.disconnect();
   }, [seen]);
   return (
     <li ref={ref}>
-      {caption && <p className="text-[24px] leading-tight font-black tracking-[-0.03em] text-balance">{caption}</p>}
-      <div className={cn(FRAME, "mt-4 max-h-[760px] min-h-[320px] overflow-hidden rounded-panel border border-border bg-bg px-4 pt-2 pb-6 sm:px-6")}>
+      {caption && (
+        <p className="text-[24px] leading-tight font-black tracking-[-0.03em] text-balance">
+          {caption}
+        </p>
+      )}
+      <div
+        className={cn(
+          FRAME,
+          "mt-4 max-h-[760px] min-h-[320px] overflow-hidden rounded-panel border border-border bg-bg px-4 pt-2 pb-6 sm:px-6",
+        )}
+      >
         {seen && <Stage kind={kind} still={still} />}
       </div>
     </li>
@@ -163,12 +182,17 @@ export function SampleSession() {
   return (
     <section aria-labelledby="sample-heading" className="page-x py-20 lg:py-28">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-        <h2 id="sample-heading" className="text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act">
+        <h2
+          id="sample-heading"
+          className="text-[36px] leading-none font-black tracking-[-0.04em] lg:text-act"
+        >
           {copy.landing.sample.heading}
         </h2>
         {!pinned && <SampleLabel />}
       </div>
-      <p className="mt-4 max-w-[640px] text-[18px] leading-snug text-text-muted lg:text-[20px]">{copy.landing.sample.lede}</p>
+      <p className="mt-4 max-w-[640px] text-[18px] leading-snug text-text-muted lg:text-[20px]">
+        {copy.landing.sample.lede}
+      </p>
       {pinned ? (
         <PinnedStage />
       ) : (

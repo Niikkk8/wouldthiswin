@@ -11,10 +11,13 @@ export const SOURCE_CHARS = 12_000;
  */
 export type Source = { path: string; text: string; truncated?: boolean };
 
-const LOCKFILE = /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|poetry\.lock|Pipfile\.lock|Cargo\.lock|Gemfile\.lock|composer\.lock|go\.sum|uv\.lock)$/i;
-const GENERATED_DIR = /(^|\/)(node_modules|dist|build|out|\.next|\.nuxt|\.svelte-kit|coverage|vendor|__pycache__|\.venv|venv|generated|__generated__|target)\//i;
+const LOCKFILE =
+  /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|poetry\.lock|Pipfile\.lock|Cargo\.lock|Gemfile\.lock|composer\.lock|go\.sum|uv\.lock)$/i;
+const GENERATED_DIR =
+  /(^|\/)(node_modules|dist|build|out|\.next|\.nuxt|\.svelte-kit|coverage|vendor|__pycache__|\.venv|venv|generated|__generated__|target)\//i;
 const MINIFIED = /\.min\.(js|css|mjs)$|[.-]bundle\.js$|\.chunk\.js$/i;
-const BINARY = /\.(png|jpe?g|gif|webp|avif|ico|bmp|tiff?|svg|psd|mp3|wav|ogg|mp4|mov|webm|avi|woff2?|ttf|otf|eot|pdf|zip|gz|tgz|rar|7z|tar|jar|exe|dll|so|dylib|bin|wasm|onnx|pt|pth|h5|pkl|gguf|safetensors|npy|npz|parquet|db|sqlite3?|ipynb|map|pyc|class|o|a|lockb)$/i;
+const BINARY =
+  /\.(png|jpe?g|gif|webp|avif|ico|bmp|tiff?|svg|psd|mp3|wav|ogg|mp4|mov|webm|avi|woff2?|ttf|otf|eot|pdf|zip|gz|tgz|rar|7z|tar|jar|exe|dll|so|dylib|bin|wasm|onnx|pt|pth|h5|pkl|gguf|safetensors|npy|npz|parquet|db|sqlite3?|ipynb|map|pyc|class|o|a|lockb)$/i;
 
 // Env files can hold real keys. Their contents would be stored and could be quoted in a
 // review, so only the templates are read.
@@ -24,7 +27,9 @@ const ENV_TEMPLATE = /(^|\/)\.env\.(example|sample|template)$/i;
 /** Lockfiles, build output, minified bundles, binaries and env files are never read. */
 export function isReadablePath(path: string): boolean {
   if (ENV.test(path) && !ENV_TEMPLATE.test(path)) return false;
-  return !LOCKFILE.test(path) && !GENERATED_DIR.test(path) && !MINIFIED.test(path) && !BINARY.test(path);
+  return (
+    !LOCKFILE.test(path) && !GENERATED_DIR.test(path) && !MINIFIED.test(path) && !BINARY.test(path)
+  );
 }
 
 /**
@@ -45,7 +50,10 @@ export function readableText(text: string): string | null {
  * The files to fetch: every claim's first candidate, then every claim's second, skipping
  * unreadable paths and repeats, up to MAX_SOURCES.
  */
-export function pickFiles(candidates: readonly (readonly string[])[], limit = MAX_SOURCES): string[] {
+export function pickFiles(
+  candidates: readonly (readonly string[])[],
+  limit = MAX_SOURCES,
+): string[] {
   const picked: string[] = [];
   const most = Math.max(0, ...candidates.map((c) => c.length));
   for (let rank = 0; rank < most; rank++) {

@@ -43,7 +43,12 @@ function harness() {
 
 describe("cache key", () => {
   test("owner, repo, full SHA and the scan version", () => {
-    assert.deepEqual(cacheKey("Team", "Repo", SHA), { owner: "team", repo: "repo", sha: SHA, version: SCAN_VERSION });
+    assert.deepEqual(cacheKey("Team", "Repo", SHA), {
+      owner: "team",
+      repo: "repo",
+      sha: SHA,
+      version: SCAN_VERSION,
+    });
   });
 
   test("no key without a full commit SHA", () => {
@@ -56,7 +61,10 @@ describe("what is cached", () => {
   test("findings and file paths, never file contents", () => {
     const cached = toCached(DEMO_SCAN);
     assert.ok(!("sources" in cached));
-    assert.deepEqual(cached.sourcePaths, DEMO_SCAN.sources.map((s) => s.path));
+    assert.deepEqual(
+      cached.sourcePaths,
+      DEMO_SCAN.sources.map((s) => s.path),
+    );
     assert.ok(!JSON.stringify(cached).includes(DEMO_SCAN.sources[0].text));
   });
 
@@ -109,14 +117,20 @@ describe("scan with cache", () => {
   test("findings are stored under the commit the scan actually read", async () => {
     const h = harness();
     const newer = cacheKey("team", "repo", "c".repeat(40))!;
-    await scanWithCache({ ...h.deps(cacheKey("team", "repo", SHA)), fresh: async () => ({ scan: DEMO_SCAN, usage: 0, key: newer }) });
+    await scanWithCache({
+      ...h.deps(cacheKey("team", "repo", SHA)),
+      fresh: async () => ({ scan: DEMO_SCAN, usage: 0, key: newer }),
+    });
     assert.equal(h.store.size, 1);
     assert.equal((await scanWithCache(h.deps(newer))).source, "cache");
   });
 
   test("a scan that asks not to be cached isn't", async () => {
     const h = harness();
-    await scanWithCache({ ...h.deps(cacheKey("team", "repo", SHA)), fresh: async () => ({ scan: DEMO_SCAN, usage: 0, key: null }) });
+    await scanWithCache({
+      ...h.deps(cacheKey("team", "repo", SHA)),
+      fresh: async () => ({ scan: DEMO_SCAN, usage: 0, key: null }),
+    });
     assert.equal(h.store.size, 0);
   });
 

@@ -3,7 +3,12 @@ import { describe, test } from "vitest";
 import { checksOf, reviewOf, summaryLine } from "./review";
 import { newSession, type Claim, type Panel, type SessionState } from "./session";
 
-const claim = (claim: string, status: Claim["status"], weight: Claim["weight"] = "core", over: Partial<Claim> = {}): Claim => ({
+const claim = (
+  claim: string,
+  status: Claim["status"],
+  weight: Claim["weight"] = "core",
+  over: Partial<Claim> = {},
+): Claim => ({
   claim,
   status,
   weight,
@@ -21,7 +26,10 @@ const panel: Panel = {
   fixes: ["a", "b", "c"],
   reviews: {
     tired: { status: "commented", comment: null },
-    investor: { status: "approved", comment: { file: "lib/queue.ts", excerpt: "x", startLine: 4, body: "b" } },
+    investor: {
+      status: "approved",
+      comment: { file: "lib/queue.ts", excerpt: "x", startLine: 4, body: "b" },
+    },
     engineer: { status: "approved", comment: null },
   },
 };
@@ -30,9 +38,25 @@ function session(over: Partial<SessionState> = {}): SessionState {
   return {
     ...newSession("abcdefghij", "late/queue-less"),
     act: "verdict",
-    claims: [claim("Live queue", "backed"), claim("SMS alerts", "unbacked"), claim("Any hospital", "unclear", "minor")],
-    signals: { demo: { status: "dead", url: "https://queue.vercel.app/x" }, bulkFirstCommit: false },
-    answers: [{ text: "MY SECRET ANSWER", receivedAt: 1, silent: false, late: false, score: 5, reason: "r" }],
+    claims: [
+      claim("Live queue", "backed"),
+      claim("SMS alerts", "unbacked"),
+      claim("Any hospital", "unclear", "minor"),
+    ],
+    signals: {
+      demo: { status: "dead", url: "https://queue.vercel.app/x" },
+      bulkFirstCommit: false,
+    },
+    answers: [
+      {
+        text: "MY SECRET ANSWER",
+        receivedAt: 1,
+        silent: false,
+        late: false,
+        score: 5,
+        reason: "r",
+      },
+    ],
     events: [
       { act: 1, kind: "claim", delta: 6, reason: "a", before: 50, after: 56 },
       { act: 2, kind: "answer", delta: -12, reason: "b", before: 56, after: 44 },
@@ -59,18 +83,34 @@ describe("checks", () => {
   });
 
   test("a demo video that resolves passes", () => {
-    const checks = checksOf(session({ signals: { demo: { status: "video", url: "https://www.loom.com/share/x" }, bulkFirstCommit: false } }));
-    assert.deepEqual(checks.find((c) => c.title === "Demo video resolves"), {
-      status: "passed",
-      title: "Demo video resolves",
-      detail: "www.loom.com",
-      file: null,
-    });
+    const checks = checksOf(
+      session({
+        signals: {
+          demo: { status: "video", url: "https://www.loom.com/share/x" },
+          bulkFirstCommit: false,
+        },
+      }),
+    );
+    assert.deepEqual(
+      checks.find((c) => c.title === "Demo video resolves"),
+      {
+        status: "passed",
+        title: "Demo video resolves",
+        detail: "www.loom.com",
+        file: null,
+      },
+    );
   });
 
   test("the summary line", () => {
-    assert.equal(summaryLine({ passed: 3, failed: 1, warning: 1 }), "3 passed, 1 failed, 1 warning");
-    assert.equal(summaryLine({ passed: 0, failed: 0, warning: 2 }), "0 passed, 0 failed, 2 warnings");
+    assert.equal(
+      summaryLine({ passed: 3, failed: 1, warning: 1 }),
+      "3 passed, 1 failed, 1 warning",
+    );
+    assert.equal(
+      summaryLine({ passed: 0, failed: 0, warning: 2 }),
+      "0 passed, 0 failed, 2 warnings",
+    );
   });
 });
 
@@ -82,16 +122,22 @@ describe("the review", () => {
     assert.equal(r.readyToWin, false);
     assert.deepEqual(r.summary, { passed: 2, failed: 2, warning: 1 });
     assert.deepEqual(r.spark, [50, 56, 44]);
-    assert.deepEqual(r.comments.map((c) => [c.judge, c.file, c.startLine]), [["investor", "lib/queue.ts", 4]]);
+    assert.deepEqual(
+      r.comments.map((c) => [c.judge, c.file, c.startLine]),
+      [["investor", "lib/queue.ts", 4]],
+    );
   });
 
   test("the Engineer requests changes when a core claim is missing, even on an older panel", () => {
     const r = reviewOf(session())!;
-    assert.deepEqual(r.reviewers.map((x) => [x.judge, x.status]), [
-      ["tired", "commented"],
-      ["investor", "approved"],
-      ["engineer", "changesRequested"],
-    ]);
+    assert.deepEqual(
+      r.reviewers.map((x) => [x.judge, x.status]),
+      [
+        ["tired", "commented"],
+        ["investor", "approved"],
+        ["engineer", "changesRequested"],
+      ],
+    );
   });
 
   test("never contains the answers or the chat", () => {

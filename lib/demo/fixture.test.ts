@@ -14,7 +14,17 @@ test("the sample session's odds go 50, 34, 39, 41, 37", () => {
 });
 
 test("every stage of the sample session is reachable, and the review comes out", () => {
-  for (const at of ["start", "scanned", "grilling", "asking", "answered", "deliberation", "deliberated", "verdict", "share"] as const) {
+  for (const at of [
+    "start",
+    "scanned",
+    "grilling",
+    "asking",
+    "answered",
+    "deliberation",
+    "deliberated",
+    "verdict",
+    "share",
+  ] as const) {
     assert.doesNotThrow(() => demoState(at), at);
   }
   const r = reviewOf(demoState("verdict"))!;
@@ -29,9 +39,12 @@ test("the demo transport plays a whole session without touching the network", as
     throw new Error("the demo made a request");
   };
   try {
-    const t = demoTransport(demoState("start"), { timings: { scanStepMs: 0, thinkMs: 0, deliberateMs: 0 } });
+    const t = demoTransport(demoState("start"), {
+      timings: { scanStepMs: 0, thinkMs: 0, deliberateMs: 0 },
+    });
     const progress: string[] = [];
-    const ok = async (p: Promise<{ status: number; body: Record<string, unknown> }>) => assert.equal((await p).status, 200);
+    const ok = async (p: Promise<{ status: number; body: Record<string, unknown> }>) =>
+      assert.equal((await p).status, 200);
     await ok(t("x", { action: "scan" }, (p) => progress.push(p.type)));
     assert.ok(progress.includes("claims") && progress.includes("checking"));
     await ok(t("x", { action: "advance", from: "scan" }));

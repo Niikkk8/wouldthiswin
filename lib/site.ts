@@ -4,13 +4,15 @@ import { copy, fill } from "./copy";
 import type { Review } from "./review";
 
 /** The canonical site. Copyable links always use it, even when the page runs elsewhere. */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://wouldthiswin.com").replace(/\/+$/, "");
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://wouldthiswin.com").replace(
+  /\/+$/,
+  "",
+);
 
 /** The session itself: the owner resumes here; anyone else is sent to the shared verdict. */
 export const reviewPath = (id: string) => `/s/${id}`;
 /** The shareable verdict, once its owner has opted in. */
 export const verdictPath = (id: string) => `/v/${id}`;
-export const ogPath = (id: string) => `/og/${id}`;
 export const badgePath = (id: string) => `/badge/${id}.svg`;
 /** The repo's badge: its latest shareable verdict, or "not judged yet". */
 export const repoBadgePath = (repo: string) => `/api/badge/${repo}`;
@@ -50,7 +52,8 @@ export function whatsAppUrl(r: Pick<Review, "id" | "repo" | "odds" | "readyToWin
 }
 
 /** A share image in one of the post formats. */
-export const imagePath = (id: string, format: "landscape" | "portrait" | "story") => `/og/${id}/${format}.png`;
+export const imagePath = (id: string, format: "landscape" | "portrait" | "story") =>
+  `/og/${id}/${format}.png`;
 export const imageFileName = (r: Pick<Review, "repo">, format: string) =>
   `wouldthiswin-${projectName(r.repo).replace(/[^\w.-]+/g, "-")}-${format}.png`;
 
@@ -61,5 +64,10 @@ export function linkedInUrl(id: string): string {
 
 /** The caption that goes with a shared image: the odds, the one-liner and the link. */
 export function captionFor(r: Pick<Review, "id" | "repo" | "oneLiner" | "odds">): string {
-  return fill(copy.acts.share.caption, { repo: projectName(r.repo), oneLiner: r.oneLiner, odds: r.odds, url: reviewUrl(r.id) });
+  return fill(copy.acts.share.caption, {
+    repo: projectName(r.repo),
+    oneLiner: r.oneLiner,
+    odds: r.odds,
+    url: reviewUrl(r.id),
+  });
 }

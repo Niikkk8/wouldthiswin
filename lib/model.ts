@@ -27,7 +27,11 @@ export type Usage = { inputTokens: number; outputTokens: number; calls: CallReco
 export const newUsage = (): Usage => ({ inputTokens: 0, outputTokens: 0, calls: [] });
 
 export function mergeUsage(a: Usage, b: Usage): Usage {
-  return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens, calls: [...a.calls, ...b.calls] };
+  return {
+    inputTokens: a.inputTokens + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
+    calls: [...a.calls, ...b.calls],
+  };
 }
 
 export const usdOf = (u: Usage) => u.calls.reduce((n, c) => n + c.usd, 0);
@@ -44,7 +48,13 @@ export type Billed = {
 };
 
 /** Adds one response to `usage` and logs it. Test doubles may leave out the cache fields. */
-export function recordCall(usage: Usage, step: string, model: string, res: Billed, ms: number): CallRecord {
+export function recordCall(
+  usage: Usage,
+  step: string,
+  model: string,
+  res: Billed,
+  ms: number,
+): CallRecord {
   const u = res.usage;
   const cacheRead = u.cache_read_input_tokens ?? 0;
   const cacheWrite = u.cache_creation_input_tokens ?? 0;

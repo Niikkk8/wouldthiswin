@@ -39,6 +39,9 @@ test("display tree keeps cited files and their folders", () => {
 });
 
 test("OS clutter stays out of the display tree", () => {
-  const tree = displayTree([...files, ".DS_Store", "lib/.DS_Store"], [{ file: "lib/queue.ts", searched: [] }]);
+  const tree = displayTree(
+    [...files, ".DS_Store", "lib/.DS_Store"],
+    [{ file: "lib/queue.ts", searched: [] }],
+  );
   assert.ok(!tree.some((p) => p.endsWith(".DS_Store")));
 });

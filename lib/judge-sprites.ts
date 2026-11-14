@@ -12,8 +12,6 @@ export const FRAMES = {
   tired: ["base", "blink", "talk", "sip", "unconvinced", "perked", "dozing"],
 } as const satisfies Record<Judge, readonly string[]>;
 
-export type Frame<J extends Judge = Judge> = (typeof FRAMES)[J][number];
-
 /** The reactions every judge has, and which frame each judge plays for it. */
 export type Reaction = "scan" | "drop" | "gain";
 export const REACTION_FRAME: Record<Judge, Record<Reaction, string>> = {

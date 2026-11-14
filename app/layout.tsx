@@ -25,7 +25,11 @@ export const metadata: Metadata = {
     description: copy.meta.description,
     url: "/",
   },
-  twitter: { card: "summary_large_image", title: copy.meta.title, description: copy.meta.description },
+  twitter: {
+    card: "summary_large_image",
+    title: copy.meta.title,
+    description: copy.meta.description,
+  },
 };
 
 // The phone keyboard shrinks the layout instead of covering it, so act 2's answer field stays visible.
@@ -33,10 +37,7 @@ export const viewport: Viewport = { interactiveWidget: "resizes-content", themeC
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${archivo.variable} ${mono.variable} antialiased`}
-    >
+    <html lang="en" className={`${archivo.variable} ${mono.variable} antialiased`}>
       <body className="min-h-dvh">
         <a
           href="#main"

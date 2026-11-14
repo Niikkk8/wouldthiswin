@@ -83,7 +83,32 @@ A fix about the README, the pitch or the demo link counts if the README or confi
 
 const esc = escapeDelimiters;
 
-const STOP = new Set(["with", "from", "that", "this", "into", "instead", "before", "after", "your", "make", "real", "demo", "file", "code", "until", "there", "their", "when", "then", "them", "what", "which", "only", "each"]);
+const STOP = new Set([
+  "with",
+  "from",
+  "that",
+  "this",
+  "into",
+  "instead",
+  "before",
+  "after",
+  "your",
+  "make",
+  "real",
+  "demo",
+  "file",
+  "code",
+  "until",
+  "there",
+  "their",
+  "when",
+  "then",
+  "them",
+  "what",
+  "which",
+  "only",
+  "each",
+]);
 
 /** The words in the fixes worth looking for in a path: "sitemap", "twilio", "notify". */
 export function fixWords(fixes: readonly string[]): Set<string> {
@@ -102,10 +127,20 @@ export function fixWords(fixes: readonly string[]): Set<string> {
  * (a claim's file, a file it searched), then those whose path names something a fix asked
  * for ("sitemap" in app/sitemap.ts), then the biggest additions.
  */
-export function pickDiffFiles(diff: Compare, previous: PreviousReview, limit = DIFF_FILES): Compare["files"] {
-  const pointed = new Set(previous.claims.flatMap((c) => [c.file, ...c.searched]).filter(Boolean) as string[]);
+export function pickDiffFiles(
+  diff: Compare,
+  previous: PreviousReview,
+  limit = DIFF_FILES,
+): Compare["files"] {
+  const pointed = new Set(
+    previous.claims.flatMap((c) => [c.file, ...c.searched]).filter(Boolean) as string[],
+  );
   const words = fixWords(previous.fixes);
-  const hits = (path: string) => path.toLowerCase().split(/[^a-z0-9]+/).filter((w) => words.has(w) || words.has(w.replace(/s$/, ""))).length;
+  const hits = (path: string) =>
+    path
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((w) => words.has(w) || words.has(w.replace(/s$/, ""))).length;
   return diff.files
     .filter((f) => f.added.trim())
     .map((f) => ({ f, pointed: Number(pointed.has(f.path)), hits: hits(f.path) }))
@@ -114,7 +149,10 @@ export function pickDiffFiles(diff: Compare, previous: PreviousReview, limit = D
     .slice(0, limit);
 }
 
-export function buildRecheckPrompt(diff: Compare, previous: PreviousReview): { system: string; user: string } {
+export function buildRecheckPrompt(
+  diff: Compare,
+  previous: PreviousReview,
+): { system: string; user: string } {
   const files = pickDiffFiles(diff, previous);
   const fixes = previous.fixes.map((f, i) => `${i + 1}. ${esc(f)}`).join("\n");
   const commits = diff.commits
@@ -123,7 +161,8 @@ export function buildRecheckPrompt(diff: Compare, previous: PreviousReview): { s
     .join("\n");
   const changed = diff.files.map((f) => `${f.path} (+${f.additions} -${f.deletions})`).join("\n");
   const blocks = files.map(
-    (f) => `<untrusted_diff path="${esc(f.path).replace(/"/g, "")}">\n${esc(f.added)}\n</untrusted_diff>`,
+    (f) =>
+      `<untrusted_diff path="${esc(f.path).replace(/"/g, "")}">\n${esc(f.added)}\n</untrusted_diff>`,
   );
   return {
     system: SYSTEM,
@@ -131,17 +170,21 @@ export function buildRecheckPrompt(diff: Compare, previous: PreviousReview): { s
       `The fixes you asked for last round:\n${fixes}`,
       `<untrusted_commits>\n${commits || "(no commit messages)"}\n</untrusted_commits>`,
       `Changed files (${diff.files.length}):\n${esc(changed) || "(none)"}`,
-      blocks.length ? `Lines added, in the most relevant files:\n\n${blocks.join("\n\n")}` : "No added lines could be shown.",
+      blocks.length
+        ? `Lines added, in the most relevant files:\n\n${blocks.join("\n\n")}`
+        : "No added lines could be shown.",
       "Check each fix against the diff.",
     ].join("\n\n"),
   };
 }
 
-const HARSH = /\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bfake[ds]?\b|\blazy\b|\bdishonest\b/i;
+const HARSH =
+  /\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bfake[ds]?\b|\blazy\b|\bdishonest\b/i;
 const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
 
-export type RecheckResult = { ok: true; fixes: FixCheck[]; downgraded: number } | { ok: false; reason: string };
+export type RecheckResult =
+  { ok: true; fixes: FixCheck[]; downgraded: number } | { ok: false; reason: string };
 
 /**
  * - Every fix gets a check; a fix the model skipped is untouched.
@@ -150,18 +193,30 @@ export type RecheckResult = { ok: true; fixes: FixCheck[]; downgraded: number } 
  * - Binary files (images, sprites) have no lines to quote: one counts if it's in the diff,
  *   changed and not removed. Code checks that much; the model can't invent the file.
  */
-export function validateRecheck(output: unknown, diff: Compare, previous: PreviousReview): RecheckResult {
+export function validateRecheck(
+  output: unknown,
+  diff: Compare,
+  previous: PreviousReview,
+): RecheckResult {
   const parsed = RecheckOutput.safeParse(output);
   if (!parsed.success) return { ok: false, reason: "shape" };
   const shown = new Map(pickDiffFiles(diff, previous).map((f) => [f.path, f.added]));
-  const assets = new Set(diff.files.filter((f) => f.status !== "removed" && !isReadablePath(f.path)).map((f) => f.path));
+  const assets = new Set(
+    diff.files.filter((f) => f.status !== "removed" && !isReadablePath(f.path)).map((f) => f.path),
+  );
   const byId = new Map<number, z.infer<typeof ModelFix>>();
   for (const f of parsed.data.fixes) if (!byId.has(f.id)) byId.set(f.id, f);
 
   let downgraded = 0;
   const fixes = previous.fixes.map((fix, i): FixCheck => {
     const m = byId.get(i + 1);
-    const untouched = (note: string): FixCheck => ({ fix, status: "untouched", file: null, quote: null, note });
+    const untouched = (note: string): FixCheck => ({
+      fix,
+      status: "untouched",
+      file: null,
+      quote: null,
+      note,
+    });
     if (!m) {
       downgraded++;
       return untouched(copy.iteration.noChange);
@@ -171,11 +226,23 @@ export function validateRecheck(output: unknown, diff: Compare, previous: Previo
     if (m.status === "untouched") return untouched(cleanNote ?? copy.iteration.noChange);
     const file = normalizePath(m.file);
     if (file && assets.has(file)) {
-      return { fix, status: m.status, file, quote: null, note: cleanNote ?? fill(copy.iteration.changedIn, { path: clip(file, 80) }) };
+      return {
+        fix,
+        status: m.status,
+        file,
+        quote: null,
+        note: cleanNote ?? fill(copy.iteration.changedIn, { path: clip(file, 80) }),
+      };
     }
     const added = file ? shown.get(file) : undefined;
     const quote = (m.quote ?? "").trim();
-    if (!file || added === undefined || !quote || quote.length > MAX_QUOTE || !quotedIn(added, quote)) {
+    if (
+      !file ||
+      added === undefined ||
+      !quote ||
+      quote.length > MAX_QUOTE ||
+      !quotedIn(added, quote)
+    ) {
       downgraded++;
       return untouched(copy.iteration.noChange);
     }
@@ -195,7 +262,15 @@ export type RecheckCall = (system: string, user: string) => Promise<Anthropic.Me
 const outputFormat = zodOutputFormat(RecheckOutput);
 
 const defaultCall: RecheckCall = (system, user) =>
-  createMessage({ model: MODEL, step: "recheck", system, user, maxTokens: MAX_TOKENS, format: outputFormat, timeoutMs: 30_000 });
+  createMessage({
+    model: MODEL,
+    step: "recheck",
+    system,
+    user,
+    maxTokens: MAX_TOKENS,
+    format: outputFormat,
+    timeoutMs: 30_000,
+  });
 
 /**
  * Checks last round's fixes against the diff. One retry on bad output. If the model can't
@@ -215,9 +290,13 @@ export async function recheckFixes(
     commits: diff.commits.length,
     filesChanged: diff.files.length,
   };
-  const unchecked = previous.fixes.map(
-    (fix): FixCheck => ({ fix, status: "untouched", file: null, quote: null, note: copy.iteration.unchecked }),
-  );
+  const unchecked = previous.fixes.map((fix): FixCheck => ({
+    fix,
+    status: "untouched",
+    file: null,
+    quote: null,
+    note: copy.iteration.unchecked,
+  }));
   if (!previous.fixes.length) return { iteration: { ...base, fixes: [] }, usage };
 
   const { system, user } = buildRecheckPrompt(diff, previous);

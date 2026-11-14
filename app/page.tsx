@@ -12,9 +12,6 @@ import { SiteHeader } from "@/components/site-header";
 import { copy } from "@/lib/copy";
 import { webApplication } from "@/lib/structured-data";
 
-// Yesterday's board (components/landing/yesterdays-board.tsx) stays off the page until the
-// board exists.
-
 export default function Home() {
   return (
     <div className="flex min-h-dvh flex-col">

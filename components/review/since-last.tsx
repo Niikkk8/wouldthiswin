@@ -27,7 +27,11 @@ export function SinceLast({ it, delta }: { it: Iteration; delta: RejudgeDelta | 
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-4">
         <h2 id="since" className="flex items-baseline gap-3 text-[17px] font-bold">
           {c.heading}
-          {it.round && <span className="font-mono text-[12px] font-medium text-gain uppercase">{fill(c.round, { n: it.round })}</span>}
+          {it.round && (
+            <span className="font-mono text-[12px] font-medium text-gain uppercase">
+              {fill(c.round, { n: it.round })}
+            </span>
+          )}
         </h2>
         <Link
           href={reviewPath(it.previousId)}
@@ -50,11 +54,16 @@ export function SinceLast({ it, delta }: { it: Iteration; delta: RejudgeDelta | 
         {it.fixes.map((f, i) => {
           const { Icon, color } = FIX[f.status];
           return (
-            <li key={i} className="grid grid-cols-[20px_minmax(0,1fr)] gap-x-3 border-b border-border px-5 py-3.5 last:border-0">
+            <li
+              key={i}
+              className="grid grid-cols-[20px_minmax(0,1fr)] gap-x-3 border-b border-border px-5 py-3.5 last:border-0"
+            >
               <Icon aria-hidden size={18} strokeWidth={ICON} className={cn("mt-0.5", color)} />
               <div className="min-w-0">
                 <p className="text-[16px] leading-snug font-semibold text-pretty">
-                  <span className={cn("mr-2 font-mono text-[12px] font-medium uppercase", color)}>{c.status[f.status]}</span>
+                  <span className={cn("mr-2 font-mono text-[12px] font-medium uppercase", color)}>
+                    {c.status[f.status]}
+                  </span>
                   {f.fix}
                 </p>
                 <p className="mt-0.5 text-[14px] leading-snug text-text-subtle">{f.note}</p>
@@ -62,7 +71,9 @@ export function SinceLast({ it, delta }: { it: Iteration; delta: RejudgeDelta | 
                   <div className="mt-2 overflow-x-auto rounded-control bg-bg px-3 py-2 font-mono text-[12px] text-text-muted">
                     <p className="text-text-subtle">{f.file}</p>
                     <p className="whitespace-pre">
-                      <span aria-hidden className="text-gain">+ </span>
+                      <span aria-hidden className="text-gain">
+                        +{" "}
+                      </span>
                       {f.quote}
                     </p>
                   </div>
@@ -75,4 +86,3 @@ export function SinceLast({ it, delta }: { it: Iteration; delta: RejudgeDelta | 
     </section>
   );
 }
-

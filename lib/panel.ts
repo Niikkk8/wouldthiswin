@@ -77,7 +77,9 @@ const esc = escapeDelimiters;
 /** The findings, by id, in evidence words: what the criteria may cite. */
 function findingLines(s: SessionState): string {
   // Private findings (secrets, timeline) never reach the panel: its words can end up public.
-  const lines = publicFindings(findingsOf(s)).map((f) => `- ${f.id} [${f.outcome}]: ${esc(f.title)}. ${esc(f.detail)}`);
+  const lines = publicFindings(findingsOf(s)).map(
+    (f) => `- ${f.id} [${f.outcome}]: ${esc(f.title)}. ${esc(f.detail)}`,
+  );
   return lines.join("\n") || "(none)";
 }
 
@@ -88,18 +90,30 @@ const FINDING = {
   unclear: "couldn't confirm it",
 };
 
-const DEMO = { loads: "a live demo loads", video: "a demo video plays", dead: "the demo link is dead", none: "no demo link given" };
+const DEMO = {
+  loads: "a live demo loads",
+  video: "a demo video plays",
+  dead: "the demo link is dead",
+  none: "no demo link given",
+};
 
-export function buildPanelPrompt(s: SessionState, rubric: Rubric = rubricFor(s.eventSlug)): { system: string; user: string } {
+export function buildPanelPrompt(
+  s: SessionState,
+  rubric: Rubric = rubricFor(s.eventSlug),
+): { system: string; user: string } {
   const odds = currentOdds(s.events);
   const claims = (s.claims ?? [])
-    .map((c) => `- ${c.weight}: ${esc(c.claim)}. ${FINDING[c.status]}: ${esc(c.evidence)}${c.file ? ` (${c.file})` : ""}`)
+    .map(
+      (c) =>
+        `- ${c.weight}: ${esc(c.claim)}. ${FINDING[c.status]}: ${esc(c.evidence)}${c.file ? ` (${c.file})` : ""}`,
+    )
     .join("\n");
   const demo = s.signals?.demo.status ?? "none";
   const qa = s.questions
     .map((q, i) => {
       const a = s.answers[i];
-      const answer = !a || a.silent ? (a?.late ? "(answered after the buzzer)" : "(said nothing)") : a.text;
+      const answer =
+        !a || a.silent ? (a?.late ? "(answered after the buzzer)" : "(said nothing)") : a.text;
       return [
         `Question ${i + 1}. ${q.judge} asked: ${esc(q.text)}`,
         `<untrusted_answer judge="${q.judge}">\n${esc(answer)}\n</untrusted_answer>`,
@@ -115,7 +129,10 @@ export function buildPanelPrompt(s: SessionState, rubric: Rubric = rubricFor(s.e
         "React to what they did with your feedback. Fixes still open belong in this round's fixes again, unless something more important came up.",
       ].join("\n")
     : null;
-  const files = s.sources.map((f) => `<untrusted_file path="${esc(f.path).replace(/"/g, "")}">\n${esc(f.text.slice(0, FILE_CHARS))}\n</untrusted_file>`);
+  const files = s.sources.map(
+    (f) =>
+      `<untrusted_file path="${esc(f.path).replace(/"/g, "")}">\n${esc(f.text.slice(0, FILE_CHARS))}\n</untrusted_file>`,
+  );
   const user = [
     `Project: ${s.repo}`,
     `Final chance to win: ${odds}% (${tierFor(odds)}).`,
@@ -123,7 +140,9 @@ export function buildPanelPrompt(s: SessionState, rubric: Rubric = rubricFor(s.e
     `Demo: ${DEMO[demo]}. ${s.signals?.bulkFirstCommit ? "Most of the code arrived in one commit." : ""}`.trim(),
     ...(iteration ? [iteration] : []),
     `The questions and answers:\n\n${qa}`,
-    files.length ? `Files the scan read:\n\n${files.join("\n\n")}` : "No files could be read, so set every review's file and excerpt to null.",
+    files.length
+      ? `Files the scan read:\n\n${files.join("\n\n")}`
+      : "No files could be read, so set every review's file and excerpt to null.",
     `Findings (cite these ids in criteria):\n${findingLines(s)}`,
     `Rubric:\n${rubric.criteria.map((c) => `- ${c.key} (${c.name}, weight ${c.weight}): ${esc(c.description)}`).join("\n")}`,
     ...eventBlock(judgeContextFor(s.eventSlug)),
@@ -133,7 +152,8 @@ export function buildPanelPrompt(s: SessionState, rubric: Rubric = rubricFor(s.e
 }
 
 // Attacks on the person, or verdict words. Lines with them are dropped.
-const HARSH = /\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bscam(mer)?\b|\bdishonest\b|\blazy\b|\bidiots?\b|\bstupid\b/i;
+const HARSH =
+  /\b(un)?backed\b|\bliars?\b|\blying\b|\bfraud\b|\bscam(mer)?\b|\bdishonest\b|\blazy\b|\bidiots?\b|\bstupid\b/i;
 
 const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
 const ok = (s: string, max: number) => s.length > 0 && s.length <= max && !HARSH.test(s);
@@ -161,12 +181,22 @@ export function anchorComment(
   if (at < 0) return null;
   const comment = oneLine(body);
   if (!ok(comment, 240)) return null;
-  return { file: path!, excerpt: ex, startLine: text.slice(0, at).split("\n").length, body: comment };
+  return {
+    file: path!,
+    excerpt: ex,
+    startLine: text.slice(0, at).split("\n").length,
+    body: comment,
+  };
 }
 
-const STATUS = { approved: "approved", changes_requested: "changesRequested", commented: "commented" } as const;
+const STATUS = {
+  approved: "approved",
+  changes_requested: "changesRequested",
+  commented: "commented",
+} as const;
 
-export type PanelCheck = { ok: true; panel: Panel; dropped: number } | { ok: false; reason: string };
+export type PanelCheck =
+  { ok: true; panel: Panel; dropped: number } | { ok: false; reason: string };
 
 /**
  * - 5 or 6 chat messages survive (too long, empty or harsh ones are dropped), or it fails.
@@ -197,7 +227,10 @@ export function validatePanel(
   const oneLiner = oneLine(p.oneLiner).replace(/^["'“”]+|["'“”]+$/g, "");
   if (!ok(oneLiner, 100)) return { ok: false, reason: "oneLiner" };
 
-  const fixes = p.fixes.map(oneLine).filter((f) => ok(f, 160)).slice(0, 3);
+  const fixes = p.fixes
+    .map(oneLine)
+    .filter((f) => ok(f, 160))
+    .slice(0, 3);
   if (fixes.length !== 3) return { ok: false, reason: "fixes" };
 
   const missing = anyCoreMissing(s.claims ?? []);
@@ -216,7 +249,18 @@ export function validatePanel(
   if (!scored && !fallback) return { ok: false, reason: "criteria" };
   const criteria = scored ?? fallbackCriteria(rubric, sheetOf(s), copy.review.rubric.fallback);
 
-  return { ok: true, panel: { chat, oneLiner, fixes, reviews, criteria, strongAnswers: strongAnswersOf(p.strongAnswers, s.questions.length) }, dropped };
+  return {
+    ok: true,
+    panel: {
+      chat,
+      oneLiner,
+      fixes,
+      reviews,
+      criteria,
+      strongAnswers: strongAnswersOf(p.strongAnswers, s.questions.length),
+    },
+    dropped,
+  };
 }
 
 const MAX_POINT = 160;
@@ -225,12 +269,18 @@ const MAX_POINT = 160;
  * "A strong answer would cover": 2 to 4 short, plain points per question. Bad entries are
  * dropped rather than failing the panel; a question with fewer than 2 usable points has none.
  */
-export function strongAnswersOf(raw: readonly { question: number; points: string[] }[], count: number): string[][] {
+export function strongAnswersOf(
+  raw: readonly { question: number; points: string[] }[],
+  count: number,
+): string[][] {
   const out: string[][] = Array.from({ length: count }, () => []);
   for (const r of raw) {
     const i = Math.round(r.question) - 1;
     if (i < 0 || i >= count || out[i].length) continue;
-    const points = r.points.map(oneLine).filter((p) => ok(p, MAX_POINT)).slice(0, 4);
+    const points = r.points
+      .map(oneLine)
+      .filter((p) => ok(p, MAX_POINT))
+      .slice(0, 4);
     if (points.length >= 2) out[i] = points;
   }
   return out;
@@ -253,7 +303,15 @@ type Call = (system: string, user: string) => Promise<Anthropic.Message>;
 const outputFormat = zodOutputFormat(PanelOutput);
 
 const defaultCall: Call = (system, user) =>
-  createMessage({ model: MODEL, step: "panel", system, user, maxTokens: MAX_TOKENS, format: outputFormat, timeoutMs: 40_000 });
+  createMessage({
+    model: MODEL,
+    step: "panel",
+    system,
+    user,
+    maxTokens: MAX_TOKENS,
+    format: outputFormat,
+    timeoutMs: 40_000,
+  });
 
 /** One call, one retry on bad output. */
 export async function runPanel(
@@ -289,4 +347,3 @@ export async function runPanel(
   }
   throw new PanelError(`invalid panel after retry: ${lastError}`, usage);
 }
-

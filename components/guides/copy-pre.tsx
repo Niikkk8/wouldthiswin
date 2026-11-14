@@ -23,7 +23,12 @@ function CopyButtonFor({ target }: { target: React.RefObject<HTMLPreElement | nu
   // The text is read at click time, from the rendered block, so it's exactly what's shown.
   return (
     <span className="absolute top-3 right-3">
-      <CopyButton value="" label={copy.guides.copyTemplate} idle={copy.guides.copyTemplate} getValue={() => target.current?.innerText ?? ""} />
+      <CopyButton
+        value=""
+        label={copy.guides.copyTemplate}
+        idle={copy.guides.copyTemplate}
+        getValue={() => target.current?.innerText ?? ""}
+      />
     </span>
   );
 }

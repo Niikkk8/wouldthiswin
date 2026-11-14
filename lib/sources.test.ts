@@ -22,7 +22,13 @@ describe("which files are worth reading", () => {
     ]) {
       assert.equal(isReadablePath(p), false, p);
     }
-    for (const p of ["package.json", "backend/src/utils.js", "app/api/chat/route.ts", "requirements.txt", "backend/.env.example"]) {
+    for (const p of [
+      "package.json",
+      "backend/src/utils.js",
+      "app/api/chat/route.ts",
+      "requirements.txt",
+      "backend/.env.example",
+    ]) {
       assert.equal(isReadablePath(p), true, p);
     }
   });
