@@ -4,16 +4,11 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { copy } from "@/lib/copy";
 import { allGuides, formatDate, guidePath } from "@/lib/guides";
-import { SITE_URL } from "@/lib/site";
+import { pageMeta } from "@/lib/seo";
 
 const G = copy.guides;
 
-export const metadata: Metadata = {
-  title: `${G.title} · ${copy.meta.name}`,
-  description: G.lede,
-  alternates: { canonical: "/guides" },
-  openGraph: { title: `${G.title} · ${copy.meta.name}`, description: G.lede, url: `${SITE_URL}/guides` },
-};
+export const metadata: Metadata = pageMeta({ title: copy.seo.guides.title, description: copy.seo.guides.description, path: "/guides" });
 
 export default async function GuidesPage() {
   const guides = await allGuides();

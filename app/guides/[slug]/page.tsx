@@ -8,7 +8,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { copy, fill } from "@/lib/copy";
 import { formatDate, guidePath, guideSlugs, loadGuide } from "@/lib/guides";
 import { SITE_URL } from "@/lib/site";
-import { article } from "@/lib/structured-data";
+import { pageMeta } from "@/lib/seo";
+import { article, breadcrumbs } from "@/lib/structured-data";
 
 const G = copy.guides;
 
@@ -21,22 +22,11 @@ export async function generateMetadata({ params }: PageProps<"/guides/[slug]">):
   const guide = await loadGuide((await params).slug);
   if (!guide) return {};
   const { meta } = guide;
-  const url = SITE_URL + guidePath(meta.slug);
+  const base = pageMeta({ title: meta.title, description: meta.description, path: guidePath(meta.slug), type: "article", index: !meta.draft });
   return {
-    title: `${meta.title} · ${copy.meta.name}`,
-    description: meta.description,
-    alternates: { canonical: guidePath(meta.slug) },
+    ...base,
     authors: [{ name: copy.footer.author.name, url: copy.footer.author.url }],
-    openGraph: {
-      type: "article",
-      title: meta.title,
-      description: meta.description,
-      url,
-      publishedTime: meta.date,
-      modifiedTime: meta.updated ?? meta.date,
-      authors: [copy.footer.author.url],
-    },
-    twitter: { card: "summary_large_image", title: meta.title, description: meta.description },
+    openGraph: { ...base.openGraph, type: "article", publishedTime: meta.date, modifiedTime: meta.updated ?? meta.date, authors: [copy.footer.author.url] },
   };
 }
 
@@ -48,6 +38,7 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
   return (
     <div className="flex min-h-dvh flex-col">
       <JsonLd data={article({ ...meta, url: SITE_URL + guidePath(meta.slug) })} />
+      <JsonLd data={breadcrumbs([{ name: G.title, path: "/guides" }, { name: meta.title, path: guidePath(meta.slug) }])} />
       <SiteHeader />
       <main id="main" tabIndex={-1} className="page-x flex-1 pt-10 pb-20 lg:pt-14">
         <article className="max-w-[720px]">

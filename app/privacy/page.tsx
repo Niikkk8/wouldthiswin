@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { copy, fill } from "@/lib/copy";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: `${copy.privacy.title} · ${copy.meta.name}`,
-  description: copy.privacy.lede,
-};
+export const metadata: Metadata = pageMeta({ title: copy.seo.privacy.title, description: copy.privacy.lede, path: "/privacy" });
 
 const UPDATED = "9 November 2026";
 

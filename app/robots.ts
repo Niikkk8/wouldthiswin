@@ -1,16 +1,17 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 
-// Search engines get the public pages (landing, /demo, /guides, /privacy), never review links
-// or the API. Session pages also carry noindex.
-// Link-preview bots honour robots.txt too, so they're let into review links and the share
-// card; without that, a review posted to X or Slack would show no card.
+// Every crawler, AI search ones included, may read the public pages; none get the API or
+// private sessions. Link-preview bots also read /s/ (which redirects to a shared verdict) and
+// the share cards, or a posted link would show no card.
 const PREVIEW_BOTS = ["Twitterbot", "facebookexternalhit", "LinkedInBot", "Slackbot", "Slackbot-LinkExpanding", "Discordbot", "TelegramBot", "WhatsApp"];
+const AI_SEARCH = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot", "Claude-User", "PerplexityBot", "Google-Extended", "Applebot-Extended", "CCBot"];
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
-      { userAgent: "*", allow: "/", disallow: ["/s/", "/api/"] },
+      { userAgent: "*", allow: "/", disallow: ["/api/", "/s/", "/capture"] },
+      { userAgent: AI_SEARCH, allow: "/", disallow: ["/api/", "/s/", "/capture"] },
       { userAgent: PREVIEW_BOTS, allow: ["/", "/s/", "/og/"], disallow: ["/api/"] },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

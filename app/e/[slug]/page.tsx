@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { copy, fill } from "@/lib/copy";
 import { eventBySlug } from "@/lib/events";
 import type { EventPreset } from "@/lib/events/types";
-import { SITE_URL } from "@/lib/site";
+import { pageMeta } from "@/lib/seo";
 
 const E = copy.events;
 
@@ -19,10 +19,7 @@ export async function generateMetadata({ params }: PageProps<"/e/[slug]">): Prom
   const { slug } = await params;
   const event = eventBySlug(slug);
   if (!event) return { robots: { index: false, follow: false } };
-  const title = fill(E.metaTitle, { name: event.name }).slice(0, 60);
-  const description = fill(E.metaDescription, { name: event.name }).slice(0, 155);
-  const url = `${SITE_URL}/e/${slug}`;
-  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url }, twitter: { card: "summary_large_image", title, description } };
+  return pageMeta({ title: fill(E.metaTitle, { name: event.name }), description: fill(E.metaDescription, { name: event.name }), path: `/e/${slug}` });
 }
 
 export default function EventPage({ params }: PageProps<"/e/[slug]">) {

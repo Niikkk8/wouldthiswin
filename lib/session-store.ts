@@ -523,6 +523,21 @@ export async function loadLatestShareable(repo: string): Promise<{ id: string; o
   return data ? { id: data.id, odds: currentOdds(data.events) } : null;
 }
 
+/** Verdicts their owners listed publicly (and nobody hid), newest first: for the sitemap and the board. */
+export async function listedVerdicts(limit = 500): Promise<{ id: string; updatedAt: string }[]> {
+  const { data, error } = await db()
+    .from("sessions")
+    .select("id, updated_at")
+    .eq("listed", true)
+    .eq("shareable", true)
+    .is("hidden_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(limit)
+    .returns<{ id: string; updated_at: string }[]>();
+  if (error) throw error;
+  return data.map((r) => ({ id: r.id, updatedAt: r.updated_at }));
+}
+
 /** True if this browser started the session. */
 export async function isOwner(id: string): Promise<boolean> {
   const owner = await ownerHash();

@@ -16,6 +16,8 @@ export type GuideMeta = {
   date: string;
   /** Last real edit, if any. YYYY-MM-DD. */
   updated?: string;
+  /** Hidden from the index, the sitemap and search until it's flipped to false. */
+  draft?: boolean;
 };
 
 export type Guide = GuideMeta & { slug: string };

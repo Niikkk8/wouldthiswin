@@ -537,6 +537,12 @@ export const copy = {
       open: "Open",
     },
   },
+  // Titles and descriptions for search and link previews (lib/seo.ts caps them at 60 and 155).
+  seo: {
+    demo: { title: "Sample session: watch a hackathon repo get judged", description: "Watch three AI judges check a sample hackathon project's README against its code, grill the team, and write the verdict. No sign-up." },
+    privacy: { title: "Privacy: what Would This Win? keeps" },
+    guides: { title: "Hackathon guides: judging, READMEs, demos, pitches", description: "How hackathon judges score projects, and how to get your README, demo and answers ready before you submit." },
+  },
   // An event's page, /e/[slug].
   events: {
     eyebrow: "Event",
