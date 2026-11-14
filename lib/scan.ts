@@ -26,6 +26,7 @@ import { commitsTouching, readFileAt, readRawAt, type RawRepoData } from "./gith
 import { QuestionsError, buildQuestionsPrompt, routeFindings, writeQuestions, type WrittenQuestion } from "./grill/questions";
 import { findingsOf } from "./findings";
 import { log } from "./log";
+import { pitchFacts } from "./pitch";
 import { newUsage, type Usage } from "./model";
 import { HAIKU } from "./pricing";
 import { noEmit, type Emit } from "./scan-progress";
@@ -213,6 +214,7 @@ export async function scanRepo(
         bulkFirstCommit: firstCommitAddedOver70Pct,
         commit: raw.latestSha,
         checks: model.findings,
+        pitch: pitchFacts(raw),
       },
       files: raw.headFilePaths.slice(0, STORED_FILES),
       sources: model.sources,

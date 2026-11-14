@@ -14,6 +14,7 @@ import {
 import { displayTree } from "./file-tree";
 import type { ClaimCategory } from "./evidence/extract";
 import type { Finding } from "./findings";
+import type { PitchFacts } from "./pitch";
 import type { SourceKind } from "./evidence/sources";
 import type { Iteration } from "./recheck";
 import { reviewOf, type Review } from "./review";
@@ -96,6 +97,8 @@ export type ScanSignals = {
   commit?: string;
   /** What the deterministic checks found (lib/checks). Scans from before them have none. */
   checks?: Finding[];
+  /** The stack and the setup steps the repo supports, for the honest pitch tools (lib/pitch.ts). */
+  pitch?: PitchFacts;
 };
 
 export type Question = {

@@ -288,6 +288,33 @@ export const copy = {
       committedFix: "Delete those folders from git and add them to .gitignore.",
     },
   },
+  // The honest pitch tools on the owner's review (lib/pitch.ts).
+  pitch: {
+    heading: "Pitch it honestly",
+    note: "Built only from what the code backs. Edit before you use it.",
+    tabs: { readme: "Write my README", submission: "Draft my submission text" },
+    copy: "Copy",
+    download: "Download .md",
+    words: "{n} words",
+    leftOut: "Claims left out until your code backs them",
+    readme: {
+      oneLiner: "The judges will remember it as {oneLiner}. Say what it does and for whom here, in one sentence.",
+      what: "What it does",
+      nothingBacked: "Nothing the scan could confirm yet. Add each feature here once its code is in the repo.",
+      stack: "Built with",
+      setup: "Run it locally",
+      team: "Team",
+      teamNote: "Who built what.",
+    },
+    submission: {
+      intro: "{name} is the one judges will remember as {oneLiner}.",
+      works: "What works today: {list}. Each of these is in the code, and the README links to the files.",
+      noWorks: "The core of it is still being built, so this submission describes the plan, not a finished product.",
+      stack: "It's built with {stack}.",
+      next: "Not done yet, and we won't claim it until it is: {list}.",
+      repo: "The code is public at {url}.",
+    },
+  },
   // The claim verification agent's own words, when code overrides its answer.
   evidence: {
     notChecked: "Couldn't check this one in the time the panel had.",

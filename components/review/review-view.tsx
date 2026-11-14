@@ -12,6 +12,7 @@ import { fixItems } from "@/lib/fix-list";
 import { rejudgeDelta } from "@/lib/rejudge";
 import { FixList } from "./fix-list";
 import { JudgingSheet } from "./judging-sheet";
+import { PitchTools } from "./pitch-tools";
 import { Practice } from "./practice";
 import { ICON, Lines, Rise, StatusPill, Still, projectName } from "./review-parts";
 import { RubricBreakdown } from "./rubric-breakdown";
@@ -213,6 +214,12 @@ export function ReviewView({
           {fixList && (
             <Rise delay={0.43}>
               <FixList items={fixItems(r.findings, r.repo, r.commit)} repo={r.repo} reviewId={r.id} issues={fixList === "full"} />
+            </Rise>
+          )}
+
+          {r.pitch && fixList && (
+            <Rise delay={0.44}>
+              <PitchTools pitch={r.pitch} repo={r.repo} />
             </Rise>
           )}
 

@@ -5,6 +5,7 @@ import { copy, fill } from "./copy";
 import { START_ODDS, anyCoreMissing, currentOdds, readyToWin, tierFor, type Tier } from "./odds";
 import type { Iteration } from "./recheck";
 import { findingsOf, type Finding } from "./findings";
+import { buildPitch, type Pitch } from "./pitch";
 import { rubricFor } from "./events";
 import { aggregate, rubricDelta, sheetOf, type Criterion, type Rubric, type RubricCriterion, type ScoredCriterion } from "./rubric";
 import type { Judge, ReviewComment, ReviewStatus, SessionState } from "./session";
@@ -44,6 +45,8 @@ export type Review = {
   listed: boolean;
   /** The owner's practice notes: each question and what a strong answer would cover. Never public. */
   practice: { judge: Judge; question: string; points: string[] }[];
+  /** The owner's honest README skeleton and submission draft. Null on public reviews. */
+  pitch: Pitch | null;
 };
 
 export type RubricView = {
@@ -158,6 +161,7 @@ export function reviewOf(s: SessionState, audience: Audience = "public", rubric:
             return points.length ? [{ judge: q.judge, question: q.text, points }] : [];
           })
         : [],
+    pitch: audience === "owner" ? buildPitch({ repo: s.repo, oneLiner: panel.oneLiner, claims: s.claims ?? [], facts: s.signals?.pitch ?? null }) : null,
     shareable: s.visibility?.shareable === true,
     listed: s.visibility?.listed === true,
   };
