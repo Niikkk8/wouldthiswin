@@ -91,3 +91,6 @@ next-env.d.ts
 
 # eval reports (npm run eval)
 /evals/out/
+
+# assistant instructions stay local
+CLAUDE.md
