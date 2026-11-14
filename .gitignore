@@ -64,6 +64,7 @@ next-env.d.ts
 /video/public/logo.png
 /video/public/reel/
 /video/public/reel-v3/
+/video/public/reel-final/
 /video/whisper*/
 /video/**/*.bin
 /video/.venv*/

@@ -8,7 +8,8 @@ import { AbsoluteFill, Audio, OffthreadVideo, Sequence, staticFile, useCurrentFr
 import { C, F, Logo, Mask, easeIn, easeOut, prog } from "../v2/kit";
 import { Footage, type Cam } from "../v3/footage";
 
-export type Broll = { clip: string; from: number; rate?: number; target: Cam["target"]; fill: number };
+/** One target and fill, or full camera keyframes (`cams`) and shake times for a move inside the shot. */
+export type Broll = { clip: string; from: number; rate?: number; target?: Cam["target"]; fill?: number; cams?: Cam[]; shake?: number[] };
 export type Visual =
   | { kind: "face"; src: string; start: number; dur: number; offset?: number }
   | { kind: "broll"; start: number; dur: number; broll: Broll; label?: string; pip?: { src: string; offset: number } }
@@ -131,7 +132,7 @@ export function Reel({ plan }: ReelProps) {
           {v.kind === "face" && <Face src={v.src} offset={v.offset} words={plan.words.map((w) => ({ ...w, start: w.start - v.start, end: w.end - v.start }))} t={t - v.start} />}
           {v.kind === "broll" && (
             <>
-              <Footage clip={v.broll.clip} from={v.broll.from} rate={v.broll.rate} cams={[{ at: 0, target: v.broll.target, fill: v.broll.fill, ay: 0.32, isolate: 30 }]} />
+              <Footage clip={v.broll.clip} from={v.broll.from} rate={v.broll.rate} cams={v.broll.cams ?? [{ at: 0, target: v.broll.target!, fill: v.broll.fill, ay: 0.32, isolate: 30 }]} shakeAt={v.broll.shake} />
               <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(10,10,11,0) 50%, rgba(10,10,11,0.85) 66%)" }} />
               {v.label && <Label text={v.label} />}
               {v.pip && <Pip src={v.pip.src} offset={v.pip.offset} />}
@@ -140,7 +141,7 @@ export function Reel({ plan }: ReelProps) {
           {v.kind === "split" && (
             <>
               <div style={{ position: "absolute", left: 0, top: 0, right: 0, height: height / 2, overflow: "hidden" }}>
-                <Footage clip={v.broll.clip} from={v.broll.from} rate={v.broll.rate} cams={[{ at: 0, target: v.broll.target, fill: v.broll.fill, ay: 0.5, isolate: 30 }]} box={{ w: 1080, h: Math.round(height / 2) }} />
+                <Footage clip={v.broll.clip} from={v.broll.from} rate={v.broll.rate} cams={v.broll.cams ?? [{ at: 0, target: v.broll.target!, fill: v.broll.fill, ay: 0.5, isolate: 30 }]} box={{ w: 1080, h: Math.round(height / 2) }} />
               </div>
               <div style={{ position: "absolute", left: 0, top: height / 2, right: 0, bottom: 0, overflow: "hidden", borderTop: `4px solid ${C.loss}` }}>
                 <OffthreadVideo src={staticFile(v.face.src)} startFrom={Math.round(v.face.offset * FPS)} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />

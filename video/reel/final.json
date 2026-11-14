@@ -1,0 +1,175 @@
+{
+  "note": "One continuous take (footage/raw/full.*). Each spoken line is matched by phrase to a visual: face, or B-roll from the app captures. Read by scripts/reel-final.ts. A beat runs from the first word of its phrase to the first word of the next beat's.",
+  "target": {
+    "min": 25,
+    "max": 32
+  },
+  "corrections": {
+    "wood this way": "Would This Win",
+    "would this way": "Would This Win",
+    "would this when": "Would This Win"
+  },
+  "emphasis": [
+    "grill",
+    "odds",
+    "drop",
+    "free"
+  ],
+  "endHold": 2.4,
+  "beats": [
+    {
+      "match": "most hackathon projects",
+      "visual": "face"
+    },
+    {
+      "match": "they lose when",
+      "visual": "broll",
+      "broll": {
+        "clip": "9x16-scan",
+        "from": 1.5,
+        "target": [
+          "judge:engineer",
+          "judge:tired"
+        ],
+        "fill": 0.92
+      }
+    },
+    {
+      "match": "so i built",
+      "visual": "broll",
+      "broll": {
+        "clip": "9x16-landing",
+        "from": 0.4,
+        "target": "question",
+        "fill": 0.9
+      }
+    },
+    {
+      "match": "paste your repo",
+      "visual": "broll",
+      "broll": {
+        "clip": "9x16-landing",
+        "from": 1.25,
+        "target": "repo",
+        "fill": 0.98
+      }
+    },
+    {
+      "match": "three ai judges",
+      "visual": "broll",
+      "hit": "finding",
+      "hitAt": 0.45,
+      "broll": {
+        "clip": "9x16-scan",
+        "from": 6.1,
+        "target": "claim",
+        "fill": 0.98
+      }
+    },
+    {
+      "match": "and then they grill",
+      "visual": "face"
+    },
+    {
+      "match": "why did you build",
+      "visual": "broll",
+      "broll": {
+        "clip": "9x16-grilling",
+        "from": 0.1,
+        "target": "question",
+        "fill": 1.0
+      }
+    },
+    {
+      "match": "who's going to pay",
+      "visual": "broll",
+      "broll": {
+        "clip": "9x16-followup",
+        "from": 9.55,
+        "target": "question",
+        "fill": 1.0
+      }
+    },
+    {
+      "match": "give a vague answer",
+      "visual": "broll",
+      "broll": {
+        "clip": "9x16-followup",
+        "from": 16.5,
+        "target": "question",
+        "fill": 1.0
+      }
+    },
+    {
+      "match": "give a bad one",
+      "visual": "face"
+    },
+    {
+      "match": "your odds drop",
+      "visual": "broll",
+      "hit": "drop",
+      "dropOn": "drop",
+      "dropAt": 7.47,
+      "broll": {
+        "clip": "9x16-scan",
+        "cams": [
+          {
+            "at": 0,
+            "target": [
+              40,
+              345,
+              930,
+              150
+            ],
+            "fill": 0.95,
+            "ay": 0.32,
+            "isolate": 30
+          },
+          {
+            "at": "drop",
+            "target": [
+              60,
+              365,
+              236,
+              121
+            ],
+            "fill": 0.62,
+            "ay": 0.3,
+            "isolate": 30,
+            "move": 0.18,
+            "ease": "out"
+          }
+        ]
+      }
+    },
+    {
+      "match": "at the end",
+      "visual": "broll",
+      "broll": {
+        "clip": "9x16-practice",
+        "from": 3.2,
+        "target": "practice",
+        "fill": 1.0
+      }
+    },
+    {
+      "match": "and what to fix",
+      "visual": "broll",
+      "broll": {
+        "clip": "9x16-fixes",
+        "from": 3.4,
+        "target": "key",
+        "fill": 0.98
+      }
+    },
+    {
+      "match": "it's free",
+      "visual": "face"
+    },
+    {
+      "match": "link in bio",
+      "visual": "card",
+      "hit": "end"
+    }
+  ]
+}

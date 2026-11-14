@@ -1,4 +1,4 @@
-"""Face reel sound: a hit on each finding, the verdict's impact and chime, the end card.
+"""Face reel sound: a hit on each finding, the odds drop, the verdict's impact and chime, the end card.
 
 Stem only (the voice is the star): mastered to -20 LUFS so it sits under the voice, and the
 whole reel is mastered to -14 afterwards. C major, like the v3 videos.
@@ -28,6 +28,11 @@ def main(src, out):
             mix.put(max(0, h["t"] - 1.0), riser(1.0, 300, 3000), 0.08)
             mix.put(h["t"], impact(1.0), 0.32)
             mix.put(h["t"] + 0.1, chime([C5, E5, G5], 1.6, 0.6), 0.14)
+        elif h["kind"] == "drop":
+            # The odds dropping: a short riser into one hard hit and the falling pop.
+            mix.put(max(0, h["t"] - 0.55), riser(0.55, 400, 2600), 0.07)
+            mix.put(h["t"], impact(1.0), 0.34)
+            mix.put(h["t"], pop(A5, E5, 0.2), 0.2, pan=0.3)
         elif h["kind"] == "end":
             mix.put(h["t"] - 0.08, whoosh(0.35, 500, 2600, peak=0.5), 0.14)
             mix.put(h["t"] + 0.3, chime([C5, E5, G5, C6], 2.0, 0.8), 0.16)

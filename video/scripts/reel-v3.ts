@@ -25,6 +25,7 @@ import { extname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import type { Broll, Plan, Visual, Voice, Word } from "../src/reel/Reel";
 import { ffmpeg, master, OUT, PUBLIC, render, still, VIDEO } from "./lib";
+import { tokensToWords, type W } from "./whisper-words";
 
 const RAW = join(VIDEO, "footage", "raw");
 const WORK = join(VIDEO, ".cache", "reel-v3");
@@ -38,7 +39,6 @@ const FILLERS = new Set(["um", "uh", "erm", "er", "ah", "hmm", "mm", "uhm"]);
 
 type ScriptShot = { line: string | null; emphasis?: string[]; alt?: string };
 type Script = { target: { min: number; max: number }; shots: Record<string, ScriptShot>; structure: Record<string, unknown>[] };
-type W = { text: string; start: number; end: number; p: number; take?: number };
 type Take = { shot: string; file: string; index: number; start: number; end: number; words: W[]; score: number; why: string };
 
 // ---------------------------------------------------------------- 0. footage
@@ -70,29 +70,6 @@ function ffprobeText(f: string) {
   } catch (e) {
     return String(e);
   }
-}
-
-/** whisper.cpp tokens to words: a token without a leading space continues the word before it, bare punctuation sticks to it, DTW times. */
-function tokensToWords(captions: { text: string; startMs: number; endMs: number; timestampMs: number | null; confidence: number | null }[]): W[] {
-  const words: W[] = [];
-  for (const x of captions) {
-    const raw = x.text;
-    const text = raw.trim();
-    if (!text || /^\[.*\]$/.test(text)) continue;
-    // DTW time (timestampMs) is where the token is actually said; the segment offsets drift.
-    const at = (x.timestampMs ?? x.startMs) / 1000;
-    const tok = { text, start: at, end: at + Math.max(0.08, (x.endMs - x.startMs) / 1000), p: x.confidence ?? 0.8 };
-    const prev = words.at(-1);
-    if (prev && (!/^\s/.test(raw) || /^[.,!?;:'")\]-]+$/.test(text))) {
-      prev.text += text;
-      prev.end = tok.end;
-      prev.p = Math.min(prev.p, tok.p);
-    } else words.push(tok);
-  }
-  // A word ends where the next one starts, at the latest.
-  for (let i = 0; i + 1 < words.length; i++) words[i].end = Math.min(words[i].end, Math.max(words[i].start + 0.05, words[i + 1].start - 0.02));
-  // Non-speech markers ("[BLANK_AUDIO]") arrive in pieces; drop them once whole.
-  return words.filter((x) => !/[[\]]/.test(x.text));
 }
 
 async function transcribeAll(): Promise<Map<string, W[]>> {
