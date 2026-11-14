@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useEffect } from "react";
 import { cn } from "cn";
-import { UNDERLINE_WORD_MS, WORD_IN_MS, WORD_MS } from "@/lib/deadline";
+import { UNDERLINE_WORD_MS, WORD_IN_MS, WORD_MS, typingMs } from "@/lib/deadline";
 import { EASE } from "@/lib/motion";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
@@ -11,7 +12,9 @@ import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 /**
  * The question, word by word at 60ms a word. The caught phrase comes in last, in red, and
- * its underline draws in after it. `onTyped` fires the moment the last word has landed.
+ * its underline draws in after it. `onTyped` fires when the typing is done, timed by
+ * lib/deadline.ts typingMs (the server's own measure) rather than by the animation ending: a
+ * page that opens mid-act mounts these without their entrance, so no completion event comes.
  */
 export function QuestionText({
   text,
@@ -24,6 +27,11 @@ export function QuestionText({
 }) {
   const reduce = useReducedMotion();
   const at = caught ? text.indexOf(caught) : -1;
+  const typedMs = reduce ? REDUCED_MS : typingMs(text, caught);
+  useEffect(() => {
+    const t = setTimeout(onTyped, typedMs);
+    return () => clearTimeout(t);
+  }, [typedMs, onTyped]);
   const parts =
     caught && at >= 0
       ? [
@@ -38,8 +46,7 @@ export function QuestionText({
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.2 }}
-        onAnimationComplete={onTyped}
+        transition={{ duration: REDUCED_MS / 1000 }}
       >
         {parts.map((p, i) =>
           p.caught ? (
@@ -62,7 +69,6 @@ export function QuestionText({
     delay: number;
     underline: number;
     bridge: boolean;
-    last?: boolean;
   };
   const raw = parts.flatMap((p) => words(p.text).map((w) => ({ text: w, caught: p.caught })));
   const isWord = (t?: { text: string }) => !!t && !/^\s+$/.test(t.text);
@@ -83,9 +89,6 @@ export function QuestionText({
       bridge: t.caught && !isWord(raw[i + 1]) && !!raw[i + 2]?.caught,
     };
   });
-  // The word that lands last ends the typing.
-  const placed = tokens.filter((t): t is Token => typeof t !== "string");
-  if (placed.length) placed.reduce((a, b) => (b.delay >= a.delay ? b : a)).last = true;
   // Tokens with no space between them ("calls" + ",") stay on one line together.
   const groups: (Token[] | string)[] = [];
   for (const t of tokens) {
@@ -112,7 +115,6 @@ export function QuestionText({
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: WORD_IN_MS / 1000, ease: EASE, delay: t.delay / 1000 }}
-                onAnimationComplete={t.last ? onTyped : undefined}
               >
                 {t.text}
                 {t.caught && (
@@ -137,3 +139,4 @@ export function QuestionText({
 }
 
 const words = (s: string) => s.split(/(\s+)/).filter(Boolean);
+const REDUCED_MS = 200;
